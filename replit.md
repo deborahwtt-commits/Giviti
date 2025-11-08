@@ -32,10 +32,11 @@ Preferred communication style: Simple, everyday language.
 - Design inspiration from Etsy, Pinterest, Notion, and Airbnb
 
 **State Management**:
-- Server state managed via TanStack Query with aggressive caching (staleTime: Infinity)
+- Server state managed via TanStack Query with fresh data (staleTime: 0)
 - Local UI state handled with React hooks
 - Authentication state through custom useAuth hook
 - Theme persistence in localStorage
+- Cache invalidation on mutations to keep data fresh
 
 **Key Pages**:
 - Landing: Marketing page with hero section and feature highlights
@@ -81,10 +82,10 @@ Preferred communication style: Simple, everyday language.
 
 **Schema Design**:
 - `users` - User profiles (firstName, lastName, email, profileImageUrl)
-- `recipients` - Gift recipients with demographics and interests
-- `events` - Important dates linked to recipients
+- `recipients` - Gift recipients with name, age (required), gender/zodiacSign/relationship (optional), interests array
+- `events` - Important dates linked to recipients with eventType, eventName, eventDate
 - `userGifts` - Saved/purchased gifts with metadata
-- `giftSuggestions` - Pre-seeded gift catalog with tags and categories
+- `giftSuggestions` - Pre-seeded gift catalog (20 items) with tags and categories
 - `sessions` - Express session storage (required for Replit Auth)
 
 **Key Relationships**:
@@ -141,3 +142,33 @@ Preferred communication style: Simple, everyday language.
 - Mock e-commerce links (no actual payment integration in MVP)
 - Pre-seeded gift database (no external API for suggestions in MVP)
 - Session storage in PostgreSQL (connect-pg-simple)
+
+## Recent Changes & Fixes (November 2025)
+
+### Critical Fixes Applied
+1. **apiRequest Parameter Order**: Fixed from (method, url, data) to (url, method, data) to match usage patterns
+2. **Recipients Schema**: Made gender, zodiacSign, and relationship fields optional (nullable) for better UX
+3. **RecipientForm**: Updated to send null for empty optional fields instead of empty strings
+4. **SelectItem Validation**: Fixed empty value prop error by using "all" instead of "" for "Todas" option
+5. **Category Filtering**: Updated logic to handle "all" value correctly
+6. **Query Caching**: Changed staleTime from Infinity to 0 for fresh data on navigation
+7. **401 Error Handling**: All protected pages now properly handle session expiration with toast notifications and redirect
+8. **Cache Invalidation**: Stats queries properly invalidated after recipient/event mutations
+
+### E2E Testing Results
+✅ **All Core Flows Verified:**
+- OIDC authentication and login
+- Create recipient with interests
+- Create event with future date
+- Filter suggestions by category
+- Dashboard displays correct stats after mutations
+- Logout and return to landing page
+
+### Production Readiness
+- All pages connected to real backend APIs
+- Proper authentication and security (isAuthenticated middleware)
+- User ownership validation on all CRUD operations
+- Error handling with user-friendly messages in Portuguese
+- Loading states and empty states throughout
+- 20 gift suggestions seeded for testing
+- Database schema stable and tested
