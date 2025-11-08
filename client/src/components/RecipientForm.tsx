@@ -105,9 +105,9 @@ export default function RecipientForm({
     const data = {
       name,
       age: parseInt(age),
-      gender,
-      zodiacSign,
-      relationship,
+      gender: gender || null,
+      zodiacSign: zodiacSign || null,
+      relationship: relationship || null,
       interests,
     };
     console.log("Form submitted:", data);

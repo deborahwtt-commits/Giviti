@@ -56,6 +56,7 @@ export default function Recipients() {
       setEditingRecipient(null);
     },
     onError: (error: Error) => {
+      console.error("Error creating recipient:", error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Sessão Expirada",
@@ -69,7 +70,7 @@ export default function Recipients() {
       }
       toast({
         title: "Erro",
-        description: "Falha ao criar presenteado. Tente novamente.",
+        description: error.message || "Falha ao criar presenteado. Tente novamente.",
         variant: "destructive",
       });
     },

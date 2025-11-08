@@ -47,7 +47,7 @@ export default function Suggestions() {
   ).sort();
 
   const filteredSuggestions = allSuggestions?.filter((suggestion) => {
-    const matchesCategory = !category || suggestion.category === category;
+    const matchesCategory = !category || category === "all" || suggestion.category === category;
     const matchesBudget = suggestion.priceMin <= budget[0];
     return matchesCategory && matchesBudget;
   }) || [];
@@ -57,7 +57,7 @@ export default function Suggestions() {
   };
 
   const handleClearFilters = () => {
-    setCategory("");
+    setCategory("all");
     setBudget([1000]);
   };
 
@@ -131,7 +131,7 @@ export default function Suggestions() {
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
