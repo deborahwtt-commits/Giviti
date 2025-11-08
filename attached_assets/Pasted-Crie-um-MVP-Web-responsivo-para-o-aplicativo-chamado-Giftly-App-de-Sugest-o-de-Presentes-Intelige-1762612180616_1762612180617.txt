@@ -1,0 +1,70 @@
+Crie um MVP Web responsivo para o aplicativo chamado “Giftly – App de Sugestão de Presentes Inteligente”. Este aplicativo tem como objetivo ajudar usuários a encontrar sugestões de presentes personalizadas com base em múltiplos critérios do presenteado.
+
+Abaixo estão os requisitos funcionais e características-chave para esta primeira versão (MVP), com foco em usabilidade, personalização e integração com e-commerces:
+
+⸻
+
+✅ Funcionalidades Principais do MVP:
+	1.	Cadastro de presenteados:
+	•	Nome, sexo, idade, signo, interesses/hobbies.
+	•	Tipo de relacionamento com o usuário (ex: amigo, parceiro, familiar).
+	2.	Cadastro de eventos importantes:
+	•	Data (ex: aniversário, formatura, casamento).
+	•	Associação com o presenteado.
+	•	Alertas e lembretes via notificação (ou via dashboard para MVP).
+	3.	Sugestão personalizada de presentes:
+	•	Baseada em sexo, hobbies, signo, ocasião, tipo de relacionamento e orçamento definido pelo usuário.
+	•	Lista de sugestões com:
+	•	Nome do presente
+	•	Mini descrição
+	•	Imagem
+	•	Faixa de preço
+	•	Link de compra com o menor preço encontrado (mock para MVP).
+	4.	Gerenciamento de presentes:
+	•	Marcar como “Comprado”
+	•	Histórico de presentes dados
+	•	Lista atual de presentes a serem comprados
+
+⸻
+
+🎨 Requisitos de Interface (UX/UI):
+	•	Interface limpa e intuitiva.
+	•	Navegação fluida com foco em praticidade e rapidez na escolha.
+	•	Design responsivo (priorizar mobile-first).
+	•	Paleta de cores moderna e amigável (ex: tons pastel ou candy colors).
+
+⸻
+
+🛠️ Funcionalidades Técnicas para MVP:
+	•	Front-end Web Only (React.js preferencial).
+	•	Mock de API para sugestões de presentes (dados simulados para testes).
+	•	Banco de dados simples (Firebase ou Supabase) para armazenar usuários, eventos e histórico.
+	•	Integração com e-commerce via links fictícios ou APIs públicas (se viável).
+	•	Suporte básico a login/cadastro via email (OAuth opcional).
+
+⸻
+
+👥 Público-alvo:
+	•	Adultos entre 20 e 45 anos.
+	•	Usuários com vida social ativa e poder aquisitivo médio a alto.
+	•	Perfil que valoriza praticidade e originalidade ao presentear.
+
+⸻
+
+💰 Modelo de Monetização (referência futura):
+	•	Comissões via links afiliados.
+	•	Sugestões patrocinadas.
+	•	Plano Premium (recursos exclusivos).
+
+⸻
+
+🗺️ Roadmap de MVP (escopo atual):
+	•	Cadastro de presenteado e eventos.
+	•	Geração de sugestões personalizadas.
+	•	Lista de gerenciamento de presentes.
+	•	Link para compra.
+	•	Alertas simples por evento.
+
+⸻
+
+Importante: Este MVP deve ser escalável e modular, permitindo evolução futura como: plano premium, marketplace, engine de recomendação baseada em IA real, e dashboard de marcas patrocinadas.
