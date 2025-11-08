@@ -1,22 +1,31 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Menu, X, Sun, Moon } from "lucide-react";
+import { Gift, Menu, X, Sun, Moon, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import type { Event } from "@shared/schema";
 
 interface HeaderProps {
-  upcomingEventsCount?: number;
   onToggleTheme?: () => void;
   isDark?: boolean;
 }
 
 export default function Header({
-  upcomingEventsCount = 0,
   onToggleTheme,
   isDark = false,
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
+  const { isAuthenticated } = useAuth();
+  
+  const { data: upcomingEvents } = useQuery<Event[]>({
+    queryKey: ["/api/events", { upcoming: "true" }],
+    enabled: isAuthenticated,
+  });
+  
+  const upcomingEventsCount = upcomingEvents?.length || 0;
 
   const navItems = [
     { path: "/", label: "Dashboard" },
@@ -83,6 +92,16 @@ export default function Header({
             <Button
               variant="ghost"
               size="icon"
+              className="hidden md:flex"
+              onClick={() => window.location.href = "/api/logout"}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
@@ -119,6 +138,15 @@ export default function Header({
                   )}
                 </Link>
               ))}
+              <Button
+                variant="ghost"
+                className="w-full justify-start px-3"
+                onClick={() => window.location.href = "/api/logout"}
+                data-testid="button-mobile-logout"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
             </div>
           </nav>
         )}

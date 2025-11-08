@@ -1,62 +1,127 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import EventCard from "@/components/EventCard";
 import EventForm from "@/components/EventForm";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
+import type { Event, Recipient } from "@shared/schema";
+import { format, differenceInDays } from "date-fns";
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
-  const [hasEvents] = useState(true);
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
-  const mockRecipients = [
-    { id: "1", name: "João Silva" },
-    { id: "2", name: "Ana Costa" },
-    { id: "3", name: "Pedro Santos" },
-  ];
+  const { data: recipients, error: recipientsError } = useQuery<Recipient[]>({
+    queryKey: ["/api/recipients"],
+  });
 
-  const allEvents = [
-    {
-      id: "1",
-      eventName: "Aniversário",
-      recipientName: "João Silva",
-      daysUntil: 12,
-      date: "25 de Dez, 2024",
-    },
-    {
-      id: "2",
-      eventName: "Formatura",
-      recipientName: "Ana Costa",
-      daysUntil: 28,
-      date: "10 de Jan, 2025",
-    },
-    {
-      id: "3",
-      eventName: "Casamento",
-      recipientName: "Pedro Santos",
-      daysUntil: 45,
-      date: "27 de Fev, 2025",
-    },
-    {
-      id: "4",
-      eventName: "Dia das Mães",
-      recipientName: "Maria Oliveira",
-      daysUntil: 85,
-      date: "15 de Mar, 2025",
-    },
-    {
-      id: "5",
-      eventName: "Aniversário",
-      recipientName: "Beatriz Lima",
-      daysUntil: 120,
-      date: "5 de Abr, 2025",
-    },
-  ];
+  const { data: allEvents, isLoading: eventsLoading, error: eventsError } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+  });
 
-  const thisMonthEvents = allEvents.filter((e) => e.daysUntil <= 30);
-  const nextThreeMonthsEvents = allEvents.filter((e) => e.daysUntil <= 90);
+  useEffect(() => {
+    const error = recipientsError || eventsError;
+    if (error && isUnauthorizedError(error as Error)) {
+      toast({
+        title: "Sessão Expirada",
+        description: "Você foi desconectado. Redirecionando para login...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [recipientsError, eventsError, toast]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/events", "POST", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Evento criado com sucesso.",
+      });
+      setShowEventForm(false);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao criar evento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRecipientName = (recipientId: string) => {
+    const recipient = recipients?.find(r => r.id === recipientId);
+    return recipient?.name || "Desconhecido";
+  };
+
+  const calculateDaysUntil = (eventDate: string) => {
+    const today = new Date();
+    const event = new Date(eventDate);
+    return differenceInDays(event, today);
+  };
+
+  const formatEventDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, "d 'de' MMM, yyyy");
+    } catch {
+      return dateString;
+    }
+  };
+
+  const today = new Date();
+  const oneMonthFromNow = new Date();
+  oneMonthFromNow.setMonth(today.getMonth() + 1);
+  const threeMonthsFromNow = new Date();
+  threeMonthsFromNow.setMonth(today.getMonth() + 3);
+
+  const thisMonthEvents = allEvents?.filter((e) => {
+    const eventDate = new Date(e.eventDate);
+    return eventDate >= today && eventDate <= oneMonthFromNow;
+  }) || [];
+
+  const nextThreeMonthsEvents = allEvents?.filter((e) => {
+    const eventDate = new Date(e.eventDate);
+    return eventDate >= today && eventDate <= threeMonthsFromNow;
+  }) || [];
+
+  const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
+
+  if (eventsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,75 +145,85 @@ export default function Events() {
           </Button>
         </div>
 
-        {hasEvents ? (
+        {allEvents && allEvents.length > 0 ? (
           <Tabs defaultValue="all" className="space-y-6">
             <TabsList>
               <TabsTrigger value="all" data-testid="tab-all-events">
-                Todos
+                Todos ({allEvents.length})
               </TabsTrigger>
               <TabsTrigger
                 value="thisMonth"
                 data-testid="tab-this-month-events"
               >
-                Este Mês
+                Este Mês ({thisMonthEvents.length})
               </TabsTrigger>
               <TabsTrigger
                 value="nextThreeMonths"
                 data-testid="tab-next-three-months-events"
               >
-                Próximos 3 Meses
+                Próximos 3 Meses ({nextThreeMonthsEvents.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {allEvents.map((event) => (
+                {allEvents?.map((event) => (
                   <EventCard
                     key={event.id}
-                    eventName={event.eventName}
-                    recipientName={event.recipientName}
-                    daysUntil={event.daysUntil}
-                    date={event.date}
-                    onViewSuggestions={() =>
-                      console.log(`View suggestions for ${event.recipientName}`)
-                    }
+                    eventName={event.eventName || event.eventType}
+                    recipientName={getRecipientName(event.recipientId)}
+                    daysUntil={calculateDaysUntil(event.eventDate)}
+                    date={formatEventDate(event.eventDate)}
+                    onViewSuggestions={() => setLocation("/sugestoes")}
                   />
                 ))}
               </div>
             </TabsContent>
 
             <TabsContent value="thisMonth">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {thisMonthEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    eventName={event.eventName}
-                    recipientName={event.recipientName}
-                    daysUntil={event.daysUntil}
-                    date={event.date}
-                    onViewSuggestions={() =>
-                      console.log(`View suggestions for ${event.recipientName}`)
-                    }
-                  />
-                ))}
-              </div>
+              {thisMonthEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {thisMonthEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      eventName={event.eventName || event.eventType}
+                      recipientName={getRecipientName(event.recipientId)}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    Nenhum evento neste mês
+                  </p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="nextThreeMonths">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {nextThreeMonthsEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    eventName={event.eventName}
-                    recipientName={event.recipientName}
-                    daysUntil={event.daysUntil}
-                    date={event.date}
-                    onViewSuggestions={() =>
-                      console.log(`View suggestions for ${event.recipientName}`)
-                    }
-                  />
-                ))}
-              </div>
+              {nextThreeMonthsEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {nextThreeMonthsEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      eventName={event.eventName || event.eventType}
+                      recipientName={getRecipientName(event.recipientId)}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    Nenhum evento nos próximos 3 meses
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         ) : (
@@ -164,11 +239,8 @@ export default function Events() {
         <EventForm
           isOpen={showEventForm}
           onClose={() => setShowEventForm(false)}
-          onSubmit={(data) => {
-            console.log("Event created:", data);
-            setShowEventForm(false);
-          }}
-          recipients={mockRecipients}
+          onSubmit={(data) => createMutation.mutate(data)}
+          recipients={recipientOptions}
         />
       </div>
     </div>

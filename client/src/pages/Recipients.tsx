@@ -1,67 +1,202 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import RecipientCard from "@/components/RecipientCard";
 import RecipientForm from "@/components/RecipientForm";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyRecipientsImage from "@assets/generated_images/Empty_state_no_recipients_cc3b64a6.png";
+import type { Recipient, Event } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function Recipients() {
   const [showForm, setShowForm] = useState(false);
-  const [hasRecipients] = useState(true);
+  const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
-  const mockRecipients = [
-    {
-      id: "1",
-      name: "João Silva",
-      age: 28,
-      relationship: "Amigo",
-      interests: ["Tecnologia", "Games", "Música", "Fotografia", "Viagens"],
-      nextEventDate: "25 de Dez",
-      nextEventName: "Aniversário",
+  const { data: recipients, isLoading: recipientsLoading, error: recipientsError } = useQuery<Recipient[]>({
+    queryKey: ["/api/recipients"],
+  });
+
+  const { data: events, error: eventsError } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+  });
+
+  useEffect(() => {
+    const error = recipientsError || eventsError;
+    if (error && isUnauthorizedError(error as Error)) {
+      toast({
+        title: "Sessão Expirada",
+        description: "Você foi desconectado. Redirecionando para login...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [recipientsError, eventsError, toast]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/recipients", "POST", data);
     },
-    {
-      id: "2",
-      name: "Ana Costa",
-      age: 24,
-      relationship: "Irmã",
-      interests: ["Leitura", "Yoga", "Culinária"],
-      nextEventDate: "10 de Jan",
-      nextEventName: "Formatura",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Presenteado criado com sucesso.",
+      });
+      setShowForm(false);
+      setEditingRecipient(null);
     },
-    {
-      id: "3",
-      name: "Pedro Santos",
-      age: 32,
-      relationship: "Parceiro",
-      interests: ["Esportes", "Cinema", "Cervejaria"],
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao criar presenteado. Tente novamente.",
+        variant: "destructive",
+      });
     },
-    {
-      id: "4",
-      name: "Maria Oliveira",
-      age: 55,
-      relationship: "Mãe",
-      interests: ["Jardinagem", "Culinária", "Artesanato"],
-      nextEventDate: "15 de Mar",
-      nextEventName: "Dia das Mães",
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest(`/api/recipients/${id}`, "PUT", data);
     },
-    {
-      id: "5",
-      name: "Carlos Mendes",
-      age: 19,
-      relationship: "Primo",
-      interests: ["Games", "Skate", "Música"],
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      toast({
+        title: "Sucesso!",
+        description: "Presenteado atualizado com sucesso.",
+      });
+      setShowForm(false);
+      setEditingRecipient(null);
     },
-    {
-      id: "6",
-      name: "Beatriz Lima",
-      age: 26,
-      relationship: "Colega",
-      interests: ["Fitness", "Moda", "Fotografia", "Viagens"],
-      nextEventDate: "5 de Abr",
-      nextEventName: "Aniversário",
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar presenteado. Tente novamente.",
+        variant: "destructive",
+      });
     },
-  ];
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/recipients/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Sucesso!",
+        description: "Presenteado excluído com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir presenteado. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getNextEvent = (recipientId: string) => {
+    if (!events) return null;
+    const recipientEvents = events.filter(e => e.recipientId === recipientId);
+    if (recipientEvents.length === 0) return null;
+
+    const today = new Date();
+    const futureEvents = recipientEvents
+      .filter(e => new Date(e.eventDate) >= today)
+      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+
+    return futureEvents[0] || null;
+  };
+
+  const formatEventDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, "d 'de' MMM");
+    } catch {
+      return "";
+    }
+  };
+
+  const handleEdit = (recipient: Recipient) => {
+    setEditingRecipient(recipient);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este presenteado?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleSubmit = (data: any) => {
+    if (editingRecipient) {
+      updateMutation.mutate({ id: editingRecipient.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingRecipient(null);
+  };
+
+  if (recipientsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,25 +222,26 @@ export default function Recipients() {
               </Button>
             </div>
 
-            {hasRecipients ? (
+            {recipients && recipients.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {mockRecipients.map((recipient) => (
-                  <RecipientCard
-                    key={recipient.id}
-                    id={recipient.id}
-                    name={recipient.name}
-                    age={recipient.age}
-                    relationship={recipient.relationship}
-                    interests={recipient.interests}
-                    nextEventDate={recipient.nextEventDate}
-                    nextEventName={recipient.nextEventName}
-                    onViewSuggestions={() =>
-                      console.log(`View suggestions for ${recipient.name}`)
-                    }
-                    onEdit={() => console.log(`Edit ${recipient.name}`)}
-                    onDelete={() => console.log(`Delete ${recipient.name}`)}
-                  />
-                ))}
+                {recipients.map((recipient) => {
+                  const nextEvent = getNextEvent(recipient.id);
+                  return (
+                    <RecipientCard
+                      key={recipient.id}
+                      id={recipient.id}
+                      name={recipient.name}
+                      age={recipient.age}
+                      relationship={recipient.relationship}
+                      interests={recipient.interests}
+                      nextEventDate={nextEvent ? formatEventDate(nextEvent.eventDate) : undefined}
+                      nextEventName={nextEvent ? (nextEvent.eventName || nextEvent.eventType) : undefined}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(recipient)}
+                      onDelete={() => handleDelete(recipient.id)}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <EmptyState
@@ -121,12 +257,12 @@ export default function Recipients() {
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <h1 className="font-heading font-bold text-4xl text-foreground">
-                Novo Presenteado
+                {editingRecipient ? "Editar Presenteado" : "Novo Presenteado"}
               </h1>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowForm(false)}
+                onClick={handleCloseForm}
                 data-testid="button-close-form"
               >
                 <X className="w-5 h-5" />
@@ -135,11 +271,16 @@ export default function Recipients() {
 
             <div className="bg-card border border-card-border rounded-lg p-6">
               <RecipientForm
-                onSubmit={(data) => {
-                  console.log("Recipient created:", data);
-                  setShowForm(false);
-                }}
-                onCancel={() => setShowForm(false)}
+                initialData={editingRecipient ? {
+                  name: editingRecipient.name,
+                  age: editingRecipient.age,
+                  gender: editingRecipient.gender,
+                  zodiacSign: editingRecipient.zodiacSign || "",
+                  relationship: editingRecipient.relationship,
+                  interests: editingRecipient.interests,
+                } : undefined}
+                onSubmit={handleSubmit}
+                onCancel={handleCloseForm}
               />
             </div>
           </div>
