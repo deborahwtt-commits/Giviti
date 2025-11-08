@@ -1,15 +1,372 @@
+// API routes for Giftly - Following Replit Auth blueprint
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import {
+  insertRecipientSchema,
+  insertEventSchema,
+  insertUserGiftSchema,
+} from "@shared/schema";
+import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Setup authentication middleware
+  await setupAuth(app);
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // ========== Auth Routes ==========
+
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // ========== Recipient Routes ==========
+
+  // GET /api/recipients - Get all recipients for authenticated user
+  app.get("/api/recipients", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recipientsList = await storage.getRecipients(userId);
+      res.json(recipientsList);
+    } catch (error) {
+      console.error("Error fetching recipients:", error);
+      res.status(500).json({ message: "Failed to fetch recipients" });
+    }
+  });
+
+  // POST /api/recipients - Create a new recipient
+  app.post("/api/recipients", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertRecipientSchema.parse(req.body);
+      const newRecipient = await storage.createRecipient(userId, validatedData);
+      res.status(201).json(newRecipient);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid recipient data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating recipient:", error);
+      res.status(500).json({ message: "Failed to create recipient" });
+    }
+  });
+
+  // GET /api/recipients/:id - Get a specific recipient
+  app.get("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const recipient = await storage.getRecipient(id, userId);
+      
+      if (!recipient) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      res.json(recipient);
+    } catch (error) {
+      console.error("Error fetching recipient:", error);
+      res.status(500).json({ message: "Failed to fetch recipient" });
+    }
+  });
+
+  // PUT /api/recipients/:id - Update a recipient
+  app.put("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const validatedData = insertRecipientSchema.partial().parse(req.body);
+      const updated = await storage.updateRecipient(id, userId, validatedData);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid recipient data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating recipient:", error);
+      res.status(500).json({ message: "Failed to update recipient" });
+    }
+  });
+
+  // DELETE /api/recipients/:id - Delete a recipient
+  app.delete("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const deleted = await storage.deleteRecipient(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting recipient:", error);
+      res.status(500).json({ message: "Failed to delete recipient" });
+    }
+  });
+
+  // ========== Event Routes ==========
+
+  // GET /api/events - Get all events for authenticated user
+  app.get("/api/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { upcoming } = req.query;
+      
+      let eventsList;
+      if (upcoming === "true") {
+        eventsList = await storage.getUpcomingEvents(userId, 30);
+      } else {
+        eventsList = await storage.getEvents(userId);
+      }
+      
+      res.json(eventsList);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  // POST /api/events - Create a new event
+  app.post("/api/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertEventSchema.parse(req.body);
+      
+      // Verify that the recipient belongs to the user
+      const recipient = await storage.getRecipient(validatedData.recipientId, userId);
+      if (!recipient) {
+        return res.status(400).json({ 
+          message: "Invalid recipient ID or recipient does not belong to user" 
+        });
+      }
+      
+      const newEvent = await storage.createEvent(userId, validatedData);
+      res.status(201).json(newEvent);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid event data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating event:", error);
+      res.status(500).json({ message: "Failed to create event" });
+    }
+  });
+
+  // GET /api/events/:id - Get a specific event
+  app.get("/api/events/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const event = await storage.getEvent(id, userId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      res.status(500).json({ message: "Failed to fetch event" });
+    }
+  });
+
+  // PUT /api/events/:id - Update an event
+  app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const validatedData = insertEventSchema.partial().parse(req.body);
+      
+      // If recipientId is being updated, verify it belongs to the user
+      if (validatedData.recipientId) {
+        const recipient = await storage.getRecipient(validatedData.recipientId, userId);
+        if (!recipient) {
+          return res.status(400).json({ 
+            message: "Invalid recipient ID or recipient does not belong to user" 
+          });
+        }
+      }
+      
+      const updated = await storage.updateEvent(id, userId, validatedData);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid event data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating event:", error);
+      res.status(500).json({ message: "Failed to update event" });
+    }
+  });
+
+  // DELETE /api/events/:id - Delete an event
+  app.delete("/api/events/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const deleted = await storage.deleteEvent(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+
+  // ========== UserGift Routes ==========
+
+  // GET /api/gifts - Get all user gifts
+  app.get("/api/gifts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const gifts = await storage.getUserGifts(userId);
+      res.json(gifts);
+    } catch (error) {
+      console.error("Error fetching gifts:", error);
+      res.status(500).json({ message: "Failed to fetch gifts" });
+    }
+  });
+
+  // POST /api/gifts - Create a new user gift
+  app.post("/api/gifts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertUserGiftSchema.parse(req.body);
+      
+      // Verify that the recipient belongs to the user
+      const recipient = await storage.getRecipient(validatedData.recipientId, userId);
+      if (!recipient) {
+        return res.status(400).json({ 
+          message: "Invalid recipient ID or recipient does not belong to user" 
+        });
+      }
+      
+      // If eventId is provided, verify it belongs to the user
+      if (validatedData.eventId) {
+        const event = await storage.getEvent(validatedData.eventId, userId);
+        if (!event) {
+          return res.status(400).json({ 
+            message: "Invalid event ID or event does not belong to user" 
+          });
+        }
+      }
+      
+      const newGift = await storage.createUserGift(userId, validatedData);
+      res.status(201).json(newGift);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid gift data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating gift:", error);
+      res.status(500).json({ message: "Failed to create gift" });
+    }
+  });
+
+  // PUT /api/gifts/:id - Update user gift (toggle favorite/purchased)
+  app.put("/api/gifts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const { isFavorite, isPurchased } = req.body;
+      
+      // Only allow updating favorite and purchased status
+      const updates: any = {};
+      if (typeof isFavorite === 'boolean') {
+        updates.isFavorite = isFavorite;
+      }
+      if (typeof isPurchased === 'boolean') {
+        updates.isPurchased = isPurchased;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ 
+          message: "No valid updates provided. Only isFavorite and isPurchased can be updated." 
+        });
+      }
+      
+      const updated = await storage.updateUserGift(id, userId, updates);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Gift not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating gift:", error);
+      res.status(500).json({ message: "Failed to update gift" });
+    }
+  });
+
+  // DELETE /api/gifts/:id - Delete a user gift
+  app.delete("/api/gifts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const deleted = await storage.deleteUserGift(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Gift not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting gift:", error);
+      res.status(500).json({ message: "Failed to delete gift" });
+    }
+  });
+
+  // ========== Stats Route ==========
+
+  // GET /api/stats - Get user statistics
+  app.get("/api/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
