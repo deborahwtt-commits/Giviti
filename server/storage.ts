@@ -4,6 +4,7 @@ import {
   recipients,
   events,
   userGifts,
+  giftSuggestions,
   type User,
   type UpsertUser,
   type Recipient,
@@ -12,6 +13,7 @@ import {
   type InsertEvent,
   type UserGift,
   type InsertUserGift,
+  type GiftSuggestion,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql } from "drizzle-orm";
@@ -45,6 +47,9 @@ export interface IStorage {
 
   // Stats
   getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number }>;
+  
+  // Gift Suggestions
+  getGiftSuggestions(filters?: { category?: string; minPrice?: number; maxPrice?: number; tags?: string[] }): Promise<GiftSuggestion[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -290,6 +295,41 @@ export class DatabaseStorage implements IStorage {
       upcomingEvents: upcomingEventCount[0]?.count || 0,
       giftsPurchased: purchasedGiftCount[0]?.count || 0,
     };
+  }
+
+  // ========== Gift Suggestions ==========
+
+  async getGiftSuggestions(filters?: {
+    category?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    tags?: string[];
+  }): Promise<GiftSuggestion[]> {
+    let query = db.select().from(giftSuggestions);
+    
+    const conditions: any[] = [];
+    
+    if (filters?.category) {
+      conditions.push(eq(giftSuggestions.category, filters.category));
+    }
+    
+    if (filters?.minPrice !== undefined) {
+      conditions.push(gte(giftSuggestions.priceMax, filters.minPrice));
+    }
+    
+    if (filters?.maxPrice !== undefined) {
+      conditions.push(sql`${giftSuggestions.priceMin} <= ${filters.maxPrice}`);
+    }
+    
+    if (filters?.tags && filters.tags.length > 0) {
+      conditions.push(sql`${giftSuggestions.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query;
   }
 }
 

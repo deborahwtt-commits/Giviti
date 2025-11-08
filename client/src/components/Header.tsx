@@ -29,38 +29,39 @@ export default function Header({
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
-          <Link href="/">
-            <a className="flex items-center gap-2 hover-elevate rounded-md px-2 py-1">
-              <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-                <Gift className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-heading font-bold text-xl text-foreground">
-                Giftly
-              </span>
-            </a>
+          <Link
+            href="/"
+            className="flex items-center gap-2 hover-elevate rounded-md px-2 py-1"
+          >
+            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
+              <Gift className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-heading font-bold text-xl text-foreground">
+              Giftly
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={`text-sm font-medium transition-colors hover-elevate px-3 py-2 rounded-md relative ${
-                    location === item.path
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                  }`}
-                  data-testid={`link-${item.label.toLowerCase()}`}
-                >
-                  {item.label}
-                  {item.label === "Eventos" && upcomingEventsCount > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center text-xs"
-                    >
-                      {upcomingEventsCount}
-                    </Badge>
-                  )}
-                </a>
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`text-sm font-medium transition-colors hover-elevate px-3 py-2 rounded-md relative ${
+                  location === item.path
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+                data-testid={`link-${item.label.toLowerCase()}`}
+              >
+                {item.label}
+                {item.label === "Eventos" && upcomingEventsCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center text-xs"
+                  >
+                    {upcomingEventsCount}
+                  </Badge>
+                )}
               </Link>
             ))}
           </nav>
@@ -99,23 +100,23 @@ export default function Header({
           <nav className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <a
-                    className={`flex items-center justify-between px-3 py-2 rounded-md font-medium hover-elevate ${
-                      location === item.path
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground"
-                    }`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    data-testid={`link-mobile-${item.label.toLowerCase()}`}
-                  >
-                    {item.label}
-                    {item.label === "Eventos" && upcomingEventsCount > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {upcomingEventsCount} próximos
-                      </Badge>
-                    )}
-                  </a>
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center justify-between px-3 py-2 rounded-md font-medium hover-elevate ${
+                    location === item.path
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid={`link-mobile-${item.label.toLowerCase()}`}
+                >
+                  {item.label}
+                  {item.label === "Eventos" && upcomingEventsCount > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      {upcomingEventsCount} próximos
+                    </Badge>
+                  )}
                 </Link>
               ))}
             </div>

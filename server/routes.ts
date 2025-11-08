@@ -367,6 +367,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Gift Suggestions Routes ==========
+
+  // GET /api/suggestions - Get gift suggestions with optional filters
+  app.get("/api/suggestions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { category, minPrice, maxPrice, tags } = req.query;
+      
+      const filters: any = {};
+      if (category) filters.category = category;
+      if (minPrice) filters.minPrice = parseInt(minPrice);
+      if (maxPrice) filters.maxPrice = parseInt(maxPrice);
+      if (tags) {
+        filters.tags = Array.isArray(tags) ? tags : tags.split(',');
+      }
+      
+      const suggestions = await storage.getGiftSuggestions(filters);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching gift suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch gift suggestions" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
