@@ -12,10 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion } from "@shared/schema";
+import type { GiftSuggestion, Recipient } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 
@@ -23,10 +23,20 @@ export default function Suggestions() {
   const [showFilters, setShowFilters] = useState(false);
   const [budget, setBudget] = useState([1000]);
   const [category, setCategory] = useState<string>("");
+  const [selectedRecipient, setSelectedRecipient] = useState<string>("");
+  const [visibleCount, setVisibleCount] = useState(5);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setVisibleCount(5);
+  }, [category, selectedRecipient, budget]);
 
   const { data: allSuggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
     queryKey: ["/api/suggestions"],
+  });
+
+  const { data: recipients, isLoading: recipientsLoading } = useQuery<Recipient[]>({
+    queryKey: ["/api/recipients"],
   });
 
   useEffect(() => {
@@ -46,11 +56,36 @@ export default function Suggestions() {
     new Set(allSuggestions?.map((s) => s.category) || [])
   ).sort();
 
+  const selectedRecipientData = selectedRecipient && selectedRecipient !== "all"
+    ? recipients?.find(r => r.id === selectedRecipient)
+    : null;
+
   const filteredSuggestions = allSuggestions?.filter((suggestion) => {
     const matchesCategory = !category || category === "all" || suggestion.category === category;
     const matchesBudget = suggestion.priceMin <= budget[0];
-    return matchesCategory && matchesBudget;
+    
+    let matchesRecipient = true;
+    if (selectedRecipientData) {
+      const recipientInterests = selectedRecipientData.interests || [];
+      const suggestionTags = suggestion.tags || [];
+      
+      if (recipientInterests.length > 0) {
+        matchesRecipient = recipientInterests.some(interest => 
+          suggestionTags.some(tag => 
+            tag.toLowerCase().includes(interest.toLowerCase()) ||
+            interest.toLowerCase().includes(tag.toLowerCase())
+          ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
+        );
+      }
+    }
+    
+    return matchesCategory && matchesBudget && matchesRecipient;
   }) || [];
+
+  const visibleSuggestions = filteredSuggestions.slice(0, visibleCount);
+  const hasMoreSuggestions = filteredSuggestions.length > visibleCount;
+
+  const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
   const formatPriceRange = (min: number, max: number) => {
     return `R$ ${min} - R$ ${max}`;
@@ -59,9 +94,15 @@ export default function Suggestions() {
   const handleClearFilters = () => {
     setCategory("all");
     setBudget([1000]);
+    setSelectedRecipient("all");
+    setVisibleCount(5);
   };
 
-  if (suggestionsLoading) {
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + 5);
+  };
+
+  if (suggestionsLoading || recipientsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -80,9 +121,16 @@ export default function Suggestions() {
             <h1 className="font-heading font-bold text-4xl text-foreground">
               Sugestões de Presentes
             </h1>
-            <p className="text-muted-foreground mt-2">
-              Encontre o presente perfeito
-            </p>
+            {selectedRecipientNames.length > 0 ? (
+              <p className="text-muted-foreground mt-2 flex items-center gap-2">
+                <Gift className="w-4 h-4" />
+                Para: <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
+              </p>
+            ) : (
+              <p className="text-muted-foreground mt-2">
+                Encontre o presente perfeito
+              </p>
+            )}
           </div>
 
           <Button
@@ -119,6 +167,28 @@ export default function Suggestions() {
               </div>
 
               <div className="space-y-6">
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">
+                    Presenteado
+                  </Label>
+                  <Select
+                    value={selectedRecipient}
+                    onValueChange={setSelectedRecipient}
+                  >
+                    <SelectTrigger data-testid="select-recipient">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {recipients?.map((recipient) => (
+                        <SelectItem key={recipient.id} value={recipient.id}>
+                          {recipient.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
                     Categoria
@@ -176,10 +246,10 @@ export default function Suggestions() {
             {filteredSuggestions.length > 0 ? (
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'resultado' : 'resultados'}
+                  Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredSuggestions.map((gift) => (
+                  {visibleSuggestions.map((gift) => (
                     <GiftCard
                       key={gift.id}
                       id={gift.id}
@@ -196,6 +266,18 @@ export default function Suggestions() {
                     />
                   ))}
                 </div>
+                {hasMoreSuggestions && (
+                  <div className="flex justify-center mt-8">
+                    <Button 
+                      onClick={handleLoadMore}
+                      variant="outline"
+                      size="lg"
+                      data-testid="button-load-more"
+                    >
+                      Ver mais sugestões
+                    </Button>
+                  </div>
+                )}
               </>
             ) : !allSuggestions || allSuggestions.length === 0 ? (
               <EmptyState
