@@ -59,6 +59,7 @@ Preferred communication style: Simple, everyday language.
 - `/api/auth/*` - Authentication endpoints (Replit Auth integration)
 - `/api/profile` - User profile management (GET/POST for questionnaire)
 - `/api/recipients` - CRUD operations for gift recipients
+- `/api/recipients/:id/profile` - GET/POST recipient profile questionnaire
 - `/api/events` - Event management with filtering
 - `/api/suggestions` - Gift suggestion retrieval
 - `/api/stats` - Dashboard statistics aggregation
@@ -86,6 +87,7 @@ Preferred communication style: Simple, everyday language.
 - `users` - User profiles (firstName, lastName, email, profileImageUrl)
 - `userProfiles` - User personality questionnaire (11 fun questions: ageRange, gender, zodiacSign, giftPreference, freeTimeActivity, musicalStyle, monthlyGiftPreference, surpriseReaction, giftPriority, giftGivingStyle, specialTalent, isCompleted)
 - `recipients` - Gift recipients with name, age (required), gender/zodiacSign/relationship (optional), interests array
+- `recipientProfiles` - Optional detailed questionnaire for recipients (10 questions: ageRange, gender, zodiacSign, relationship, giftPreference, lifestyle, interestCategory, giftReceptionStyle, budgetRange, occasion, isCompleted)
 - `events` - Important dates with eventType, eventName, eventDate, recipientId (nullable, legacy for backward compatibility)
 - `eventRecipients` - Junction table for many-to-many event-recipient relationships (eventId, recipientId)
 - `userGifts` - Saved/purchased gifts with metadata
@@ -95,6 +97,7 @@ Preferred communication style: Simple, everyday language.
 **Key Relationships**:
 - Users → UserProfiles (one-to-one)
 - Users → Recipients (one-to-many)
+- Recipients → RecipientProfiles (one-to-one)
 - Events ↔ Recipients (many-to-many via eventRecipients junction table)
 - Users → UserGifts (one-to-many)
 - UserGifts → GiftSuggestions (many-to-one reference)
@@ -201,6 +204,49 @@ Preferred communication style: Simple, everyday language.
 11. Special Talent (8 options)
 
 **E2E Testing:** ✅ Passed - Modal appears on first access, form saves correctly, values persist on return, modal doesn't reappear after completion
+
+### Recipient Profile Questionnaire Feature (November 10, 2025)
+✅ **Implemented:**
+- Database table `recipientProfiles` (stored as `recipient_profiles` in PostgreSQL) with 10 optional questionnaire fields
+- Backend API endpoints GET/POST `/api/recipients/:id/profile` for recipient profile management
+- Storage layer methods: `getRecipientProfile` and `upsertRecipientProfile` with security validation
+- RecipientProfileQuestionnaire component integrated into RecipientForm via Collapsible UI
+- Optional questionnaire expandable within recipient creation/edit form
+- Async mutation sequencing: recipient save → profile save with proper error handling
+- Profile data only sent if at least one field is filled
+
+**Questionnaire Fields:**
+1. Age Range (faixa etária: 18-24, 25-34, 35-44, 45-54, 55+)
+2. Gender (gênero: masculino, feminino, não-binário, prefiro não dizer)
+3. Zodiac Sign (signo: all 12 zodiac signs)
+4. Relationship (relacionamento: amigo, familiar, parceiro, colega)
+5. Gift Preference (preferência: práticos, experiências, únicos, divertidos, formato experiência, xi não sei)
+6. Lifestyle (estilo de vida: ativo/aventureiro, criativo/artístico, tech/inovador, caseiro/relaxado, social/festeiro)
+7. Interest Category (categoria interesse: esportes, arte/cultura, tecnologia, culinária, viagens, leitura, música, jogos)
+8. Gift Reception Style (estilo recepção: surpresa total, gosta saber antes, participar escolha, lista desejos)
+9. Budget Range (faixa orçamento: R$0-50, R$50-150, R$150-300, R$300-600, acima R$600, depende/parcela, céu limite/impressionar)
+10. Occasion (ocasião: aniversário, Natal, amigo secreto, formatura, casamento, Dia dos Namorados, conquista especial, só porque sim)
+
+**Architecture:**
+- One-to-one relationship: Recipients → RecipientProfiles (recipientId unique constraint)
+- Upsert pattern for create/update in single POST operation
+- Security: backend validates recipient belongs to authenticated user before profile operations
+- Frontend: Collapsible component with ChevronDown icon rotation on expand/collapse
+- Form behavior: profile completely optional, can be added later via edit
+
+**Async Flow Improvements:**
+- Changed from `mutate()` to `mutateAsync()` for proper sequencing
+- Update path: await recipient update → await profile save → invalidate cache → toast → close form
+- Create path: await recipient create → await profile save (if provided) → invalidate cache → toast → close form
+- Error handling: recipient errors keep form open, profile errors show warning toast
+- No duplicate success toasts or premature form closing
+
+**E2E Testing:** ✅ Verified
+- Create recipient without profile questionnaire (optional behavior confirmed)
+- Create recipient with full profile questionnaire (all 10 fields)
+- Edit existing recipient and add profile data
+- Database persistence verified: `recipient_profiles` table contains saved data
+- Success/error toasts display correctly for different scenarios
 
 ### Critical Fixes Applied
 1. **apiRequest Parameter Order**: Fixed from (method, url, data) to (url, method, data) to match usage patterns
