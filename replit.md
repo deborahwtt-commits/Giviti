@@ -2,7 +2,7 @@
 
 ## Overview
 
-Giviti is a web-based MVP application designed to provide personalized gift suggestions. Its core purpose is to simplify gift-giving by managing recipient information, tracking events, and offering curated gift recommendations based on individual preferences, occasions, and budgets. The application aims to ensure users never miss an important date and always find the perfect gift.
+Giviti is a web-based MVP application designed to provide personalized gift suggestions. Its core purpose is to simplify gift-giving by managing recipient information, tracking events, and offering curated gift recommendations based on individual preferences, occasions, and budgets. The application features intelligent suggestion matching based on recipient profiles, with pagination and multi-criteria filtering. Users never miss important dates and always find the perfect gift.
 
 ## User Preferences
 
@@ -47,3 +47,36 @@ Preferred communication style: Simple, everyday language.
 - **UI Component Dependencies**: Radix UI, Lucide React, date-fns, cmdk, vaul, embla-carousel-react, recharts.
 - **Form Management**: react-hook-form, @hookform/resolvers (Zod resolver).
 - **Notable Integrations**: Mock e-commerce links, pre-seeded gift database.
+
+## Recent Features & Updates
+
+### Suggestions Page Enhancements (November 10, 2025)
+✅ **Implemented:**
+- **Recipient Filtering**: Dropdown filter to view suggestions for specific recipients
+  - Displays recipient name in page header when selected (with gift icon)
+  - Intelligent matching: Filters suggestions based on recipient's interests matching suggestion tags/category
+  - Uses fuzzy matching to connect interests with tags for better recommendations
+- **Pagination System**: Shows 5 suggestions initially with "Ver mais sugestões" button
+  - Loads 5 additional suggestions per click
+  - Smart pagination reset: Automatically resets to first page when filters change
+  - Counter displays "Mostrando X de Y sugestões"
+- **Multi-criteria Filtering**: Combines recipient, category, and budget filters with AND logic
+  - Recipient filter: Matches interests with tags/category
+  - Category filter: Exact category match
+  - Budget filter: priceMin <= selectedBudget
+- **Filter Management**: "Limpar Filtros" button resets all filters and pagination
+
+**Technical Implementation:**
+- Recipient data fetched via `/api/recipients` query
+- Filtering logic implemented client-side for instant response
+- Pagination state managed with React hooks
+- Filter changes trigger automatic pagination reset for better UX
+
+**E2E Testing:** ✅ Passed
+- Recipient filter dropdown works correctly
+- Category filter updates suggestion list
+- Budget slider filters by price
+- Pagination loads 5 suggestions at a time
+- "Ver mais sugestões" button appears/disappears appropriately
+- Filter clear resets all filters and pagination
+- Counter updates correctly with filter changes
