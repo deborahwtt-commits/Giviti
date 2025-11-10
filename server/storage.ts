@@ -7,6 +7,7 @@ import {
   userGifts,
   giftSuggestions,
   userProfiles,
+  recipientProfiles,
   type User,
   type UpsertUser,
   type Recipient,
@@ -20,6 +21,8 @@ import {
   type GiftSuggestion,
   type UserProfile,
   type InsertUserProfile,
+  type RecipientProfile,
+  type InsertRecipientProfile,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -60,6 +63,10 @@ export interface IStorage {
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   upsertUserProfile(userId: string, profile: InsertUserProfile): Promise<UserProfile>;
+  
+  // Recipient Profile operations
+  getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined>;
+  upsertRecipientProfile(recipientId: string, userId: string, profile: InsertRecipientProfile): Promise<RecipientProfile>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -435,6 +442,43 @@ export class DatabaseStorage implements IStorage {
       .values({ ...profileData, userId })
       .onConflictDoUpdate({
         target: userProfiles.userId,
+        set: {
+          ...profileData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return profile;
+  }
+
+  // ========== Recipient Profile ==========
+
+  async getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined> {
+    // First verify the recipient belongs to the user
+    const recipient = await this.getRecipient(recipientId, userId);
+    if (!recipient) {
+      return undefined;
+    }
+
+    const [profile] = await db
+      .select()
+      .from(recipientProfiles)
+      .where(eq(recipientProfiles.recipientId, recipientId));
+    return profile;
+  }
+
+  async upsertRecipientProfile(recipientId: string, userId: string, profileData: InsertRecipientProfile): Promise<RecipientProfile> {
+    // First verify the recipient belongs to the user
+    const recipient = await this.getRecipient(recipientId, userId);
+    if (!recipient) {
+      throw new Error("Recipient not found or access denied");
+    }
+
+    const [profile] = await db
+      .insert(recipientProfiles)
+      .values({ ...profileData, recipientId })
+      .onConflictDoUpdate({
+        target: recipientProfiles.recipientId,
         set: {
           ...profileData,
           updatedAt: new Date(),

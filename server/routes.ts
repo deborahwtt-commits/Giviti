@@ -8,6 +8,7 @@ import {
   insertEventSchema,
   insertUserGiftSchema,
   insertUserProfileSchema,
+  insertRecipientProfileSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 
@@ -438,6 +439,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error saving profile:", error);
       res.status(500).json({ message: "Failed to save profile" });
+    }
+  });
+
+  // GET /api/recipients/:id/profile - Get recipient profile
+  app.get("/api/recipients/:id/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recipientId = req.params.id;
+      const profile = await storage.getRecipientProfile(recipientId, userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Recipient profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching recipient profile:", error);
+      res.status(500).json({ message: "Failed to fetch recipient profile" });
+    }
+  });
+
+  // POST /api/recipients/:id/profile - Create or update recipient profile
+  app.post("/api/recipients/:id/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recipientId = req.params.id;
+      const validatedData = insertRecipientProfileSchema.parse(req.body);
+      const profile = await storage.upsertRecipientProfile(recipientId, userId, validatedData);
+      res.json(profile);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid recipient profile data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error saving recipient profile:", error);
+      res.status(500).json({ message: "Failed to save recipient profile" });
     }
   });
 

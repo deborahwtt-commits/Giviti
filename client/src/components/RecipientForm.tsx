@@ -10,7 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { X, ChevronDown } from "lucide-react";
+import RecipientProfileQuestionnaire from "./RecipientProfileQuestionnaire";
 
 interface RecipientFormProps {
   initialData?: {
@@ -21,7 +27,7 @@ interface RecipientFormProps {
     relationship: string;
     interests: string[];
   };
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any, profile?: any) => void;
   onCancel: () => void;
 }
 
@@ -86,6 +92,8 @@ export default function RecipientForm({
     initialData?.interests || []
   );
   const [newInterest, setNewInterest] = useState("");
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [profileData, setProfileData] = useState<any>({});
 
   const handleAddInterest = (interest: string) => {
     if (interest && !interests.includes(interest)) {
@@ -111,7 +119,16 @@ export default function RecipientForm({
       interests,
     };
     console.log("Form submitted:", data);
-    onSubmit(data);
+    
+    // Check if any profile field is filled
+    const hasProfileData = Object.values(profileData).some(value => value);
+    const profile = hasProfileData ? { ...profileData, isCompleted: hasProfileData } : null;
+    
+    onSubmit(data, profile);
+  };
+
+  const handleProfileChange = (field: string, value: string) => {
+    setProfileData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -247,6 +264,46 @@ export default function RecipientForm({
           </Select>
         </div>
       </div>
+
+      <Collapsible
+        open={showQuestionnaire}
+        onOpenChange={setShowQuestionnaire}
+        className="space-y-4"
+      >
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full flex items-center justify-between"
+            data-testid="button-toggle-questionnaire"
+          >
+            <span className="font-medium">
+              Questionário Detalhado (Opcional)
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${
+                showQuestionnaire ? "rotate-180" : ""
+              }`}
+            />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 border border-border rounded-lg p-6">
+          <div className="space-y-2 mb-4">
+            <h3 className="font-semibold text-lg text-foreground">
+              Quem é essa pessoa sortuda?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Preencha o questionário abaixo para receber sugestões ainda mais
+              personalizadas. Todos os campos são opcionais e podem ser alterados
+              a qualquer momento.
+            </p>
+          </div>
+          <RecipientProfileQuestionnaire
+            formData={profileData}
+            onChange={handleProfileChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="flex gap-3 pt-4 border-t border-border">
         <Button

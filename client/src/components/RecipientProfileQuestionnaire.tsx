@@ -1,0 +1,522 @@
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+interface RecipientProfileQuestionnaireProps {
+  formData: {
+    ageRange?: string;
+    gender?: string;
+    zodiacSign?: string;
+    relationship?: string;
+    giftPreference?: string;
+    lifestyle?: string;
+    interestCategory?: string;
+    giftReceptionStyle?: string;
+    budgetRange?: string;
+    occasion?: string;
+  };
+  onChange: (field: string, value: string) => void;
+}
+
+export default function RecipientProfileQuestionnaire({
+  formData,
+  onChange,
+}: RecipientProfileQuestionnaireProps) {
+  return (
+    <div className="space-y-6">
+      {/* Question 1: Age Range */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          1. Qual é a faixa etária do presenteado?
+        </Label>
+        <RadioGroup
+          value={formData.ageRange || ""}
+          onValueChange={(value) => onChange("ageRange", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="até-3" id="age-0-3" />
+            <Label htmlFor="age-0-3" className="font-normal cursor-pointer">
+              Até 3 anos
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="4-12" id="age-4-12" />
+            <Label htmlFor="age-4-12" className="font-normal cursor-pointer">
+              De 4 a 12
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="13-17" id="age-13-17" />
+            <Label htmlFor="age-13-17" className="font-normal cursor-pointer">
+              De 13 a 17
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="18-24" id="age-18-24" />
+            <Label htmlFor="age-18-24" className="font-normal cursor-pointer">
+              18–24
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="25-34" id="age-25-34" />
+            <Label htmlFor="age-25-34" className="font-normal cursor-pointer">
+              25–34
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="35-44" id="age-35-44" />
+            <Label htmlFor="age-35-44" className="font-normal cursor-pointer">
+              35–44
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="45-54" id="age-45-54" />
+            <Label htmlFor="age-45-54" className="font-normal cursor-pointer">
+              45–54
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="55+" id="age-55plus" />
+            <Label htmlFor="age-55plus" className="font-normal cursor-pointer">
+              55+
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 2: Gender */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          2. Como essa pessoa se identifica?
+        </Label>
+        <RadioGroup
+          value={formData.gender || ""}
+          onValueChange={(value) => onChange("gender", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="mulher" id="gender-woman" />
+            <Label htmlFor="gender-woman" className="font-normal cursor-pointer">
+              Mulher
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="homem" id="gender-man" />
+            <Label htmlFor="gender-man" className="font-normal cursor-pointer">
+              Homem
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="nao-binarie" id="gender-nb" />
+            <Label htmlFor="gender-nb" className="font-normal cursor-pointer">
+              Não-binárie / Outro
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="prefiro-nao-informar" id="gender-pref-not" />
+            <Label htmlFor="gender-pref-not" className="font-normal cursor-pointer">
+              Prefiro não informar
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="nao-sei" id="gender-unknown" />
+            <Label htmlFor="gender-unknown" className="font-normal cursor-pointer">
+              Não sei
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 3: Zodiac Sign */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          3. Qual é o signo dela?
+          <span className="block text-sm font-normal text-muted-foreground mt-1">
+            (Se você não sabe, chute. O algoritmo gosta de astrologia.)
+          </span>
+        </Label>
+        <Select
+          value={formData.zodiacSign || ""}
+          onValueChange={(value) => onChange("zodiacSign", value)}
+        >
+          <SelectTrigger data-testid="select-profile-zodiac">
+            <SelectValue placeholder="Selecione o signo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="aries">Áries</SelectItem>
+            <SelectItem value="touro">Touro</SelectItem>
+            <SelectItem value="gemeos">Gêmeos</SelectItem>
+            <SelectItem value="cancer">Câncer</SelectItem>
+            <SelectItem value="leao">Leão</SelectItem>
+            <SelectItem value="virgem">Virgem</SelectItem>
+            <SelectItem value="libra">Libra</SelectItem>
+            <SelectItem value="escorpiao">Escorpião</SelectItem>
+            <SelectItem value="sagitario">Sagitário</SelectItem>
+            <SelectItem value="capricornio">Capricórnio</SelectItem>
+            <SelectItem value="aquario">Aquário</SelectItem>
+            <SelectItem value="peixes">Peixes</SelectItem>
+            <SelectItem value="nao-sei">Não sei</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Question 4: Relationship */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          4. Qual é a sua relação com essa pessoa?
+        </Label>
+        <RadioGroup
+          value={formData.relationship || ""}
+          onValueChange={(value) => onChange("relationship", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="par-romantico" id="rel-partner" />
+            <Label htmlFor="rel-partner" className="font-normal cursor-pointer">
+              Par romântico
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="filho" id="rel-child" />
+            <Label htmlFor="rel-child" className="font-normal cursor-pointer">
+              Filho(a)
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="pai" id="rel-father" />
+            <Label htmlFor="rel-father" className="font-normal cursor-pointer">
+              Pai
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="mae" id="rel-mother" />
+            <Label htmlFor="rel-mother" className="font-normal cursor-pointer">
+              Mãe
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="familiar" id="rel-family" />
+            <Label htmlFor="rel-family" className="font-normal cursor-pointer">
+              Familiar
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="amigo-proximo" id="rel-close-friend" />
+            <Label htmlFor="rel-close-friend" className="font-normal cursor-pointer">
+              Amigo(a) próximo(a)
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="colega-trabalho" id="rel-colleague" />
+            <Label htmlFor="rel-colleague" className="font-normal cursor-pointer">
+              Colega de trabalho
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="outro" id="rel-other" />
+            <Label htmlFor="rel-other" className="font-normal cursor-pointer">
+              Outro
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 5: Gift Preference */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          5. Que tipo de presente essa pessoa costuma gostar?
+        </Label>
+        <RadioGroup
+          value={formData.giftPreference || ""}
+          onValueChange={(value) => onChange("giftPreference", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="util-pratico" id="gift-practical" />
+            <Label htmlFor="gift-practical" className="font-normal cursor-pointer">
+              Algo útil e prático
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="criativo-diferente" id="gift-creative" />
+            <Label htmlFor="gift-creative" className="font-normal cursor-pointer">
+              Coisas criativas e diferentes
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="experiencias" id="gift-experiences" />
+            <Label htmlFor="gift-experiences" className="font-normal cursor-pointer">
+              Experiências (viagens, passeios, cursos)
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="emocional-simbolico" id="gift-emotional" />
+            <Label htmlFor="gift-emotional" className="font-normal cursor-pointer">
+              Algo com valor emocional ou simbólico
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="sofisticado-marca" id="gift-sophisticated" />
+            <Label htmlFor="gift-sophisticated" className="font-normal cursor-pointer">
+              Presentes sofisticados ou de marca
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="nao-sei" id="gift-unknown" />
+            <Label htmlFor="gift-unknown" className="font-normal cursor-pointer">
+              Não faço ideia — me salva, Giviti!
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 6: Lifestyle */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          6. Como você descreveria o estilo de vida dessa pessoa?
+        </Label>
+        <RadioGroup
+          value={formData.lifestyle || ""}
+          onValueChange={(value) => onChange("lifestyle", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="caseira" id="lifestyle-homebody" />
+            <Label htmlFor="lifestyle-homebody" className="font-normal cursor-pointer">
+              Caseira, fã de sofá e cobertor
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="aventureira" id="lifestyle-adventurous" />
+            <Label htmlFor="lifestyle-adventurous" className="font-normal cursor-pointer">
+              Aventureira, vive na rua, na trilha ou na estrada
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="estilosa" id="lifestyle-stylish" />
+            <Label htmlFor="lifestyle-stylish" className="font-normal cursor-pointer">
+              Estilosa e atualizada — tá sempre por dentro das tendências
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="cult" id="lifestyle-cultural" />
+            <Label htmlFor="lifestyle-cultural" className="font-normal cursor-pointer">
+              Cult — ama arte, leitura, música ou cinema de festival
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="workaholic" id="lifestyle-workaholic" />
+            <Label htmlFor="lifestyle-workaholic" className="font-normal cursor-pointer">
+              Workaholic que precisa de férias (mas não tira)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 7: Interest Category */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">7. Ela curte mais:</Label>
+        <RadioGroup
+          value={formData.interestCategory || ""}
+          onValueChange={(value) => onChange("interestCategory", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="tecnologia" id="interest-tech" />
+            <Label htmlFor="interest-tech" className="font-normal cursor-pointer">
+              Tecnologia e gadgets
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="decoracao" id="interest-decor" />
+            <Label htmlFor="interest-decor" className="font-normal cursor-pointer">
+              Decoração e design
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="moda" id="interest-fashion" />
+            <Label htmlFor="interest-fashion" className="font-normal cursor-pointer">
+              Moda e acessórios
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="comidas-bebidas" id="interest-food" />
+            <Label htmlFor="interest-food" className="font-normal cursor-pointer">
+              Comidas e bebidas
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="livros-papelaria" id="interest-books" />
+            <Label htmlFor="interest-books" className="font-normal cursor-pointer">
+              Livros e papelaria
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="autoestima" id="interest-wellness" />
+            <Label htmlFor="interest-wellness" className="font-normal cursor-pointer">
+              Autoestima (spa, beleza, bem-estar)
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="tudo" id="interest-all" />
+            <Label htmlFor="interest-all" className="font-normal cursor-pointer">
+              Tudo isso (complicou, hein!)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 8: Gift Reception Style */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          8. Essa pessoa gosta de receber presentes…
+        </Label>
+        <RadioGroup
+          value={formData.giftReceptionStyle || ""}
+          onValueChange={(value) => onChange("giftReceptionStyle", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="praticos" id="reception-practical" />
+            <Label htmlFor="reception-practical" className="font-normal cursor-pointer">
+              Práticos, que resolvem problemas
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="unicos" id="reception-unique" />
+            <Label htmlFor="reception-unique" className="font-normal cursor-pointer">
+              Únicos, que mostram que pensei nela
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="divertidos" id="reception-fun" />
+            <Label htmlFor="reception-fun" className="font-normal cursor-pointer">
+              Divertidos, que geram risadas
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="chiques" id="reception-fancy" />
+            <Label htmlFor="reception-fancy" className="font-normal cursor-pointer">
+              Chiques, que impressionam
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="experiencia" id="reception-experience" />
+            <Label htmlFor="reception-experience" className="font-normal cursor-pointer">
+              Em formato de experiência — ela não curte coisa física
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="nao-sei" id="reception-unknown" />
+            <Label htmlFor="reception-unknown" className="font-normal cursor-pointer">
+              Xi, não sei! Me ajude a acertar!
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 9: Budget Range */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          9. Quanto você pretende investir nesse presente?
+          <span className="block text-sm font-normal text-muted-foreground mt-1">
+            (Seja honesto — até o Giviti entende os boletos)
+          </span>
+        </Label>
+        <RadioGroup
+          value={formData.budgetRange || ""}
+          onValueChange={(value) => onChange("budgetRange", value)}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="gratis" id="budget-free" />
+            <Label htmlFor="budget-free" className="font-normal cursor-pointer">
+              R$ 0 – Me ajuda a achar um presente grátis!
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="ate-50" id="budget-50" />
+            <Label htmlFor="budget-50" className="font-normal cursor-pointer">
+              Até R$ 50
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="50-150" id="budget-50-150" />
+            <Label htmlFor="budget-50-150" className="font-normal cursor-pointer">
+              R$ 50 a R$ 150
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="150-300" id="budget-150-300" />
+            <Label htmlFor="budget-150-300" className="font-normal cursor-pointer">
+              R$ 150 a R$ 300
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="300-600" id="budget-300-600" />
+            <Label htmlFor="budget-300-600" className="font-normal cursor-pointer">
+              R$ 300 a R$ 600
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="acima-600" id="budget-600plus" />
+            <Label htmlFor="budget-600plus" className="font-normal cursor-pointer">
+              Acima de R$ 600
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="depende" id="budget-depends" />
+            <Label htmlFor="budget-depends" className="font-normal cursor-pointer">
+              Depende… se for perfeito, a gente parcela!
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="sem-limite" id="budget-unlimited" />
+            <Label htmlFor="budget-unlimited" className="font-normal cursor-pointer">
+              O céu é o limite! Quero impressionar
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {/* Question 10: Occasion */}
+      <div className="space-y-3">
+        <Label className="text-base font-medium">
+          10. Quando é a ocasião do presente?
+          <span className="block text-sm font-normal text-muted-foreground mt-1">
+            (Porque cada data pede um tipo de surpresa especial)
+          </span>
+        </Label>
+        <Select
+          value={formData.occasion || ""}
+          onValueChange={(value) => onChange("occasion", value)}
+        >
+          <SelectTrigger data-testid="select-profile-occasion">
+            <SelectValue placeholder="Selecione a ocasião" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="aniversario">Aniversário</SelectItem>
+            <SelectItem value="natal">Natal</SelectItem>
+            <SelectItem value="ano-novo">Ano Novo</SelectItem>
+            <SelectItem value="amigo-secreto">Amigo Secreto</SelectItem>
+            <SelectItem value="dia-namorados">Dia dos Namorados</SelectItem>
+            <SelectItem value="dia-maes">Dia das Mães</SelectItem>
+            <SelectItem value="dia-pais">Dia dos Pais</SelectItem>
+            <SelectItem value="dia-criancas">Dia das Crianças</SelectItem>
+            <SelectItem value="dia-mulher">Dia da Mulher</SelectItem>
+            <SelectItem value="dia-homem">Dia do Homem</SelectItem>
+            <SelectItem value="dia-professor">Dia do Professor</SelectItem>
+            <SelectItem value="dia-amigo">Dia do Amigo</SelectItem>
+            <SelectItem value="dia-secretaria">Dia da Secretária</SelectItem>
+            <SelectItem value="formatura">Formatura</SelectItem>
+            <SelectItem value="promocao">Promoção no trabalho</SelectItem>
+            <SelectItem value="bodas">Bodas ou aniversário de relacionamento</SelectItem>
+            <SelectItem value="despedida">Despedida / mudança de cidade</SelectItem>
+            <SelectItem value="bebe">Recém-nascido / chá de bebê</SelectItem>
+            <SelectItem value="recuperacao">Recuperação / superação</SelectItem>
+            <SelectItem value="so-porque-sim">"Só porque sim" — essa pessoa merece</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}

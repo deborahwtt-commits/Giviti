@@ -80,33 +80,6 @@ export default function Recipients() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       return await apiRequest(`/api/recipients/${id}`, "PUT", data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
-      toast({
-        title: "Sucesso!",
-        description: "Presenteado atualizado com sucesso.",
-      });
-      setShowForm(false);
-      setEditingRecipient(null);
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Sessão Expirada",
-          description: "Você foi desconectado. Redirecionando para login...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar presenteado. Tente novamente.",
-        variant: "destructive",
-      });
-    },
   });
 
   const deleteMutation = useMutation({
@@ -175,11 +148,75 @@ export default function Recipients() {
     }
   };
 
-  const handleSubmit = (data: any) => {
-    if (editingRecipient) {
-      updateMutation.mutate({ id: editingRecipient.id, data });
-    } else {
-      createMutation.mutate(data);
+  const handleSubmit = async (data: any, profile?: any) => {
+    try {
+      if (editingRecipient) {
+        // Update recipient first (await completion)
+        await updateMutation.mutateAsync({ id: editingRecipient.id, data });
+        
+        // Then update profile if provided
+        if (profile) {
+          await apiRequest(`/api/recipients/${editingRecipient.id}/profile`, "POST", profile);
+        }
+        
+        // If we got here, both operations succeeded
+        queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+        toast({
+          title: "Sucesso!",
+          description: profile ? "Presenteado e perfil atualizados com sucesso." : "Presenteado atualizado com sucesso.",
+        });
+      } else {
+        // Create recipient first
+        const newRecipient = await apiRequest("/api/recipients", "POST", data) as Recipient;
+        
+        // Then create profile if provided
+        if (profile && newRecipient?.id) {
+          try {
+            await apiRequest(`/api/recipients/${newRecipient.id}/profile`, "POST", profile);
+          } catch (profileError) {
+            console.error("Error saving recipient profile:", profileError);
+            // Still invalidate and close - recipient was created successfully
+            queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+            toast({
+              title: "Atenção",
+              description: "Presenteado criado, mas falha ao salvar perfil. Você pode editar para adicionar o perfil depois.",
+              variant: "destructive",
+            });
+            setShowForm(false);
+            setEditingRecipient(null);
+            return;
+          }
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+        toast({
+          title: "Sucesso!",
+          description: "Presenteado criado com sucesso.",
+        });
+      }
+      
+      setShowForm(false);
+      setEditingRecipient(null);
+    } catch (error) {
+      console.error("Error saving recipient:", error);
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar presenteado. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
