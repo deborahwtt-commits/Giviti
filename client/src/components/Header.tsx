@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Menu, X, Sun, Moon, LogOut } from "lucide-react";
+import { Gift, Menu, X, Sun, Moon, LogOut, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,6 +89,17 @@ export default function Header({
               )}
             </Button>
 
+            <Link href="/perfil">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex"
+                data-testid="button-profile"
+              >
+                <User className="w-4 h-4" />
+              </Button>
+            </Link>
+
             <Button
               variant="ghost"
               size="icon"
@@ -138,6 +149,16 @@ export default function Header({
                   )}
                 </Link>
               ))}
+              <Link href="/perfil" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start px-3"
+                  data-testid="button-mobile-profile"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Perfil
+                </Button>
+              </Link>
               <Button
                 variant="ghost"
                 className="w-full justify-start px-3"
