@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EventFormProps {
   isOpen: boolean;
@@ -43,7 +45,15 @@ export default function EventForm({
   const [eventName, setEventName] = useState("");
   const [eventType, setEventType] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [recipientId, setRecipientId] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+
+  const toggleRecipient = (recipientId: string) => {
+    setSelectedRecipients(prev =>
+      prev.includes(recipientId)
+        ? prev.filter(id => id !== recipientId)
+        : [...prev, recipientId]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,14 +61,14 @@ export default function EventForm({
       eventName,
       eventType,
       eventDate,
-      recipientId,
+      recipientIds: selectedRecipients,
     };
     console.log("Event form submitted:", data);
     onSubmit(data);
     setEventName("");
     setEventType("");
     setEventDate("");
-    setRecipientId("");
+    setSelectedRecipients([]);
   };
 
   return (
@@ -111,19 +121,38 @@ export default function EventForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="recipient">Presenteado</Label>
-            <Select value={recipientId} onValueChange={setRecipientId} required>
-              <SelectTrigger id="recipient" data-testid="select-recipient">
-                <SelectValue placeholder="Selecione o presenteado" />
-              </SelectTrigger>
-              <SelectContent>
-                {recipients.map((recipient) => (
-                  <SelectItem key={recipient.id} value={recipient.id}>
-                    {recipient.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Presenteados (opcional)</Label>
+            {recipients.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum presenteado cadastrado
+              </p>
+            ) : (
+              <ScrollArea className="h-40 rounded-md border p-3">
+                <div className="space-y-3">
+                  {recipients.map((recipient) => (
+                    <div key={recipient.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`recipient-${recipient.id}`}
+                        checked={selectedRecipients.includes(recipient.id)}
+                        onCheckedChange={() => toggleRecipient(recipient.id)}
+                        data-testid={`checkbox-recipient-${recipient.id}`}
+                      />
+                      <label
+                        htmlFor={`recipient-${recipient.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {recipient.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+            {selectedRecipients.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {selectedRecipients.length} presenteado{selectedRecipients.length > 1 ? 's' : ''} selecionado{selectedRecipients.length > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

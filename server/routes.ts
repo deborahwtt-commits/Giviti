@@ -153,17 +153,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/events", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const validatedData = insertEventSchema.parse(req.body);
+      const { recipientIds = [], ...eventData } = req.body;
+      const validatedData = insertEventSchema.parse(eventData);
       
-      // Verify that the recipient belongs to the user
-      const recipient = await storage.getRecipient(validatedData.recipientId, userId);
-      if (!recipient) {
-        return res.status(400).json({ 
-          message: "Invalid recipient ID or recipient does not belong to user" 
-        });
+      // Verify that all recipients belong to the user
+      if (recipientIds.length > 0) {
+        const userRecipients = await storage.getRecipients(userId);
+        const userRecipientIds = userRecipients.map(r => r.id);
+        const invalidIds = recipientIds.filter((id: string) => !userRecipientIds.includes(id));
+        
+        if (invalidIds.length > 0) {
+          return res.status(400).json({ 
+            message: "One or more recipient IDs are invalid or do not belong to user" 
+          });
+        }
       }
       
-      const newEvent = await storage.createEvent(userId, validatedData);
+      const newEvent = await storage.createEvent(userId, validatedData, recipientIds);
       res.status(201).json(newEvent);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -200,19 +206,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { id } = req.params;
-      const validatedData = insertEventSchema.partial().parse(req.body);
+      const { recipientIds, ...eventData } = req.body;
+      const validatedData = insertEventSchema.partial().parse(eventData);
       
-      // If recipientId is being updated, verify it belongs to the user
-      if (validatedData.recipientId) {
-        const recipient = await storage.getRecipient(validatedData.recipientId, userId);
-        if (!recipient) {
-          return res.status(400).json({ 
-            message: "Invalid recipient ID or recipient does not belong to user" 
-          });
+      // If recipientIds is being updated, verify they belong to the user
+      if (recipientIds !== undefined) {
+        if (recipientIds.length > 0) {
+          const userRecipients = await storage.getRecipients(userId);
+          const userRecipientIds = userRecipients.map(r => r.id);
+          const invalidIds = recipientIds.filter((rid: string) => !userRecipientIds.includes(rid));
+          
+          if (invalidIds.length > 0) {
+            return res.status(400).json({ 
+              message: "One or more recipient IDs are invalid or do not belong to user" 
+            });
+          }
         }
       }
       
-      const updated = await storage.updateEvent(id, userId, validatedData);
+      const updated = await storage.updateEvent(id, userId, validatedData, recipientIds);
       
       if (!updated) {
         return res.status(404).json({ message: "Event not found" });

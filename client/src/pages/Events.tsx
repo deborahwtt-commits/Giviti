@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import type { Event, Recipient } from "@shared/schema";
+import type { EventWithRecipients, Recipient } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 
 export default function Events() {
@@ -23,7 +23,7 @@ export default function Events() {
     queryKey: ["/api/recipients"],
   });
 
-  const { data: allEvents, isLoading: eventsLoading, error: eventsError } = useQuery<Event[]>({
+  const { data: allEvents, isLoading: eventsLoading, error: eventsError } = useQuery<EventWithRecipients[]>({
     queryKey: ["/api/events"],
   });
 
@@ -73,11 +73,6 @@ export default function Events() {
       });
     },
   });
-
-  const getRecipientName = (recipientId: string) => {
-    const recipient = recipients?.find(r => r.id === recipientId);
-    return recipient?.name || "Desconhecido";
-  };
 
   const calculateDaysUntil = (eventDate: string) => {
     const today = new Date();
@@ -171,7 +166,7 @@ export default function Events() {
                   <EventCard
                     key={event.id}
                     eventName={event.eventName || event.eventType}
-                    recipientName={getRecipientName(event.recipientId)}
+                    recipientNames={event.recipients.map(r => r.name)}
                     daysUntil={calculateDaysUntil(event.eventDate)}
                     date={formatEventDate(event.eventDate)}
                     onViewSuggestions={() => setLocation("/sugestoes")}
@@ -187,7 +182,7 @@ export default function Events() {
                     <EventCard
                       key={event.id}
                       eventName={event.eventName || event.eventType}
-                      recipientName={getRecipientName(event.recipientId)}
+                      recipientNames={event.recipients.map(r => r.name)}
                       daysUntil={calculateDaysUntil(event.eventDate)}
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
@@ -210,7 +205,7 @@ export default function Events() {
                     <EventCard
                       key={event.id}
                       eventName={event.eventName || event.eventType}
-                      recipientName={getRecipientName(event.recipientId)}
+                      recipientNames={event.recipients.map(r => r.name)}
                       daysUntil={calculateDaysUntil(event.eventDate)}
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}

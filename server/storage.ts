@@ -3,6 +3,7 @@ import {
   users,
   recipients,
   events,
+  eventRecipients,
   userGifts,
   giftSuggestions,
   userProfiles,
@@ -12,6 +13,8 @@ import {
   type InsertRecipient,
   type Event,
   type InsertEvent,
+  type EventWithRecipients,
+  type InsertEventRecipient,
   type UserGift,
   type InsertUserGift,
   type GiftSuggestion,
@@ -19,7 +22,7 @@ import {
   type InsertUserProfile,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, sql, inArray } from "drizzle-orm";
 
 // Storage interface with all CRUD operations
 export interface IStorage {
@@ -35,12 +38,12 @@ export interface IStorage {
   deleteRecipient(id: string, userId: string): Promise<boolean>;
 
   // Event operations
-  createEvent(userId: string, event: InsertEvent): Promise<Event>;
-  getEvents(userId: string): Promise<Event[]>;
-  getEvent(id: string, userId: string): Promise<Event | undefined>;
-  updateEvent(id: string, userId: string, event: Partial<InsertEvent>): Promise<Event | undefined>;
+  createEvent(userId: string, event: InsertEvent, recipientIds?: string[]): Promise<EventWithRecipients>;
+  getEvents(userId: string): Promise<EventWithRecipients[]>;
+  getEvent(id: string, userId: string): Promise<EventWithRecipients | undefined>;
+  updateEvent(id: string, userId: string, event: Partial<InsertEvent>, recipientIds?: string[]): Promise<EventWithRecipients | undefined>;
   deleteEvent(id: string, userId: string): Promise<boolean>;
-  getUpcomingEvents(userId: string, days?: number): Promise<Event[]>;
+  getUpcomingEvents(userId: string, days?: number): Promise<EventWithRecipients[]>;
 
   // UserGift operations
   createUserGift(userId: string, gift: InsertUserGift): Promise<UserGift>;
@@ -137,7 +140,7 @@ export class DatabaseStorage implements IStorage {
 
   // ========== Event Operations ==========
 
-  async createEvent(userId: string, event: InsertEvent): Promise<Event> {
+  async createEvent(userId: string, event: InsertEvent, recipientIds: string[] = []): Promise<EventWithRecipients> {
     const [newEvent] = await db
       .insert(events)
       .values({
@@ -145,30 +148,52 @@ export class DatabaseStorage implements IStorage {
         userId,
       })
       .returning();
-    return newEvent;
+
+    if (recipientIds.length > 0) {
+      await db.insert(eventRecipients).values(
+        recipientIds.map(recipientId => ({
+          eventId: newEvent.id,
+          recipientId,
+        }))
+      );
+    }
+
+    return this.getEvent(newEvent.id, userId) as Promise<EventWithRecipients>;
   }
 
-  async getEvents(userId: string): Promise<Event[]> {
-    return await db
+  async getEvents(userId: string): Promise<EventWithRecipients[]> {
+    const allEvents = await db
       .select()
       .from(events)
       .where(eq(events.userId, userId))
       .orderBy(events.eventDate);
+
+    return Promise.all(
+      allEvents.map(async (event) => {
+        const recipients = await this.getEventRecipients(event.id);
+        return { ...event, recipients };
+      })
+    );
   }
 
-  async getEvent(id: string, userId: string): Promise<Event | undefined> {
+  async getEvent(id: string, userId: string): Promise<EventWithRecipients | undefined> {
     const [event] = await db
       .select()
       .from(events)
       .where(and(eq(events.id, id), eq(events.userId, userId)));
-    return event;
+    
+    if (!event) return undefined;
+
+    const recipients = await this.getEventRecipients(event.id);
+    return { ...event, recipients };
   }
 
   async updateEvent(
     id: string,
     userId: string,
-    eventData: Partial<InsertEvent>
-  ): Promise<Event | undefined> {
+    eventData: Partial<InsertEvent>,
+    recipientIds?: string[]
+  ): Promise<EventWithRecipients | undefined> {
     const [updated] = await db
       .update(events)
       .set({
@@ -177,7 +202,23 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
-    return updated;
+
+    if (!updated) return undefined;
+
+    if (recipientIds !== undefined) {
+      await db.delete(eventRecipients).where(eq(eventRecipients.eventId, id));
+      
+      if (recipientIds.length > 0) {
+        await db.insert(eventRecipients).values(
+          recipientIds.map(recipientId => ({
+            eventId: id,
+            recipientId,
+          }))
+        );
+      }
+    }
+
+    return this.getEvent(id, userId);
   }
 
   async deleteEvent(id: string, userId: string): Promise<boolean> {
@@ -188,12 +229,12 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getUpcomingEvents(userId: string, days: number = 30): Promise<Event[]> {
+  async getUpcomingEvents(userId: string, days: number = 30): Promise<EventWithRecipients[]> {
     const today = new Date();
     const futureDate = new Date();
     futureDate.setDate(today.getDate() + days);
 
-    return await db
+    const upcomingEvents = await db
       .select()
       .from(events)
       .where(
@@ -203,6 +244,45 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(events.eventDate);
+
+    return Promise.all(
+      upcomingEvents.map(async (event) => {
+        const recipients = await this.getEventRecipients(event.id);
+        return { ...event, recipients };
+      })
+    );
+  }
+
+  private async getEventRecipients(eventId: string): Promise<Recipient[]> {
+    const eventRecipientRows = await db
+      .select()
+      .from(eventRecipients)
+      .where(eq(eventRecipients.eventId, eventId));
+
+    if (eventRecipientRows.length > 0) {
+      const recipientIds = eventRecipientRows.map(er => er.recipientId);
+      return await db
+        .select()
+        .from(recipients)
+        .where(inArray(recipients.id, recipientIds));
+    }
+
+    // Fallback: check if event has legacy recipientId
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.id, eventId));
+
+    if (event?.recipientId) {
+      const [recipient] = await db
+        .select()
+        .from(recipients)
+        .where(eq(recipients.id, event.recipientId));
+      
+      return recipient ? [recipient] : [];
+    }
+
+    return [];
   }
 
   // ========== UserGift Operations ==========

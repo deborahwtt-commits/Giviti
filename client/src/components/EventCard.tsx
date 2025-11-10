@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Gift } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface EventCardProps {
   eventName: string;
-  recipientName: string;
+  recipientNames: string[];
   daysUntil: number;
   date: string;
   onViewSuggestions: () => void;
@@ -12,11 +13,28 @@ interface EventCardProps {
 
 export default function EventCard({
   eventName,
-  recipientName,
+  recipientNames,
   daysUntil,
   date,
   onViewSuggestions,
 }: EventCardProps) {
+  const displayRecipients = () => {
+    if (recipientNames.length === 0) {
+      return <span className="text-muted-foreground italic">Sem presenteados</span>;
+    }
+    if (recipientNames.length === 1) {
+      return `Para ${recipientNames[0]}`;
+    }
+    if (recipientNames.length === 2) {
+      return `Para ${recipientNames[0]} e ${recipientNames[1]}`;
+    }
+    return (
+      <span>
+        Para {recipientNames[0]} e mais {recipientNames.length - 1} {recipientNames.length - 1 === 1 ? 'pessoa' : 'pessoas'}
+      </span>
+    );
+  };
+
   return (
     <Card className="p-6 hover-elevate">
       <div className="flex items-start gap-4">
@@ -29,7 +47,7 @@ export default function EventCard({
             {eventName}
           </h3>
           <p className="text-sm text-muted-foreground mb-2">
-            Para {recipientName}
+            {displayRecipients()}
           </p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
             <span>{date}</span>

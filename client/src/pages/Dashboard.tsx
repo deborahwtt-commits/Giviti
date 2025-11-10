@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
-import type { Event, Recipient, GiftSuggestion } from "@shared/schema";
+import type { EventWithRecipients, Recipient, GiftSuggestion } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 
 export default function Dashboard() {
@@ -33,7 +33,7 @@ export default function Dashboard() {
     queryKey: ["/api/recipients"],
   });
 
-  const { data: upcomingEvents, isLoading: eventsLoading, error: eventsError } = useQuery<Event[]>({
+  const { data: upcomingEvents, isLoading: eventsLoading, error: eventsError} = useQuery<EventWithRecipients[]>({
     queryKey: ["/api/events", { upcoming: "true" }],
   });
 
@@ -54,11 +54,6 @@ export default function Dashboard() {
       }, 500);
     }
   }, [statsError, recipientsError, eventsError, suggestionsError, toast]);
-
-  const getRecipientName = (recipientId: string) => {
-    const recipient = recipients?.find(r => r.id === recipientId);
-    return recipient?.name || "Desconhecido";
-  };
 
   const calculateDaysUntil = (eventDate: string) => {
     const today = new Date();
@@ -136,7 +131,7 @@ export default function Dashboard() {
                 <EventCard
                   key={event.id}
                   eventName={event.eventName || event.eventType}
-                  recipientName={getRecipientName(event.recipientId)}
+                  recipientNames={event.recipients.map(r => r.name)}
                   daysUntil={calculateDaysUntil(event.eventDate)}
                   date={formatEventDate(event.eventDate)}
                   onViewSuggestions={() => setLocation("/sugestoes")}

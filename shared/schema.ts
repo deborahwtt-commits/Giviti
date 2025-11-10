@@ -72,7 +72,6 @@ export const events = pgTable("events", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   recipientId: varchar("recipient_id")
-    .notNull()
     .references(() => recipients.id, { onDelete: "cascade" }),
   eventType: varchar("event_type").notNull(),
   eventName: varchar("event_name"),
@@ -84,12 +83,38 @@ export const events = pgTable("events", {
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   userId: true,
+  recipientId: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
+
+// Event Recipients junction table (many-to-many)
+export const eventRecipients = pgTable("event_recipients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  recipientId: varchar("recipient_id")
+    .notNull()
+    .references(() => recipients.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEventRecipientSchema = createInsertSchema(eventRecipients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEventRecipient = z.infer<typeof insertEventRecipientSchema>;
+export type EventRecipient = typeof eventRecipients.$inferSelect;
+
+// Extended event type with recipients array
+export type EventWithRecipients = Event & {
+  recipients: Recipient[];
+};
 
 // Gift suggestions table
 export const giftSuggestions = pgTable("gift_suggestions", {
