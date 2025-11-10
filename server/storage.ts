@@ -5,6 +5,7 @@ import {
   events,
   userGifts,
   giftSuggestions,
+  userProfiles,
   type User,
   type UpsertUser,
   type Recipient,
@@ -14,6 +15,8 @@ import {
   type UserGift,
   type InsertUserGift,
   type GiftSuggestion,
+  type UserProfile,
+  type InsertUserProfile,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql } from "drizzle-orm";
@@ -50,6 +53,10 @@ export interface IStorage {
   
   // Gift Suggestions
   getGiftSuggestions(filters?: { category?: string; minPrice?: number; maxPrice?: number; tags?: string[] }): Promise<GiftSuggestion[]>;
+  
+  // User Profile operations
+  getUserProfile(userId: string): Promise<UserProfile | undefined>;
+  upsertUserProfile(userId: string, profile: InsertUserProfile): Promise<UserProfile>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -330,6 +337,31 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  // ========== User Profile ==========
+
+  async getUserProfile(userId: string): Promise<UserProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    return profile;
+  }
+
+  async upsertUserProfile(userId: string, profileData: InsertUserProfile): Promise<UserProfile> {
+    const [profile] = await db
+      .insert(userProfiles)
+      .values({ ...profileData, userId })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: {
+          ...profileData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return profile;
   }
 }
 

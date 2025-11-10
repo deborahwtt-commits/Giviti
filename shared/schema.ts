@@ -142,3 +142,36 @@ export const insertUserGiftSchema = createInsertSchema(userGifts).omit({
 
 export type InsertUserGift = z.infer<typeof insertUserGiftSchema>;
 export type UserGift = typeof userGifts.$inferSelect;
+
+// User profiles (questionnaire responses)
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  ageRange: varchar("age_range"),
+  gender: varchar("gender"),
+  zodiacSign: varchar("zodiac_sign"),
+  giftPreference: varchar("gift_preference"),
+  freeTimeActivity: varchar("free_time_activity"),
+  musicalStyle: varchar("musical_style"),
+  monthlyGiftPreference: varchar("monthly_gift_preference"),
+  surpriseReaction: varchar("surprise_reaction"),
+  giftPriority: varchar("gift_priority"),
+  giftGivingStyle: varchar("gift_giving_style"),
+  specialTalent: varchar("special_talent"),
+  isCompleted: boolean("is_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+export type UserProfile = typeof userProfiles.$inferSelect;
