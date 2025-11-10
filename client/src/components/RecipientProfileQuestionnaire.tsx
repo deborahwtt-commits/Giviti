@@ -30,70 +30,10 @@ export default function RecipientProfileQuestionnaire({
 }: RecipientProfileQuestionnaireProps) {
   return (
     <div className="space-y-6">
-      {/* Question 1: Age Range */}
+      {/* Question 1: Gender */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          1. Qual é a faixa etária do presenteado?
-        </Label>
-        <RadioGroup
-          value={formData.ageRange || ""}
-          onValueChange={(value) => onChange("ageRange", value)}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="até-3" id="age-0-3" />
-            <Label htmlFor="age-0-3" className="font-normal cursor-pointer">
-              Até 3 anos
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="4-12" id="age-4-12" />
-            <Label htmlFor="age-4-12" className="font-normal cursor-pointer">
-              De 4 a 12
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="13-17" id="age-13-17" />
-            <Label htmlFor="age-13-17" className="font-normal cursor-pointer">
-              De 13 a 17
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="18-24" id="age-18-24" />
-            <Label htmlFor="age-18-24" className="font-normal cursor-pointer">
-              18–24
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="25-34" id="age-25-34" />
-            <Label htmlFor="age-25-34" className="font-normal cursor-pointer">
-              25–34
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="35-44" id="age-35-44" />
-            <Label htmlFor="age-35-44" className="font-normal cursor-pointer">
-              35–44
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="45-54" id="age-45-54" />
-            <Label htmlFor="age-45-54" className="font-normal cursor-pointer">
-              45–54
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="55+" id="age-55plus" />
-            <Label htmlFor="age-55plus" className="font-normal cursor-pointer">
-              55+
-            </Label>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Question 2: Gender */}
-      <div className="space-y-3">
-        <Label className="text-base font-medium">
-          2. Como essa pessoa se identifica?
+          1. Como essa pessoa se identifica?
         </Label>
         <RadioGroup
           value={formData.gender || ""}
@@ -132,10 +72,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 3: Zodiac Sign */}
+      {/* Question 2: Zodiac Sign */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          3. Qual é o signo dela?
+          2. Qual é o signo dela?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Se você não sabe, chute. O algoritmo gosta de astrologia.)
           </span>
@@ -165,70 +105,10 @@ export default function RecipientProfileQuestionnaire({
         </Select>
       </div>
 
-      {/* Question 4: Relationship */}
+      {/* Question 3: Gift Preference */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          4. Qual é a sua relação com essa pessoa?
-        </Label>
-        <RadioGroup
-          value={formData.relationship || ""}
-          onValueChange={(value) => onChange("relationship", value)}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="par-romantico" id="rel-partner" />
-            <Label htmlFor="rel-partner" className="font-normal cursor-pointer">
-              Par romântico
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="filho" id="rel-child" />
-            <Label htmlFor="rel-child" className="font-normal cursor-pointer">
-              Filho(a)
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="pai" id="rel-father" />
-            <Label htmlFor="rel-father" className="font-normal cursor-pointer">
-              Pai
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="mae" id="rel-mother" />
-            <Label htmlFor="rel-mother" className="font-normal cursor-pointer">
-              Mãe
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="familiar" id="rel-family" />
-            <Label htmlFor="rel-family" className="font-normal cursor-pointer">
-              Familiar
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="amigo-proximo" id="rel-close-friend" />
-            <Label htmlFor="rel-close-friend" className="font-normal cursor-pointer">
-              Amigo(a) próximo(a)
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="colega-trabalho" id="rel-colleague" />
-            <Label htmlFor="rel-colleague" className="font-normal cursor-pointer">
-              Colega de trabalho
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="outro" id="rel-other" />
-            <Label htmlFor="rel-other" className="font-normal cursor-pointer">
-              Outro
-            </Label>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Question 5: Gift Preference */}
-      <div className="space-y-3">
-        <Label className="text-base font-medium">
-          5. Que tipo de presente essa pessoa costuma gostar?
+          3. Que tipo de presente essa pessoa costuma gostar?
         </Label>
         <RadioGroup
           value={formData.giftPreference || ""}
@@ -273,10 +153,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 6: Lifestyle */}
+      {/* Question 4: Lifestyle */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          6. Como você descreveria o estilo de vida dessa pessoa?
+          4. Como você descreveria o estilo de vida dessa pessoa?
         </Label>
         <RadioGroup
           value={formData.lifestyle || ""}
@@ -315,9 +195,9 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 7: Interest Category */}
+      {/* Question 5: Interest Category */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">7. Ela curte mais:</Label>
+        <Label className="text-base font-medium">5. Ela curte mais:</Label>
         <RadioGroup
           value={formData.interestCategory || ""}
           onValueChange={(value) => onChange("interestCategory", value)}
@@ -367,10 +247,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 8: Gift Reception Style */}
+      {/* Question 6: Gift Reception Style */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          8. Essa pessoa gosta de receber presentes…
+          6. Essa pessoa gosta de receber presentes…
         </Label>
         <RadioGroup
           value={formData.giftReceptionStyle || ""}
@@ -415,10 +295,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 9: Budget Range */}
+      {/* Question 7: Budget Range */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          9. Quanto você pretende investir nesse presente?
+          7. Quanto você pretende investir nesse presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Seja honesto — até o Giviti entende os boletos)
           </span>
@@ -478,10 +358,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 10: Occasion */}
+      {/* Question 8: Occasion */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          10. Quando é a ocasião do presente?
+          8. Quando é a ocasião do presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Porque cada data pede um tipo de surpresa especial)
           </span>

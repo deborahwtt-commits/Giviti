@@ -183,26 +183,6 @@ export default function RecipientForm({
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-semibold text-lg text-foreground">Personalidade</h3>
-
-        <div className="space-y-2">
-          <Label htmlFor="zodiacSign">Signo</Label>
-          <Select value={zodiacSign} onValueChange={setZodiacSign}>
-            <SelectTrigger id="zodiacSign" data-testid="select-zodiac">
-              <SelectValue placeholder="Selecione o signo" />
-            </SelectTrigger>
-            <SelectContent>
-              {zodiacSigns.map((sign) => (
-                <SelectItem key={sign} value={sign}>
-                  {sign}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-4">
         <h3 className="font-semibold text-lg text-foreground">Interesses</h3>
 
         <div className="space-y-2">
