@@ -1,4 +1,4 @@
-// API routes for Giftly - Following Replit Auth blueprint
+// API routes for Giviti - Following Replit Auth blueprint
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";

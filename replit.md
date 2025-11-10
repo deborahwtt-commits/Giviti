@@ -1,8 +1,8 @@
-# Giftly - Intelligent Gift Suggestion App
+# Giviti - Intelligent Gift Suggestion App
 
 ## Overview
 
-Giftly is a web-based MVP application designed to help users discover personalized gift suggestions for the important people in their lives. The application focuses on simplifying the gift-giving experience by managing recipient information, tracking events, and providing curated gift recommendations based on personal preferences, occasions, and budgets.
+Giviti is a web-based MVP application designed to help users discover personalized gift suggestions for the important people in their lives. The application focuses on simplifying the gift-giving experience by managing recipient information, tracking events, and providing curated gift recommendations based on personal preferences, occasions, and budgets.
 
 **Core Purpose**: Never forget an important date and always find the perfect gift through intelligent, personalized suggestions.
 

@@ -1,4 +1,4 @@
-// Storage layer for Giftly - Following Replit Auth blueprint
+// Storage layer for Giviti - Following Replit Auth blueprint
 import {
   users,
   recipients,

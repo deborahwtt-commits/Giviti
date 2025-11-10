@@ -1,4 +1,4 @@
-// Database schema for Giftly - includes Replit Auth integration
+// Database schema for Giviti - includes Replit Auth integration
 import { sql } from "drizzle-orm";
 import {
   pgTable,

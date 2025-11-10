@@ -1,4 +1,4 @@
-# Giftly MVP - Design Guidelines
+# Giviti MVP - Design Guidelines
 
 ## Design Approach
 

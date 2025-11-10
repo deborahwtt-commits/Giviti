@@ -24,7 +24,7 @@ export default function Landing() {
           </div>
 
           <h1 className="font-heading font-bold text-5xl md:text-6xl lg:text-7xl text-white mb-6">
-            Giftly - Presentes Perfeitos, Sempre
+            Giviti - Presentes Perfeitos, Sempre
           </h1>
 
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
@@ -133,7 +133,7 @@ export default function Landing() {
 
       <footer className="py-8 px-4 md:px-6 border-t border-border">
         <div className="max-w-7xl mx-auto text-center text-sm text-muted-foreground">
-          <p>© 2024 Giftly. Presentes Perfeitos, Sempre.</p>
+          <p>© 2024 Giviti. Presentes Perfeitos, Sempre.</p>
         </div>
       </footer>
     </div>
