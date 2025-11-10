@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import GiftCard from "@/components/GiftCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -12,12 +11,95 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { SlidersHorizontal, X, Gift } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { GiftSuggestion, Recipient } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
+
+interface CompactGiftCardProps {
+  gift: GiftSuggestion;
+  formatPriceRange: (min: number, max: number) => string;
+  toast: any;
+}
+
+function CompactGiftCard({ gift, formatPriceRange, toast }: CompactGiftCardProps) {
+  const [favorite, setFavorite] = useState(false);
+  const [purchased, setPurchased] = useState(false);
+
+  return (
+    <Card className="overflow-hidden group hover-elevate" data-testid={`card-suggestion-${gift.id}`}>
+      <div className="relative aspect-square bg-muted">
+        <img
+          src={gift.imageUrl}
+          alt={gift.name}
+          className="w-full h-full object-cover"
+        />
+        
+        <button
+          onClick={() => setFavorite(!favorite)}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
+            favorite
+              ? "bg-primary text-primary-foreground"
+              : "bg-background/80 text-foreground hover-elevate"
+          }`}
+          data-testid={`button-favorite-${gift.id}`}
+          aria-label="Favoritar"
+        >
+          <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
+        </button>
+
+        <div className="absolute bottom-2 left-2">
+          <div className="flex items-center gap-1.5">
+            <Checkbox
+              checked={purchased}
+              onCheckedChange={(checked) => setPurchased(checked as boolean)}
+              id={`purchased-${gift.id}`}
+              data-testid={`checkbox-purchased-${gift.id}`}
+              className="bg-background h-4 w-4"
+            />
+            <label
+              htmlFor={`purchased-${gift.id}`}
+              className="text-xs font-medium text-background bg-foreground/90 px-1.5 py-0.5 rounded cursor-pointer"
+            >
+              Comprado
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-3">
+        <Badge variant="secondary" className="text-xs mb-2">
+          {formatPriceRange(gift.priceMin, gift.priceMax)}
+        </Badge>
+        <h3 className="font-semibold text-sm text-foreground mb-1 line-clamp-2">
+          {gift.name}
+        </h3>
+        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+          {gift.description}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs"
+          onClick={() => {
+            toast({
+              title: gift.name,
+              description: "Funcionalidade de detalhes em breve!",
+            });
+          }}
+          data-testid={`button-view-details-${gift.id}`}
+        >
+          <ExternalLink className="w-3 h-3 mr-1" />
+          Ver Detalhes
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 export default function Suggestions() {
   const [showFilters, setShowFilters] = useState(false);
@@ -248,24 +330,37 @@ export default function Suggestions() {
                 <div className="mb-4 text-sm text-muted-foreground">
                   Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
                 </div>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {visibleSuggestions.map((gift) => (
-                    <GiftCard
-                      key={gift.id}
-                      id={gift.id}
-                      name={gift.name}
-                      description={gift.description}
-                      imageUrl={gift.imageUrl}
-                      priceRange={formatPriceRange(gift.priceMin, gift.priceMax)}
-                      onViewDetails={() => {
-                        toast({
-                          title: gift.name,
-                          description: "Funcionalidade de detalhes em breve!",
-                        });
-                      }}
-                    />
-                  ))}
-                </div>
+                {selectedRecipientData ? (
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                        <Gift className="w-5 h-5 text-primary" />
+                        <h2 className="font-semibold text-lg">Para: {selectedRecipientData.name}</h2>
+                      </div>
+                      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        {visibleSuggestions.map((gift) => (
+                          <CompactGiftCard
+                            key={gift.id}
+                            gift={gift}
+                            formatPriceRange={formatPriceRange}
+                            toast={toast}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {visibleSuggestions.map((gift) => (
+                      <CompactGiftCard
+                        key={gift.id}
+                        gift={gift}
+                        formatPriceRange={formatPriceRange}
+                        toast={toast}
+                      />
+                    ))}
+                  </div>
+                )}
                 {hasMoreSuggestions && (
                   <div className="flex justify-center mt-8">
                     <Button 
