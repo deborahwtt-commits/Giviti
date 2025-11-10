@@ -80,3 +80,30 @@ Preferred communication style: Simple, everyday language.
 - "Ver mais sugestões" button appears/disappears appropriately
 - Filter clear resets all filters and pagination
 - Counter updates correctly with filter changes
+
+### Compact Suggestions Layout (November 10, 2025)
+✅ **Implemented:**
+- **Compact Card Design**: Smaller cards to fit 5 per row on extra-large screens
+  - Responsive grid: 2 columns (mobile) → 3 (md) → 4 (lg) → 5 (xl)
+  - Smaller padding (p-3), fonts (text-xs/text-sm), and interactive elements
+  - Maintained all functionality: favorite button + purchased checkbox + details button
+- **Recipient Grouping Header**: When a specific recipient is selected, displays "Para: [Nome]" with gift icon and border separator
+- **Preserved Interactive Features**:
+  - Heart button for favorites (top-right, 7x7px, toggles state)
+  - "Comprado" checkbox (bottom-left, 4x4px with compact label)
+  - "Ver Detalhes" button with ExternalLink icon
+  - All elements have proper data-testid attributes
+
+**Technical Implementation:**
+- Created CompactGiftCard component with local state management
+- Grid layout: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`
+- Smaller gaps and padding for denser display
+- All cards maintain hover-elevate interaction
+
+**E2E Testing:** ✅ Passed
+- 5-column layout renders correctly on XL screens
+- Favorite button toggles state visually (filled/unfilled heart)
+- Purchased checkbox works correctly
+- Pagination loads 5 compact cards per click
+- All interactive features present on all cards
+- Recipient header displays correctly when filtering
