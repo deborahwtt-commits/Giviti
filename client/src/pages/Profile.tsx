@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,10 +52,16 @@ export default function Profile() {
     },
   });
 
-  const { register, handleSubmit, watch, setValue } = useForm<ProfileFormData>({
+  const { register, handleSubmit, watch, setValue, reset } = useForm<ProfileFormData>({
     resolver: zodResolver(insertUserProfileSchema),
-    defaultValues: profile || {},
+    defaultValues: {},
   });
+
+  useEffect(() => {
+    if (profile) {
+      reset(profile);
+    }
+  }, [profile, reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
