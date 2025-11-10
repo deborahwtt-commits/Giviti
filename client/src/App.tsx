@@ -12,6 +12,7 @@ import Recipients from "@/pages/Recipients";
 import Events from "@/pages/Events";
 import Suggestions from "@/pages/Suggestions";
 import GiftManagement from "@/pages/GiftManagement";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedApp() {
@@ -50,6 +51,7 @@ function AuthenticatedApp() {
         <Route path="/eventos" component={Events} />
         <Route path="/sugestoes" component={Suggestions} />
         <Route path="/presentes" component={GiftManagement} />
+        <Route path="/perfil" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </div>
