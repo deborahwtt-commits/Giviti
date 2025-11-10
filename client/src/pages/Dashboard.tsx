@@ -8,6 +8,7 @@ import DashboardHero from "@/components/DashboardHero";
 import EventCard from "@/components/EventCard";
 import GiftCard from "@/components/GiftCard";
 import EmptyState from "@/components/EmptyState";
+import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
@@ -89,6 +90,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <ProfileOnboardingModal />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-12">
         <DashboardHero
           userName={userName}
