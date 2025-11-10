@@ -1,0 +1,250 @@
+Quem é essa pessoa sortuda? (Perfil do presenteado)
+1. Qual é a faixa etária do presenteado?
+() Até 3 anos
+() De 4 a 12
+() De 13 a 17
+( ) 18–24
+
+
+( ) 25–34
+
+
+( ) 35–44
+
+
+( ) 45–54
+
+
+( ) 55+
+
+
+2. Como essa pessoa se identifica?
+( ) Mulher
+
+
+( ) Homem
+
+
+( ) Não-binárie / Outro
+
+
+( ) Prefiro não informar
+
+
+( ) Não sei
+3. Qual é o signo dela?
+(Se você não sabe, chute. O algoritmo gosta de astrologia.)
+( ) Áries
+
+
+( ) Touro
+
+
+( ) Gêmeos
+
+
+( ) Câncer
+
+
+( ) Leão
+
+
+( ) Virgem
+
+
+( ) Libra
+
+
+( ) Escorpião
+
+
+( ) Sagitário
+
+
+( ) Capricórnio
+
+
+( ) Aquário
+
+
+( ) Peixes
+
+
+( ) Não sei
+
+
+4. Qual é a sua relação com essa pessoa?
+( ) Par romântico
+() Filho(a)
+() Pai
+() Mãe
+
+
+( ) Familiar
+
+
+( ) Amigo(a) próximo(a)
+
+
+( ) Colega de trabalho
+
+
+( ) Outro
+
+
+5. Que tipo de presente essa pessoa costuma gostar?
+( ) Algo útil e prático
+
+
+( ) Coisas criativas e diferentes
+
+
+( ) Experiências (viagens, passeios, cursos)
+
+
+( ) Algo com valor emocional ou simbólico
+
+
+( ) Presentes sofisticados ou de marca
+
+
+( ) Não faço ideia — me salva, Giviti!
+6. Como você descreveria o estilo de vida dessa pessoa?
+( ) Caseira, fã de sofá e cobertor
+
+
+( ) Aventureira, vive na rua, na trilha ou na estrada
+
+
+( ) Estilosa e atualizada — tá sempre por dentro das tendências
+
+
+( ) Cult — ama arte, leitura, música ou cinema de festival
+
+
+( ) Workaholic que precisa de férias (mas não tira)
+
+
+7. Ela curte mais:
+( ) Tecnologia e gadgets
+
+
+( ) Decoração e design
+
+
+( ) Moda e acessórios
+
+
+( ) Comidas e bebidas
+
+
+( ) Livros e papelaria
+
+
+( ) Autoestima (spa, beleza, bem-estar)
+
+
+( ) Tudo isso (complicou, hein!)
+
+
+8. Essa pessoa gosta de receber presentes…
+( ) Práticos, que resolvem problemas
+
+
+( ) Únicos, que mostram que pensei nela
+
+
+( ) Divertidos, que geram risadas
+
+
+( ) Chiques, que impressionam
+
+
+( ) Em formato de experiência — ela não curte coisa física
+( ) Xi, não sei! Me ajude a acertar!
+
+
+9. Quanto você pretende investir nesse presente?
+(Seja honesto — até o Giviti entende os boletos)
+( ) R$ 0 – Me ajuda a achar um presente grátis!
+
+
+( ) Até R$ 50
+
+
+( ) R$ 50 a R$ 150
+
+
+( ) R$ 150 a R$ 300
+
+
+( ) R$ 300 a R$ 600
+
+
+( ) Acima de R$ 600
+
+
+( ) Depende… se for perfeito, a gente parcela!
+( ) O céu é o limite! Quero impressionar
+
+
+10. Quando é a ocasião do presente?
+(Porque cada data pede um tipo de surpresa especial)
+( ) Aniversário
+
+
+( ) Natal
+
+
+( ) Ano Novo
+
+
+( ) Amigo Secreto
+
+
+( ) Dia dos Namorados
+
+
+( ) Dia das Mães
+
+
+( ) Dia dos Pais
+
+
+( ) Dia das Crianças
+
+
+( ) Dia da Mulher
+
+
+( ) Dia do Homem
+
+
+( ) Dia do Professor
+
+
+( ) Dia do Amigo
+
+
+( ) Dia da Secretária
+
+
+( ) Formatura
+
+
+( ) Promoção no trabalho
+
+
+( ) Bodas ou aniversário de relacionamento
+
+
+( ) Despedida / mudança de cidade
+
+
+( ) Recém-nascido / chá de bebê
+
+
+( ) Recuperação / superação
+
+
+( ) “Só porque sim” — essa pessoa merece
