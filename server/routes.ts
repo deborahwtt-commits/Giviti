@@ -7,6 +7,7 @@ import {
   insertRecipientSchema,
   insertEventSchema,
   insertUserGiftSchema,
+  insertUserProfileSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 
@@ -387,6 +388,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching gift suggestions:", error);
       res.status(500).json({ message: "Failed to fetch gift suggestions" });
+    }
+  });
+
+  // ========== User Profile Routes ==========
+
+  // GET /api/profile - Get user profile
+  app.get("/api/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getUserProfile(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // POST /api/profile - Create or update user profile
+  app.post("/api/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertUserProfileSchema.parse(req.body);
+      const profile = await storage.upsertUserProfile(userId, validatedData);
+      res.json(profile);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid profile data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error saving profile:", error);
+      res.status(500).json({ message: "Failed to save profile" });
     }
   });
 
