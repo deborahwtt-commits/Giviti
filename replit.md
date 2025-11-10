@@ -41,6 +41,7 @@ Preferred communication style: Simple, everyday language.
 **Key Pages**:
 - Landing: Marketing page with hero section and feature highlights
 - Dashboard: Overview with statistics, upcoming events, and gift suggestions
+- Profile: 11-question personality questionnaire for personalized recommendations
 - Recipients: Manage gift recipients (presenteados)
 - Events: Track important dates and occasions
 - Suggestions: Browse and filter gift recommendations
@@ -56,6 +57,7 @@ Preferred communication style: Simple, everyday language.
 
 **API Structure**:
 - `/api/auth/*` - Authentication endpoints (Replit Auth integration)
+- `/api/profile` - User profile management (GET/POST for questionnaire)
 - `/api/recipients` - CRUD operations for gift recipients
 - `/api/events` - Event management with filtering
 - `/api/suggestions` - Gift suggestion retrieval
@@ -82,6 +84,7 @@ Preferred communication style: Simple, everyday language.
 
 **Schema Design**:
 - `users` - User profiles (firstName, lastName, email, profileImageUrl)
+- `userProfiles` - User personality questionnaire (11 fun questions: ageRange, gender, zodiacSign, giftPreference, freeTimeActivity, musicalStyle, monthlyGiftPreference, surpriseReaction, giftPriority, giftGivingStyle, specialTalent, isCompleted)
 - `recipients` - Gift recipients with name, age (required), gender/zodiacSign/relationship (optional), interests array
 - `events` - Important dates linked to recipients with eventType, eventName, eventDate
 - `userGifts` - Saved/purchased gifts with metadata
@@ -89,6 +92,7 @@ Preferred communication style: Simple, everyday language.
 - `sessions` - Express session storage (required for Replit Auth)
 
 **Key Relationships**:
+- Users → UserProfiles (one-to-one)
 - Users → Recipients (one-to-many)
 - Recipients → Events (one-to-many)
 - Users → UserGifts (one-to-many)
@@ -145,6 +149,31 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes & Fixes (November 2025)
 
+### User Profile Questionnaire Feature (November 10, 2025)
+✅ **Implemented:**
+- Database table `userProfiles` with 11 personality fields
+- Backend API endpoints GET/POST `/api/profile`
+- Profile page at `/perfil` with 11 fun personality questions
+- ProfileOnboardingModal shown on first access with "Fazer mais tarde" option
+- Profile link in header (desktop and mobile navigation)
+- Form data persistence and pre-filling using React Hook Form reset()
+- Integration with authentication system and proper error handling
+
+**Questionnaire Fields:**
+1. Age Range (5 options)
+2. Gender Identity (4 options)
+3. Zodiac Sign (12 options)
+4. Gift Preference (6 creative options)
+5. Free Time Activity (5 humorous options)
+6. Musical Style (5 personality-based options)
+7. Monthly Gift Preference (6 options)
+8. Surprise Reaction (4 options)
+9. Gift Priority (5 options)
+10. Gift Giving Style (5 options)
+11. Special Talent (8 options)
+
+**E2E Testing:** ✅ Passed - Modal appears on first access, form saves correctly, values persist on return, modal doesn't reappear after completion
+
 ### Critical Fixes Applied
 1. **apiRequest Parameter Order**: Fixed from (method, url, data) to (url, method, data) to match usage patterns
 2. **Recipients Schema**: Made gender, zodiacSign, and relationship fields optional (nullable) for better UX
@@ -154,10 +183,12 @@ Preferred communication style: Simple, everyday language.
 6. **Query Caching**: Changed staleTime from Infinity to 0 for fresh data on navigation
 7. **401 Error Handling**: All protected pages now properly handle session expiration with toast notifications and redirect
 8. **Cache Invalidation**: Stats queries properly invalidated after recipient/event mutations
+9. **Profile Form Reset**: Fixed form pre-filling by using useEffect + reset() when profile data loads
 
 ### E2E Testing Results
 ✅ **All Core Flows Verified:**
 - OIDC authentication and login
+- Profile questionnaire onboarding and completion
 - Create recipient with interests
 - Create event with future date
 - Filter suggestions by category
@@ -172,3 +203,4 @@ Preferred communication style: Simple, everyday language.
 - Loading states and empty states throughout
 - 20 gift suggestions seeded for testing
 - Database schema stable and tested
+- User profile questionnaire fully functional
