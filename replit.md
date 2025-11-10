@@ -86,7 +86,8 @@ Preferred communication style: Simple, everyday language.
 - `users` - User profiles (firstName, lastName, email, profileImageUrl)
 - `userProfiles` - User personality questionnaire (11 fun questions: ageRange, gender, zodiacSign, giftPreference, freeTimeActivity, musicalStyle, monthlyGiftPreference, surpriseReaction, giftPriority, giftGivingStyle, specialTalent, isCompleted)
 - `recipients` - Gift recipients with name, age (required), gender/zodiacSign/relationship (optional), interests array
-- `events` - Important dates linked to recipients with eventType, eventName, eventDate
+- `events` - Important dates with eventType, eventName, eventDate, recipientId (nullable, legacy for backward compatibility)
+- `eventRecipients` - Junction table for many-to-many event-recipient relationships (eventId, recipientId)
 - `userGifts` - Saved/purchased gifts with metadata
 - `giftSuggestions` - Pre-seeded gift catalog (20 items) with tags and categories
 - `sessions` - Express session storage (required for Replit Auth)
@@ -94,7 +95,7 @@ Preferred communication style: Simple, everyday language.
 **Key Relationships**:
 - Users → UserProfiles (one-to-one)
 - Users → Recipients (one-to-many)
-- Recipients → Events (one-to-many)
+- Events ↔ Recipients (many-to-many via eventRecipients junction table)
 - Users → UserGifts (one-to-many)
 - UserGifts → GiftSuggestions (many-to-one reference)
 
@@ -148,6 +149,33 @@ Preferred communication style: Simple, everyday language.
 - Session storage in PostgreSQL (connect-pg-simple)
 
 ## Recent Changes & Fixes (November 2025)
+
+### Multi-Recipient Events Feature (November 10, 2025)
+✅ **Implemented:**
+- Junction table `eventRecipients` for many-to-many event-recipient relationships
+- Events now support optional selection of zero, one, or multiple recipients
+- Backend API updated to handle `recipientIds: string[]` parameter (optional)
+- EventForm redesigned with multi-select checkboxes in ScrollArea
+- EventCard displays recipients with smart formatting:
+  - Empty: "Sem presenteados"
+  - 1 recipient: "Para {name}"
+  - 2 recipients: "Para {name1} e {name2}"
+  - 3+ recipients: "Para {name1} e mais N pessoas"
+- Backward compatibility via fallback logic for legacy `recipientId` column
+- Storage layer returns `EventWithRecipients` type with populated `recipients[]` array
+
+**Architecture:**
+- Junction table approach ensures proper normalization and future scalability
+- Backend validates that all recipientIds belong to the user for security
+- Fallback mechanism reads from legacy recipientId when junction table is empty
+- Frontend query types updated to `EventWithRecipients[]` throughout
+
+**E2E Testing:** ✅ Passed
+- Event creation with zero recipients (optional selection verified)
+- Event creation with single recipient
+- Event creation with multiple recipients (2 selected)
+- Correct display on Events page and Dashboard
+- All recipient names rendered correctly in event cards
 
 ### User Profile Questionnaire Feature (November 10, 2025)
 ✅ **Implemented:**
