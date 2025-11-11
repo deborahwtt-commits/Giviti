@@ -164,6 +164,36 @@ export default function Suggestions() {
     return matchesCategory && matchesBudget && matchesRecipient;
   }) || [];
 
+  // Group suggestions by recipient when "Todos" is selected
+  const groupedByRecipient = !selectedRecipient || selectedRecipient === "all"
+    ? (recipients || []).map(recipient => {
+        const recipientInterests = recipient.interests || [];
+        const matchingSuggestions = (allSuggestions || []).filter((suggestion) => {
+          const matchesCategory = !category || category === "all" || suggestion.category === category;
+          const matchesBudget = suggestion.priceMin <= budget[0];
+          
+          let matchesRecipient = true;
+          const suggestionTags = suggestion.tags || [];
+          
+          if (recipientInterests.length > 0) {
+            matchesRecipient = recipientInterests.some(interest => 
+              suggestionTags.some(tag => 
+                tag.toLowerCase().includes(interest.toLowerCase()) ||
+                interest.toLowerCase().includes(tag.toLowerCase())
+              ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
+            );
+          }
+          
+          return matchesCategory && matchesBudget && matchesRecipient;
+        });
+        
+        return {
+          recipient,
+          suggestions: matchingSuggestions.slice(0, 5) // Show up to 5 per recipient
+        };
+      }).filter(group => group.suggestions.length > 0)
+    : [];
+
   const visibleSuggestions = filteredSuggestions.slice(0, visibleCount);
   const hasMoreSuggestions = filteredSuggestions.length > visibleCount;
 
@@ -325,12 +355,13 @@ export default function Suggestions() {
           </aside>
 
           <div className="flex-1">
-            {filteredSuggestions.length > 0 ? (
-              <>
-                <div className="mb-4 text-sm text-muted-foreground">
-                  Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
-                </div>
-                {selectedRecipientData ? (
+            {selectedRecipientData ? (
+              // Single recipient selected
+              filteredSuggestions.length > 0 ? (
+                <>
+                  <div className="mb-4 text-sm text-muted-foreground">
+                    Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
+                  </div>
                   <div className="space-y-6">
                     <div>
                       <div className="flex items-center gap-2 mb-4 pb-2 border-b">
@@ -349,18 +380,73 @@ export default function Suggestions() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {visibleSuggestions.map((gift) => (
-                      <CompactGiftCard
-                        key={gift.id}
-                        gift={gift}
-                        formatPriceRange={formatPriceRange}
-                        toast={toast}
-                      />
-                    ))}
+                  {hasMoreSuggestions && (
+                    <div className="flex justify-center mt-8">
+                      <Button 
+                        onClick={handleLoadMore}
+                        variant="outline"
+                        size="lg"
+                        data-testid="button-load-more"
+                      >
+                        Ver mais sugestões
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">
+                    Nenhuma sugestão encontrada com os filtros selecionados.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={handleClearFilters}
+                    data-testid="button-clear-filters-empty"
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+              )
+            ) : groupedByRecipient.length > 0 ? (
+              // "Todos" selected - show grouped by recipient
+              <div className="space-y-8">
+                {groupedByRecipient.map((group) => (
+                  <div key={group.recipient.id}>
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                      <Gift className="w-5 h-5 text-primary" />
+                      <h2 className="font-semibold text-lg" data-testid={`heading-recipient-${group.recipient.id}`}>
+                        Para: {group.recipient.name}
+                      </h2>
+                    </div>
+                    <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                      {group.suggestions.map((gift) => (
+                        <CompactGiftCard
+                          key={gift.id}
+                          gift={gift}
+                          formatPriceRange={formatPriceRange}
+                          toast={toast}
+                        />
+                      ))}
+                    </div>
                   </div>
-                )}
+                ))}
+              </div>
+            ) : filteredSuggestions.length > 0 ? (
+              // Fallback: Show all suggestions when no recipients or no matches
+              <>
+                <div className="mb-4 text-sm text-muted-foreground">
+                  Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
+                </div>
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {visibleSuggestions.map((gift) => (
+                    <CompactGiftCard
+                      key={gift.id}
+                      gift={gift}
+                      formatPriceRange={formatPriceRange}
+                      toast={toast}
+                    />
+                  ))}
+                </div>
                 {hasMoreSuggestions && (
                   <div className="flex justify-center mt-8">
                     <Button 
