@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -16,19 +16,145 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SlidersHorizontal, X, Gift, Heart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion, Recipient } from "@shared/schema";
+import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CompactGiftCardProps {
   gift: GiftSuggestion;
+  recipientId?: string;
   formatPriceRange: (min: number, max: number) => string;
   toast: any;
+  userGifts?: UserGift[];
 }
 
-function CompactGiftCard({ gift, formatPriceRange, toast }: CompactGiftCardProps) {
-  const [favorite, setFavorite] = useState(false);
-  const [purchased, setPurchased] = useState(false);
+function CompactGiftCard({ gift, recipientId, formatPriceRange, toast, userGifts }: CompactGiftCardProps) {
+  // Find existing userGift for this suggestion and recipient
+  // Only match if both suggestionId AND recipientId match
+  const existingGift = recipientId 
+    ? userGifts?.find(ug => ug.suggestionId === gift.id && ug.recipientId === recipientId)
+    : undefined;
+
+  const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
+  const [purchased, setPurchased] = useState(existingGift?.isPurchased ?? false);
+
+  useEffect(() => {
+    setFavorite(existingGift?.isFavorite ?? false);
+    setPurchased(existingGift?.isPurchased ?? false);
+  }, [existingGift]);
+
+  const createGiftMutation = useMutation({
+    mutationFn: async (data: { isFavorite: boolean; isPurchased: boolean }) => {
+      if (!recipientId) {
+        throw new Error("Recipient required to save gift");
+      }
+      return await apiRequest("/api/gifts", "POST", {
+        recipientId,
+        suggestionId: gift.id,
+        name: gift.name,
+        description: gift.description,
+        imageUrl: gift.imageUrl,
+        price: Math.round((gift.priceMin + gift.priceMax) / 2),
+        isFavorite: data.isFavorite,
+        isPurchased: data.isPurchased,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
+    },
+  });
+
+  const updateGiftMutation = useMutation({
+    mutationFn: async (data: { isFavorite: boolean; isPurchased: boolean }) => {
+      if (!existingGift) return;
+      return await apiRequest(`/api/gifts/${existingGift.id}`, "PUT", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
+    },
+  });
+
+  const handleFavoriteToggle = async () => {
+    if (!recipientId) {
+      toast({
+        title: "Selecione um presenteado",
+        description: "Para salvar favoritos, escolha um presenteado específico no filtro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newFavorite = !favorite;
+    setFavorite(newFavorite);
+
+    try {
+      if (existingGift) {
+        await updateGiftMutation.mutateAsync({
+          isFavorite: newFavorite,
+          isPurchased: purchased,
+        });
+      } else {
+        await createGiftMutation.mutateAsync({
+          isFavorite: newFavorite,
+          isPurchased: false,
+        });
+      }
+    } catch (error) {
+      setFavorite(!newFavorite);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar favorito",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePurchasedToggle = async (checked: boolean) => {
+    if (!recipientId) {
+      toast({
+        title: "Selecione um presenteado",
+        description: "Para marcar como comprado, escolha um presenteado específico no filtro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPurchased(checked);
+
+    try {
+      if (existingGift) {
+        await updateGiftMutation.mutateAsync({
+          isFavorite: favorite,
+          isPurchased: checked,
+        });
+        if (checked) {
+          toast({
+            title: "Presente Comprado!",
+            description: `${gift.name} foi marcado como comprado.`,
+          });
+        }
+      } else {
+        await createGiftMutation.mutateAsync({
+          isFavorite: false,
+          isPurchased: checked,
+        });
+        if (checked) {
+          toast({
+            title: "Presente Comprado!",
+            description: `${gift.name} foi marcado como comprado.`,
+          });
+        }
+      }
+    } catch (error) {
+      setPurchased(!checked);
+      toast({
+        title: "Erro",
+        description: "Não foi possível marcar como comprado",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card className="overflow-hidden group hover-elevate" data-testid={`card-suggestion-${gift.id}`}>
@@ -40,7 +166,7 @@ function CompactGiftCard({ gift, formatPriceRange, toast }: CompactGiftCardProps
         />
         
         <button
-          onClick={() => setFavorite(!favorite)}
+          onClick={handleFavoriteToggle}
           className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
             favorite
               ? "bg-primary text-primary-foreground"
@@ -56,7 +182,7 @@ function CompactGiftCard({ gift, formatPriceRange, toast }: CompactGiftCardProps
           <div className="flex items-center gap-1.5">
             <Checkbox
               checked={purchased}
-              onCheckedChange={(checked) => setPurchased(checked as boolean)}
+              onCheckedChange={handlePurchasedToggle}
               id={`purchased-${gift.id}`}
               data-testid={`checkbox-purchased-${gift.id}`}
               className="bg-background h-4 w-4"
@@ -119,6 +245,10 @@ export default function Suggestions() {
 
   const { data: recipients, isLoading: recipientsLoading } = useQuery<Recipient[]>({
     queryKey: ["/api/recipients"],
+  });
+
+  const { data: userGifts } = useQuery<UserGift[]>({
+    queryKey: ["/api/gifts"],
   });
 
   useEffect(() => {
@@ -373,8 +503,10 @@ export default function Suggestions() {
                           <CompactGiftCard
                             key={gift.id}
                             gift={gift}
+                            recipientId={selectedRecipientData.id}
                             formatPriceRange={formatPriceRange}
                             toast={toast}
+                            userGifts={userGifts}
                           />
                         ))}
                       </div>
@@ -423,8 +555,10 @@ export default function Suggestions() {
                         <CompactGiftCard
                           key={gift.id}
                           gift={gift}
+                          recipientId={group.recipient.id}
                           formatPriceRange={formatPriceRange}
                           toast={toast}
+                          userGifts={userGifts}
                         />
                       ))}
                     </div>
@@ -444,6 +578,7 @@ export default function Suggestions() {
                       gift={gift}
                       formatPriceRange={formatPriceRange}
                       toast={toast}
+                      userGifts={userGifts}
                     />
                   ))}
                 </div>

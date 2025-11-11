@@ -134,3 +134,29 @@ Preferred communication style: Simple, everyday language.
 - Easy to compare gift ideas across different people
 - Clear visual separation between recipient groups
 - Maintains all interactive features (favorite, purchased, details)
+
+### Purchase Tracking Functionality (November 11, 2025)
+✅ **Implemented:**
+- **Database Storage**: Uses existing `userGifts` table to save purchased/favorited gifts
+- **Data Saved**: recipientId, suggestionId, name, description, imageUrl, price, isPurchased, isFavorite, purchasedAt (timestamp)
+- **Smart State Management**: Loads existing purchases from database, syncs state with backend
+- **Mutation Handling**: Creates new record on first interaction, updates existing record on subsequent toggles
+- **Recipient Requirement**: Users must select specific recipient to mark gifts as purchased/favorite
+
+**Technical Implementation:**
+- Added `getUserGiftBySuggestion` storage method for finding existing gifts
+- Frontend uses TanStack Query mutations for create/update operations
+- CompactGiftCard component fetches userGifts and initializes state
+- Guards prevent mutations when no recipientId (shows toast notification)
+- Strict matching: existingGift only found when both suggestionId AND recipientId match
+
+**API Endpoints:**
+- POST /api/gifts - Create new user gift
+- PUT /api/gifts/:id - Update favorite/purchased status
+- GET /api/gifts - List user's saved gifts
+
+**User Experience:**
+- Toast confirmation when gift marked as purchased
+- Clear error messages when recipient not selected
+- State persists across page reloads
+- Works in single recipient view and grouped "Todos" view

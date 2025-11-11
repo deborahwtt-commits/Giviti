@@ -51,6 +51,7 @@ export interface IStorage {
   // UserGift operations
   createUserGift(userId: string, gift: InsertUserGift): Promise<UserGift>;
   getUserGifts(userId: string): Promise<UserGift[]>;
+  getUserGiftBySuggestion(userId: string, suggestionId: string, recipientId: string): Promise<UserGift | undefined>;
   updateUserGift(id: string, userId: string, updates: Partial<Pick<UserGift, 'isFavorite' | 'isPurchased' | 'purchasedAt'>>): Promise<UserGift | undefined>;
   deleteUserGift(id: string, userId: string): Promise<boolean>;
 
@@ -311,6 +312,24 @@ export class DatabaseStorage implements IStorage {
       .from(userGifts)
       .where(eq(userGifts.userId, userId))
       .orderBy(userGifts.createdAt);
+  }
+
+  async getUserGiftBySuggestion(
+    userId: string,
+    suggestionId: string,
+    recipientId: string
+  ): Promise<UserGift | undefined> {
+    const [gift] = await db
+      .select()
+      .from(userGifts)
+      .where(
+        and(
+          eq(userGifts.userId, userId),
+          eq(userGifts.suggestionId, suggestionId),
+          eq(userGifts.recipientId, recipientId)
+        )
+      );
+    return gift;
   }
 
   async updateUserGift(
