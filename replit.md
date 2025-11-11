@@ -107,3 +107,30 @@ Preferred communication style: Simple, everyday language.
 - Pagination loads 5 compact cards per click
 - All interactive features present on all cards
 - Recipient header displays correctly when filtering
+
+### Recipient Grouping in "Todos" View (November 11, 2025)
+✅ **Implemented:**
+- **Automatic Grouping**: When "Todos" filter is selected, suggestions are automatically grouped by recipient
+- **Recipient Headers**: Each group displays "Para: [Nome do Presenteado]" with gift icon and border separator
+- **Interest-Based Matching**: For each recipient, shows up to 5 suggestions that match their interests
+- **Smart Fallback**: If no recipients exist or no matches found, displays all suggestions in standard grid
+- **Filter Integration**: Category and budget filters apply to all grouped suggestions
+
+**Rendering Logic:**
+1. **Specific Recipient Selected**: Single header + filtered suggestions + pagination
+2. **"Todos" + Recipients with Matches**: Grouped view (up to 5 per recipient)
+3. **"Todos" + No Recipients/Matches**: Fallback ungrouped grid with pagination
+4. **No Suggestions**: Empty state with call-to-action
+
+**Technical Implementation:**
+- Client-side grouping based on recipient interests matching suggestion tags/category
+- Fuzzy matching algorithm for interest-to-tag comparison
+- Maintains compact 5-column layout per group
+- Each group shows maximum 5 most relevant suggestions
+- Filters out recipients with zero matching suggestions
+
+**UX Benefits:**
+- Users can quickly see personalized suggestions for each recipient
+- Easy to compare gift ideas across different people
+- Clear visual separation between recipient groups
+- Maintains all interactive features (favorite, purchased, details)
