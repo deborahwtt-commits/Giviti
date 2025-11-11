@@ -160,3 +160,10 @@ Preferred communication style: Simple, everyday language.
 - Clear error messages when recipient not selected
 - State persists across page reloads
 - Works in single recipient view and grouped "Todos" view
+
+### Bug Fixes (November 11, 2025)
+✅ **Fixed Duplicate Header on Profile Page**
+- Removed local Header component from Profile.tsx
+- Profile page now uses global Header from App.tsx
+- Eliminated duplicate navigation and theme toggle buttons
+- Improved consistency across all authenticated pages

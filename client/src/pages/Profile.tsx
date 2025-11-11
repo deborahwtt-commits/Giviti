@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Loader2, User, Sparkles } from "lucide-react";
-import Header from "@/components/Header";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 
@@ -21,21 +20,6 @@ type ProfileFormData = z.infer<typeof insertUserProfileSchema>;
 export default function Profile() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") === "dark" ||
-        (!localStorage.getItem("theme") &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
-    }
-    return false;
-  });
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    localStorage.setItem("theme", newTheme ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", newTheme);
-  };
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -93,18 +77,14 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header onToggleTheme={toggleTheme} isDark={isDark} />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onToggleTheme={toggleTheme} isDark={isDark} />
       
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-12">
         <div className="mb-8">
