@@ -1,23 +1,32 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Gift } from "lucide-react";
+import { Calendar, Gift, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import EventDetailsDialog from "./EventDetailsDialog";
+import type { EventWithRecipients } from "@shared/schema";
 
 interface EventCardProps {
-  eventName: string;
-  recipientNames: string[];
+  event: EventWithRecipients;
   daysUntil: number;
   date: string;
   onViewSuggestions: () => void;
+  onEdit: (event: EventWithRecipients) => void;
+  onDelete: () => void;
 }
 
 export default function EventCard({
-  eventName,
-  recipientNames,
+  event,
   daysUntil,
   date,
   onViewSuggestions,
+  onEdit,
+  onDelete,
 }: EventCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const eventName = event.eventName || event.eventType;
+  const recipientNames = event.recipients.map(r => r.name);
   const displayRecipients = () => {
     if (recipientNames.length === 0) {
       return <span className="text-muted-foreground italic">Sem presenteados</span>;
@@ -43,9 +52,13 @@ export default function EventCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg text-foreground mb-1 truncate">
+          <button
+            onClick={() => setShowDetails(true)}
+            className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left w-full mb-1"
+            data-testid={`button-view-details-${event.id}`}
+          >
             {eventName}
-          </h3>
+          </button>
           <p className="text-sm text-muted-foreground mb-2">
             {displayRecipients()}
           </p>
@@ -57,17 +70,44 @@ export default function EventCard({
             </span>
           </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onViewSuggestions}
-            data-testid={`button-view-suggestions-${eventName}`}
-          >
-            <Gift className="w-3 h-3 mr-2" />
-            Ver Sugestões
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onViewSuggestions}
+              data-testid={`button-view-suggestions-${event.id}`}
+            >
+              <Gift className="w-3 h-3 mr-2" />
+              Ver Sugestões
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit(event)}
+              data-testid={`button-edit-${event.id}`}
+            >
+              <Pencil className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDelete}
+              data-testid={`button-delete-${event.id}`}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      <EventDetailsDialog
+        event={event}
+        open={showDetails}
+        onClose={() => setShowDetails(false)}
+        onEdit={onEdit}
+        formattedDate={date}
+        daysUntil={daysUntil}
+      />
     </Card>
   );
 }

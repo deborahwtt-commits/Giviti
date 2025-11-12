@@ -16,6 +16,7 @@ import { format, differenceInDays } from "date-fns";
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventWithRecipients | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -43,16 +44,20 @@ export default function Events() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (data.id) {
+        return await apiRequest(`/api/events/${data.id}`, "PUT", data);
+      }
       return await apiRequest("/api/events", "POST", data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
-        description: "Evento criado com sucesso.",
+        description: variables.id ? "Evento atualizado com sucesso." : "Evento criado com sucesso.",
       });
       setShowEventForm(false);
+      setEditingEvent(null);
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -68,7 +73,39 @@ export default function Events() {
       }
       toast({
         title: "Erro",
-        description: "Falha ao criar evento. Tente novamente.",
+        description: "Falha ao salvar evento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      return await apiRequest(`/api/events/${eventId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Evento deletado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao deletar evento. Tente novamente.",
         variant: "destructive",
       });
     },
@@ -106,6 +143,22 @@ export default function Events() {
   }) || [];
 
   const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
+
+  const handleEdit = (event: EventWithRecipients) => {
+    setEditingEvent(event);
+    setShowEventForm(true);
+  };
+
+  const handleDelete = (eventId: string) => {
+    if (window.confirm("Tem certeza que deseja deletar este evento?")) {
+      deleteMutation.mutate(eventId);
+    }
+  };
+
+  const handleCloseForm = () => {
+    setShowEventForm(false);
+    setEditingEvent(null);
+  };
 
   if (eventsLoading) {
     return (
@@ -165,11 +218,12 @@ export default function Events() {
                 {allEvents?.map((event) => (
                   <EventCard
                     key={event.id}
-                    eventName={event.eventName || event.eventType}
-                    recipientNames={event.recipients.map(r => r.name)}
+                    event={event}
                     daysUntil={calculateDaysUntil(event.eventDate)}
                     date={formatEventDate(event.eventDate)}
                     onViewSuggestions={() => setLocation("/sugestoes")}
+                    onEdit={handleEdit}
+                    onDelete={() => handleDelete(event.id)}
                   />
                 ))}
               </div>
@@ -181,11 +235,12 @@ export default function Events() {
                   {thisMonthEvents.map((event) => (
                     <EventCard
                       key={event.id}
-                      eventName={event.eventName || event.eventType}
-                      recipientNames={event.recipients.map(r => r.name)}
+                      event={event}
                       daysUntil={calculateDaysUntil(event.eventDate)}
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={handleEdit}
+                      onDelete={() => handleDelete(event.id)}
                     />
                   ))}
                 </div>
@@ -204,11 +259,12 @@ export default function Events() {
                   {nextThreeMonthsEvents.map((event) => (
                     <EventCard
                       key={event.id}
-                      eventName={event.eventName || event.eventType}
-                      recipientNames={event.recipients.map(r => r.name)}
+                      event={event}
                       daysUntil={calculateDaysUntil(event.eventDate)}
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={handleEdit}
+                      onDelete={() => handleDelete(event.id)}
                     />
                   ))}
                 </div>
@@ -233,9 +289,16 @@ export default function Events() {
 
         <EventForm
           isOpen={showEventForm}
-          onClose={() => setShowEventForm(false)}
+          onClose={handleCloseForm}
           onSubmit={(data) => createMutation.mutate(data)}
           recipients={recipientOptions}
+          initialEvent={editingEvent ? {
+            id: editingEvent.id,
+            eventName: editingEvent.eventName,
+            eventType: editingEvent.eventType,
+            eventDate: editingEvent.eventDate,
+            recipientIds: editingEvent.recipients.map(r => r.id),
+          } : undefined}
         />
       </div>
     </div>

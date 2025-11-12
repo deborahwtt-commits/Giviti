@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,13 @@ interface EventFormProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   recipients?: { id: string; name: string }[];
+  initialEvent?: {
+    id: string;
+    eventName: string | null;
+    eventType: string;
+    eventDate: string;
+    recipientIds: string[];
+  };
 }
 
 const eventTypes = [
@@ -41,11 +48,26 @@ export default function EventForm({
   onClose,
   onSubmit,
   recipients = [],
+  initialEvent,
 }: EventFormProps) {
-  const [eventName, setEventName] = useState("");
-  const [eventType, setEventType] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [eventName, setEventName] = useState(initialEvent?.eventName || "");
+  const [eventType, setEventType] = useState(initialEvent?.eventType || "");
+  const [eventDate, setEventDate] = useState(initialEvent?.eventDate || "");
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>(initialEvent?.recipientIds || []);
+
+  useEffect(() => {
+    if (initialEvent) {
+      setEventName(initialEvent.eventName || "");
+      setEventType(initialEvent.eventType);
+      setEventDate(initialEvent.eventDate);
+      setSelectedRecipients(initialEvent.recipientIds);
+    } else {
+      setEventName("");
+      setEventType("");
+      setEventDate("");
+      setSelectedRecipients([]);
+    }
+  }, [initialEvent]);
 
   const toggleRecipient = (recipientId: string) => {
     setSelectedRecipients(prev =>
@@ -58,17 +80,19 @@ export default function EventForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
+      ...(initialEvent?.id && { id: initialEvent.id }),
       eventName,
       eventType,
       eventDate,
       recipientIds: selectedRecipients,
     };
-    console.log("Event form submitted:", data);
     onSubmit(data);
-    setEventName("");
-    setEventType("");
-    setEventDate("");
-    setSelectedRecipients([]);
+    if (!initialEvent) {
+      setEventName("");
+      setEventType("");
+      setEventDate("");
+      setSelectedRecipients([]);
+    }
   };
 
   return (
@@ -76,7 +100,7 @@ export default function EventForm({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl">
-            Criar Novo Evento
+            {initialEvent ? "Editar Evento" : "Criar Novo Evento"}
           </DialogTitle>
         </DialogHeader>
 
@@ -161,7 +185,7 @@ export default function EventForm({
               className="flex-1"
               data-testid="button-save-event"
             >
-              Criar Evento
+              {initialEvent ? "Salvar" : "Criar Evento"}
             </Button>
             <Button
               type="button"
