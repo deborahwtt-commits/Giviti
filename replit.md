@@ -58,3 +58,35 @@ Preferred communication style: Simple, everyday language.
 - **Form Management**: react-hook-form, @hookform/resolvers (Zod resolver).
 - **Other UI Components**: cmdk, vaul, embla-carousel-react, recharts.
 - **Integrations**: Mock e-commerce links, pre-seeded gift database.
+
+## Recent Changes
+
+### Event Details View (November 12, 2025)
+✅ **Implemented Clickable Event Names with Details Dialog**
+- Clicking on an event's name opens a modal dialog showing all event information
+- Complete CRUD operations for events (Create, Read, Update, Delete)
+- Edit and Delete buttons added to event cards
+
+**Components:**
+- **EventDetailsDialog**: Modal showing event name, type, date, countdown, and recipients
+- **EventCard**: Updated with clickable name and inline Edit/Delete buttons
+- **EventForm**: Enhanced with edit mode support (dynamic title/button text)
+- **Events.tsx**: Full CRUD mutations (create, update, delete)
+
+**Key Features:**
+- Type-safe event handling with `EventWithRecipients`
+- Recipient associations properly preserved during edits
+- Form auto-populates when editing
+- Confirmation dialog before deletion
+- All mutations invalidate React Query cache properly
+
+**Testing:** ✅ E2E tests passed
+- Event creation, viewing, editing, and deletion
+- Critical test: Recipient associations preserved after edit (database verified)
+
+### Recipient Details View (November 12, 2025)
+✅ **Implemented Clickable Recipient Names with Details Dialog**
+- Clicking recipient name opens modal with all information
+- Shows basic info, interests, and detailed profile (if exists)
+- Lazy-loads profile data only when dialog opens
+- Quick access to edit functionality from dialog
