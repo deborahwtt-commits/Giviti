@@ -1,15 +1,14 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Gift, Pencil, Trash2 } from "lucide-react";
+import RecipientDetailsDialog from "./RecipientDetailsDialog";
+import type { Recipient } from "@shared/schema";
 
 interface RecipientCardProps {
-  id: string;
-  name: string;
-  age: number;
-  relationship?: string;
-  interests: string[];
+  recipient: Recipient;
   nextEventDate?: string;
   nextEventName?: string;
   onViewSuggestions: () => void;
@@ -18,26 +17,24 @@ interface RecipientCardProps {
 }
 
 export default function RecipientCard({
-  id,
-  name,
-  age,
-  relationship,
-  interests,
+  recipient,
   nextEventDate,
   nextEventName,
   onViewSuggestions,
   onEdit,
   onDelete,
 }: RecipientCardProps) {
-  const initials = name
+  const [showDetails, setShowDetails] = useState(false);
+
+  const initials = recipient.name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
 
-  const displayedInterests = interests.slice(0, 3);
-  const remainingCount = interests.length - 3;
+  const displayedInterests = recipient.interests.slice(0, 3);
+  const remainingCount = recipient.interests.length - 3;
 
   return (
     <Card className="p-6 hover-elevate">
@@ -49,11 +46,15 @@ export default function RecipientCard({
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg text-foreground truncate">
-            {name}
-          </h3>
+          <button
+            onClick={() => setShowDetails(true)}
+            className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left w-full"
+            data-testid={`button-view-details-${recipient.id}`}
+          >
+            {recipient.name}
+          </button>
           <p className="text-sm text-muted-foreground">
-            {age} anos{relationship ? ` • ${relationship}` : ""}
+            {recipient.age} anos{recipient.relationship ? ` • ${recipient.relationship}` : ""}
           </p>
         </div>
       </div>
@@ -85,7 +86,7 @@ export default function RecipientCard({
         <Button
           size="sm"
           onClick={onViewSuggestions}
-          data-testid={`button-view-suggestions-${id}`}
+          data-testid={`button-view-suggestions-${recipient.id}`}
           className="flex-1"
         >
           <Gift className="w-3 h-3 mr-2" />
@@ -95,7 +96,7 @@ export default function RecipientCard({
           size="sm"
           variant="outline"
           onClick={onEdit}
-          data-testid={`button-edit-${id}`}
+          data-testid={`button-edit-${recipient.id}`}
         >
           <Pencil className="w-3 h-3" />
         </Button>
@@ -103,11 +104,18 @@ export default function RecipientCard({
           size="sm"
           variant="outline"
           onClick={onDelete}
-          data-testid={`button-delete-${id}`}
+          data-testid={`button-delete-${recipient.id}`}
         >
           <Trash2 className="w-3 h-3" />
         </Button>
       </div>
+
+      <RecipientDetailsDialog
+        recipient={recipient}
+        open={showDetails}
+        onOpenChange={setShowDetails}
+        onEdit={onEdit}
+      />
     </Card>
   );
 }

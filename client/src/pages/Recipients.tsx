@@ -286,11 +286,7 @@ export default function Recipients() {
                   return (
                     <RecipientCard
                       key={recipient.id}
-                      id={recipient.id}
-                      name={recipient.name}
-                      age={recipient.age}
-                      relationship={recipient.relationship || undefined}
-                      interests={recipient.interests}
+                      recipient={recipient}
                       nextEventDate={nextEvent ? formatEventDate(nextEvent.eventDate) : undefined}
                       nextEventName={nextEvent ? (nextEvent.eventName || nextEvent.eventType) : undefined}
                       onViewSuggestions={() => setLocation("/sugestoes")}
