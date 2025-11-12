@@ -32,12 +32,11 @@ export default function Recipients() {
     queryFn: async () => {
       if (!editingRecipient?.id) return null;
       try {
-        const result = await apiRequest(`/api/recipients/${editingRecipient.id}/profile`, "GET");
-        console.log("Fetched profile:", result);
+        const response = await apiRequest(`/api/recipients/${editingRecipient.id}/profile`, "GET");
+        const result = await response.json();
         return result;
       } catch (error: any) {
         if (error?.status === 404) {
-          console.log("Profile not found (404)");
           return null;
         }
         throw error;
@@ -168,11 +167,6 @@ export default function Recipients() {
   };
 
   const handleSubmit = async (data: any, profile?: any) => {
-    console.log("Recipients handleSubmit - data:", data);
-    console.log("Recipients handleSubmit - profile:", profile);
-    console.log("Recipients handleSubmit - profile type:", typeof profile);
-    console.log("Recipients handleSubmit - profile truthy:", !!profile);
-    
     try {
       if (editingRecipient) {
         // Update recipient first (await completion)
@@ -191,15 +185,12 @@ export default function Recipients() {
         });
       } else {
         // Create recipient first
-        const newRecipient = await apiRequest("/api/recipients", "POST", data) as unknown as Recipient;
-        console.log("Recipients - newRecipient created:", newRecipient);
-        console.log("Recipients - newRecipient.id:", newRecipient?.id);
-        console.log("Recipients - Checking if should save profile:", { profile, id: newRecipient?.id, willSave: !!(profile && newRecipient?.id) });
+        const response = await apiRequest("/api/recipients", "POST", data);
+        const newRecipient = await response.json() as Recipient;
         
         // Then create profile if provided
         if (profile && newRecipient?.id) {
           try {
-            console.log("Recipients - Saving profile to:", `/api/recipients/${newRecipient.id}/profile`, "with data:", profile);
             await apiRequest(`/api/recipients/${newRecipient.id}/profile`, "POST", profile);
           } catch (profileError) {
             console.error("Error saving recipient profile:", profileError);

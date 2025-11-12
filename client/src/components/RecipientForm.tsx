@@ -94,14 +94,11 @@ export default function RecipientForm({
     initialData?.interests || []
   );
   const [newInterest, setNewInterest] = useState("");
-  const hasInitialProfile = initialProfileData && Object.keys(initialProfileData).length > 0;
-  const [showQuestionnaire, setShowQuestionnaire] = useState(hasInitialProfile);
-  const [profileData, setProfileData] = useState<any>(initialProfileData || {});
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [profileData, setProfileData] = useState<any>({});
 
   useEffect(() => {
-    console.log("RecipientForm useEffect - initialProfileData:", initialProfileData);
     if (initialProfileData && Object.keys(initialProfileData).length > 0) {
-      console.log("Setting profileData to:", initialProfileData);
       setProfileData(initialProfileData);
       setShowQuestionnaire(true);
     }
@@ -130,15 +127,9 @@ export default function RecipientForm({
       relationship: relationship || null,
       interests,
     };
-    console.log("Form submitted:", data);
-    
     // Check if any profile field is filled
     const hasProfileData = Object.values(profileData).some(value => value);
     const profile = hasProfileData ? { ...profileData, isCompleted: hasProfileData } : null;
-    
-    console.log("RecipientForm handleSubmit - profileData:", profileData);
-    console.log("RecipientForm handleSubmit - hasProfileData:", hasProfileData);
-    console.log("RecipientForm handleSubmit - profile to send:", profile);
     
     onSubmit(data, profile);
   };
