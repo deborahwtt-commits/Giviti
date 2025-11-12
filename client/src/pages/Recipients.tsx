@@ -27,6 +27,25 @@ export default function Recipients() {
     queryKey: ["/api/events"],
   });
 
+  const { data: editingProfile } = useQuery({
+    queryKey: ["/api/recipients", editingRecipient?.id, "profile"],
+    queryFn: async () => {
+      if (!editingRecipient?.id) return null;
+      try {
+        const result = await apiRequest(`/api/recipients/${editingRecipient.id}/profile`, "GET");
+        console.log("Fetched profile:", result);
+        return result;
+      } catch (error: any) {
+        if (error?.status === 404) {
+          console.log("Profile not found (404)");
+          return null;
+        }
+        throw error;
+      }
+    },
+    enabled: !!editingRecipient?.id,
+  });
+
   useEffect(() => {
     const error = recipientsError || eventsError;
     if (error && isUnauthorizedError(error as Error)) {
@@ -149,6 +168,11 @@ export default function Recipients() {
   };
 
   const handleSubmit = async (data: any, profile?: any) => {
+    console.log("Recipients handleSubmit - data:", data);
+    console.log("Recipients handleSubmit - profile:", profile);
+    console.log("Recipients handleSubmit - profile type:", typeof profile);
+    console.log("Recipients handleSubmit - profile truthy:", !!profile);
+    
     try {
       if (editingRecipient) {
         // Update recipient first (await completion)
@@ -167,11 +191,15 @@ export default function Recipients() {
         });
       } else {
         // Create recipient first
-        const newRecipient = await apiRequest("/api/recipients", "POST", data) as Recipient;
+        const newRecipient = await apiRequest("/api/recipients", "POST", data) as unknown as Recipient;
+        console.log("Recipients - newRecipient created:", newRecipient);
+        console.log("Recipients - newRecipient.id:", newRecipient?.id);
+        console.log("Recipients - Checking if should save profile:", { profile, id: newRecipient?.id, willSave: !!(profile && newRecipient?.id) });
         
         // Then create profile if provided
         if (profile && newRecipient?.id) {
           try {
+            console.log("Recipients - Saving profile to:", `/api/recipients/${newRecipient.id}/profile`, "with data:", profile);
             await apiRequest(`/api/recipients/${newRecipient.id}/profile`, "POST", profile);
           } catch (profileError) {
             console.error("Error saving recipient profile:", profileError);
@@ -270,7 +298,7 @@ export default function Recipients() {
                       id={recipient.id}
                       name={recipient.name}
                       age={recipient.age}
-                      relationship={recipient.relationship}
+                      relationship={recipient.relationship || undefined}
                       interests={recipient.interests}
                       nextEventDate={nextEvent ? formatEventDate(nextEvent.eventDate) : undefined}
                       nextEventName={nextEvent ? (nextEvent.eventName || nextEvent.eventType) : undefined}
@@ -312,11 +340,12 @@ export default function Recipients() {
                 initialData={editingRecipient ? {
                   name: editingRecipient.name,
                   age: editingRecipient.age,
-                  gender: editingRecipient.gender,
+                  gender: editingRecipient.gender || "",
                   zodiacSign: editingRecipient.zodiacSign || "",
-                  relationship: editingRecipient.relationship,
+                  relationship: editingRecipient.relationship || "",
                   interests: editingRecipient.interests,
                 } : undefined}
+                initialProfileData={editingProfile || undefined}
                 onSubmit={handleSubmit}
                 onCancel={handleCloseForm}
               />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ interface RecipientFormProps {
     relationship: string;
     interests: string[];
   };
+  initialProfileData?: any;
   onSubmit: (data: any, profile?: any) => void;
   onCancel: () => void;
 }
@@ -78,6 +79,7 @@ const interestOptions = [
 
 export default function RecipientForm({
   initialData,
+  initialProfileData,
   onSubmit,
   onCancel,
 }: RecipientFormProps) {
@@ -92,8 +94,18 @@ export default function RecipientForm({
     initialData?.interests || []
   );
   const [newInterest, setNewInterest] = useState("");
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
-  const [profileData, setProfileData] = useState<any>({});
+  const hasInitialProfile = initialProfileData && Object.keys(initialProfileData).length > 0;
+  const [showQuestionnaire, setShowQuestionnaire] = useState(hasInitialProfile);
+  const [profileData, setProfileData] = useState<any>(initialProfileData || {});
+
+  useEffect(() => {
+    console.log("RecipientForm useEffect - initialProfileData:", initialProfileData);
+    if (initialProfileData && Object.keys(initialProfileData).length > 0) {
+      console.log("Setting profileData to:", initialProfileData);
+      setProfileData(initialProfileData);
+      setShowQuestionnaire(true);
+    }
+  }, [initialProfileData]);
 
   const handleAddInterest = (interest: string) => {
     if (interest && !interests.includes(interest)) {
@@ -123,6 +135,10 @@ export default function RecipientForm({
     // Check if any profile field is filled
     const hasProfileData = Object.values(profileData).some(value => value);
     const profile = hasProfileData ? { ...profileData, isCompleted: hasProfileData } : null;
+    
+    console.log("RecipientForm handleSubmit - profileData:", profileData);
+    console.log("RecipientForm handleSubmit - hasProfileData:", hasProfileData);
+    console.log("RecipientForm handleSubmit - profile to send:", profile);
     
     onSubmit(data, profile);
   };

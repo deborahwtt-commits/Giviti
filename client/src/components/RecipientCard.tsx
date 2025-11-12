@@ -8,7 +8,7 @@ interface RecipientCardProps {
   id: string;
   name: string;
   age: number;
-  relationship: string;
+  relationship?: string;
   interests: string[];
   nextEventDate?: string;
   nextEventName?: string;
@@ -53,7 +53,7 @@ export default function RecipientCard({
             {name}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {age} anos • {relationship}
+            {age} anos{relationship ? ` • ${relationship}` : ""}
           </p>
         </div>
       </div>

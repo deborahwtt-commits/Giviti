@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 interface RecipientProfileQuestionnaireProps {
   formData: {
@@ -20,6 +21,7 @@ interface RecipientProfileQuestionnaireProps {
     giftReceptionStyle?: string;
     budgetRange?: string;
     occasion?: string;
+    giftsToAvoid?: string;
   };
   onChange: (field: string, value: string) => void;
 }
@@ -396,6 +398,29 @@ export default function RecipientProfileQuestionnaire({
             <SelectItem value="so-porque-sim">"Só porque sim" — essa pessoa merece</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Question 9: Gifts to Avoid - OPTIONAL */}
+      <div className="space-y-3">
+        <Label htmlFor="gifts-to-avoid" className="text-base font-medium">
+          9. Qual presente nunca sugerir para esta pessoa?
+          <span className="block text-sm font-normal text-muted-foreground mt-1">
+            (Não queremos cometer uma gafe, não é?) — Opcional
+          </span>
+        </Label>
+        <Textarea
+          id="gifts-to-avoid"
+          data-testid="textarea-gifts-to-avoid"
+          value={formData.giftsToAvoid || ""}
+          onChange={(e) => onChange("giftsToAvoid", e.target.value)}
+          placeholder="Ex: Nada relacionado a gatos, perfumes muito doces, roupas..."
+          maxLength={255}
+          className="resize-none"
+          rows={3}
+        />
+        <p className="text-xs text-muted-foreground text-right">
+          {formData.giftsToAvoid?.length || 0}/255 caracteres
+        </p>
       </div>
     </div>
   );

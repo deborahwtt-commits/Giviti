@@ -167,3 +167,23 @@ Preferred communication style: Simple, everyday language.
 - Profile page now uses global Header from App.tsx
 - Eliminated duplicate navigation and theme toggle buttons
 - Improved consistency across all authenticated pages
+
+### Recipient Profile Enhancement (November 12, 2025)
+✅ **Added "Gifts to Avoid" Field**
+- Added optional text field in recipient profile questionnaire (Question 9)
+- Field label: "Qual presente nunca sugerir para esta pessoa? (Não queremos cometer uma gafe, não é?) — Opcional"
+- 255 character limit with real-time character counter
+- Field persists to `recipientProfiles.giftsToAvoid` database column
+
+**Technical Implementation:**
+- Extended recipientProfiles schema with `giftsToAvoid: varchar(255)`
+- Updated RecipientProfileQuestionnaire component with Textarea input
+- Profile data loads automatically when editing recipient
+- Questionnaire section auto-expands if profile data exists
+- Fixed TypeScript type issues in Recipients.tsx and RecipientCard.tsx
+
+**User Experience:**
+- Users can specify gifts to avoid for each recipient
+- Data persists across page reloads
+- Character counter shows remaining characters (X/255)
+- Field is completely optional - questionnaire can be saved without it

@@ -218,6 +218,7 @@ export const recipientProfiles = pgTable("recipient_profiles", {
   giftReceptionStyle: varchar("gift_reception_style"),
   budgetRange: varchar("budget_range"),
   occasion: varchar("occasion"),
+  giftsToAvoid: varchar("gifts_to_avoid", { length: 255 }),
   isCompleted: boolean("is_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
