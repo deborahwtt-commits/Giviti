@@ -290,7 +290,7 @@ export default function Recipients() {
                       nextEventDate={nextEvent ? formatEventDate(nextEvent.eventDate) : undefined}
                       nextEventName={nextEvent ? (nextEvent.eventName || nextEvent.eventType) : undefined}
                       onViewSuggestions={() => setLocation("/sugestoes")}
-                      onEdit={() => handleEdit(recipient)}
+                      onEdit={handleEdit}
                       onDelete={() => handleDelete(recipient.id)}
                     />
                   );

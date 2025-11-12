@@ -12,7 +12,7 @@ interface RecipientCardProps {
   nextEventDate?: string;
   nextEventName?: string;
   onViewSuggestions: () => void;
-  onEdit: () => void;
+  onEdit: (recipient: Recipient) => void;
   onDelete: () => void;
 }
 
@@ -95,7 +95,7 @@ export default function RecipientCard({
         <Button
           size="sm"
           variant="outline"
-          onClick={onEdit}
+          onClick={() => onEdit(recipient)}
           data-testid={`button-edit-${recipient.id}`}
         >
           <Pencil className="w-3 h-3" />
