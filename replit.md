@@ -177,13 +177,23 @@ Preferred communication style: Simple, everyday language.
 
 **Technical Implementation:**
 - Extended recipientProfiles schema with `giftsToAvoid: varchar(255)`
-- Updated RecipientProfileQuestionnaire component with Textarea input
-- Profile data loads automatically when editing recipient
-- Questionnaire section auto-expands if profile data exists
+- Updated RecipientProfileQuestionnaire component with Textarea input (data-testid="textarea-gifts-to-avoid")
+- RecipientForm uses useEffect to hydrate profileData when initialProfileData changes
+- Questionnaire Collapsible auto-expands when editing recipients with existing profile data
+- Fixed critical bug where apiRequest() returned Response objects instead of parsed JSON
 - Fixed TypeScript type issues in Recipients.tsx and RecipientCard.tsx
 
 **User Experience:**
 - Users can specify gifts to avoid for each recipient
-- Data persists across page reloads
-- Character counter shows remaining characters (X/255)
+- Data persists across page reloads and editing sessions
+- Character counter shows remaining characters (X/255 caracteres)
 - Field is completely optional - questionnaire can be saved without it
+- Auto-expansion on edit makes it easy to see and modify saved profile data
+
+**E2E Testing:** ✅ Passed
+- Created recipient with giftsToAvoid field filled
+- Verified persistence in database (GET /api/recipients/:id/profile returns saved data)
+- Verified questionnaire auto-expands when editing
+- Verified textarea populated with saved value
+- Verified character counter accuracy
+- Verified ability to update and re-save modified values
