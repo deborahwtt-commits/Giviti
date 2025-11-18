@@ -90,3 +90,43 @@ Preferred communication style: Simple, everyday language.
 - Shows basic info, interests, and detailed profile (if exists)
 - Lazy-loads profile data only when dialog opens
 - Quick access to edit functionality from dialog
+
+### Event Archive and Advance Features (November 18, 2025)
+✅ **Implemented Past Event Management with Archive and Advance to Next Year**
+- Past events (daysUntil < 0) display "Passou há X dias" in destructive color
+- Past events show "Encerrar" (Archive) and "Próximo Ano" (Advance) buttons
+- Future events show "Faltam X dias" with standard buttons (Ver Sugestões, Edit, Delete)
+
+**Database Schema:**
+- Added `archived: boolean().default(false).notNull()` to events table
+- Migration applied successfully
+
+**Backend API:**
+- **PATCH /api/events/:id/archive**: Sets archived field to true
+- **PATCH /api/events/:id/advance-year**: Advances event date to next future occurrence
+  - Intelligent year calculation: Keeps adding years until event becomes future
+  - Example: Event dated 2023-06-15 becomes 2026-06-15 (not just +1 year)
+
+**Frontend Components:**
+- **EventCard**: Conditional button rendering based on event status (past vs future)
+- **Events.tsx**: 
+  - Added "Arquivados" tab to view archived events separately
+  - Archive and advance mutations with proper cache invalidation
+  - Tab counts show active vs archived event totals
+
+**Date Handling Fix:**
+- Consistent use of `parseISO` and `startOfDay` from date-fns throughout
+- Prevents timezone bugs in date comparisons
+- `calculateDaysUntil` function ensures accurate day-level comparisons
+- All date filters (thisMonth, nextThreeMonths) use normalized dates
+
+**User Experience:**
+- Archiving removes event from active views, moves to "Arquivados" tab
+- Advancing always results in a future event (prevents advancing to still-past dates)
+- UI updates immediately after mutations via React Query cache invalidation
+- Confirmation dialogs for both archive and advance operations
+
+**Testing:** ✅ E2E tests passed
+- Archive past event → appears in "Arquivados" tab
+- Advance past event → becomes future with correct date, status, and buttons
+- Date calculations accurate across timezone boundaries
