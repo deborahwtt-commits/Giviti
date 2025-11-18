@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Gift, Pencil, Trash2 } from "lucide-react";
+import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import EventDetailsDialog from "./EventDetailsDialog";
 import type { EventWithRecipients } from "@shared/schema";
@@ -13,6 +13,8 @@ interface EventCardProps {
   onViewSuggestions: () => void;
   onEdit: (event: EventWithRecipients) => void;
   onDelete: () => void;
+  onArchive?: () => void;
+  onAdvanceYear?: () => void;
 }
 
 export default function EventCard({
@@ -22,8 +24,11 @@ export default function EventCard({
   onViewSuggestions,
   onEdit,
   onDelete,
+  onArchive,
+  onAdvanceYear,
 }: EventCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const isPastEvent = daysUntil < 0;
 
   const eventName = event.eventName || event.eventType;
   const recipientNames = event.recipients.map(r => r.name);
@@ -65,38 +70,87 @@ export default function EventCard({
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
             <span>{date}</span>
             <span>•</span>
-            <span className="font-medium text-primary">
-              Faltam {daysUntil} dias
-            </span>
+            {isPastEvent ? (
+              <span className="font-medium text-destructive">
+                Passou há {Math.abs(daysUntil)} dias
+              </span>
+            ) : (
+              <span className="font-medium text-primary">
+                Faltam {daysUntil} dias
+              </span>
+            )}
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onViewSuggestions}
-              data-testid={`button-view-suggestions-${event.id}`}
-            >
-              <Gift className="w-3 h-3 mr-2" />
-              Ver Sugestões
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onEdit(event)}
-              data-testid={`button-edit-${event.id}`}
-            >
-              <Pencil className="w-3 h-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onDelete}
-              data-testid={`button-delete-${event.id}`}
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          </div>
+          {isPastEvent ? (
+            <div className="flex gap-2 flex-wrap">
+              {onArchive && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onArchive}
+                  data-testid={`button-archive-${event.id}`}
+                >
+                  <Archive className="w-3 h-3 mr-2" />
+                  Encerrar
+                </Button>
+              )}
+              {onAdvanceYear && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onAdvanceYear}
+                  data-testid={`button-advance-year-${event.id}`}
+                >
+                  <CalendarClock className="w-3 h-3 mr-2" />
+                  Próximo Ano
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onEdit(event)}
+                data-testid={`button-edit-${event.id}`}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onDelete}
+                data-testid={`button-delete-${event.id}`}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onViewSuggestions}
+                data-testid={`button-view-suggestions-${event.id}`}
+              >
+                <Gift className="w-3 h-3 mr-2" />
+                Ver Sugestões
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onEdit(event)}
+                data-testid={`button-edit-${event.id}`}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onDelete}
+                data-testid={`button-delete-${event.id}`}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
