@@ -196,15 +196,21 @@ export default function Events() {
   const threeMonthsFromNow = new Date();
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
-  const thisMonthEvents = allEvents?.filter((e) => {
+  // Filter active (non-archived) events
+  const activeEvents = allEvents?.filter((e) => !e.archived) || [];
+  
+  // Filter archived events
+  const archivedEvents = allEvents?.filter((e) => e.archived) || [];
+
+  const thisMonthEvents = activeEvents.filter((e) => {
     const eventDate = new Date(e.eventDate);
     return eventDate >= today && eventDate <= oneMonthFromNow;
-  }) || [];
+  });
 
-  const nextThreeMonthsEvents = allEvents?.filter((e) => {
+  const nextThreeMonthsEvents = activeEvents.filter((e) => {
     const eventDate = new Date(e.eventDate);
     return eventDate >= today && eventDate <= threeMonthsFromNow;
-  }) || [];
+  });
 
   const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
 
@@ -273,7 +279,7 @@ export default function Events() {
           <Tabs defaultValue="all" className="space-y-6">
             <TabsList>
               <TabsTrigger value="all" data-testid="tab-all-events">
-                Todos ({allEvents.length})
+                Todos ({activeEvents.length})
               </TabsTrigger>
               <TabsTrigger
                 value="thisMonth"
@@ -287,11 +293,14 @@ export default function Events() {
               >
                 Próximos 3 Meses ({nextThreeMonthsEvents.length})
               </TabsTrigger>
+              <TabsTrigger value="archived" data-testid="tab-archived-events">
+                Arquivados ({archivedEvents.length})
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {allEvents?.map((event) => (
+                {activeEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
@@ -354,6 +363,30 @@ export default function Events() {
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
                     Nenhum evento nos próximos 3 meses
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="archived">
+              {archivedEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {archivedEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={handleEdit}
+                      onDelete={() => handleDelete(event.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    Nenhum evento arquivado
                   </p>
                 </div>
               )}
