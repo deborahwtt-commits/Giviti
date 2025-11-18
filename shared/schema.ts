@@ -76,6 +76,7 @@ export const events = pgTable("events", {
   eventType: varchar("event_type").notNull(),
   eventName: varchar("event_name"),
   eventDate: date("event_date").notNull(),
+  archived: boolean("archived").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -84,6 +85,7 @@ export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   userId: true,
   recipientId: true,
+  archived: true,
   createdAt: true,
   updatedAt: true,
 });

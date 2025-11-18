@@ -262,6 +262,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/events/:id/archive - Archive an event
+  app.patch("/api/events/:id/archive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const archived = await storage.archiveEvent(id, userId);
+      
+      if (!archived) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(archived);
+    } catch (error) {
+      console.error("Error archiving event:", error);
+      res.status(500).json({ message: "Failed to archive event" });
+    }
+  });
+
+  // PATCH /api/events/:id/advance-year - Advance event to next year
+  app.patch("/api/events/:id/advance-year", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const advanced = await storage.advanceEventToNextYear(id, userId);
+      
+      if (!advanced) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(advanced);
+    } catch (error) {
+      console.error("Error advancing event:", error);
+      res.status(500).json({ message: "Failed to advance event to next year" });
+    }
+  });
+
   // ========== UserGift Routes ==========
 
   // GET /api/gifts - Get all user gifts

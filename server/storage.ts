@@ -46,6 +46,8 @@ export interface IStorage {
   getEvent(id: string, userId: string): Promise<EventWithRecipients | undefined>;
   updateEvent(id: string, userId: string, event: Partial<InsertEvent>, recipientIds?: string[]): Promise<EventWithRecipients | undefined>;
   deleteEvent(id: string, userId: string): Promise<boolean>;
+  archiveEvent(id: string, userId: string): Promise<EventWithRecipients | undefined>;
+  advanceEventToNextYear(id: string, userId: string): Promise<EventWithRecipients | undefined>;
   getUpcomingEvents(userId: string, days?: number): Promise<EventWithRecipients[]>;
 
   // UserGift operations
@@ -235,6 +237,43 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  async archiveEvent(id: string, userId: string): Promise<EventWithRecipients | undefined> {
+    const [updated] = await db
+      .update(events)
+      .set({
+        archived: true,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
+      .returning();
+
+    if (!updated) return undefined;
+
+    return this.getEvent(id, userId);
+  }
+
+  async advanceEventToNextYear(id: string, userId: string): Promise<EventWithRecipients | undefined> {
+    const event = await this.getEvent(id, userId);
+    if (!event) return undefined;
+
+    const currentDate = new Date(event.eventDate);
+    const nextYearDate = new Date(currentDate);
+    nextYearDate.setFullYear(currentDate.getFullYear() + 1);
+
+    const [updated] = await db
+      .update(events)
+      .set({
+        eventDate: nextYearDate.toISOString().split('T')[0],
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
+      .returning();
+
+    if (!updated) return undefined;
+
+    return this.getEvent(id, userId);
   }
 
   async getUpcomingEvents(userId: string, days: number = 30): Promise<EventWithRecipients[]> {
