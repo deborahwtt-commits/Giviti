@@ -12,7 +12,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import type { EventWithRecipients, Recipient } from "@shared/schema";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -176,8 +176,8 @@ export default function Events() {
   });
 
   const calculateDaysUntil = (eventDate: string) => {
-    const today = new Date();
-    const event = new Date(eventDate);
+    const today = startOfDay(new Date());
+    const event = startOfDay(parseISO(eventDate));
     return differenceInDays(event, today);
   };
 
@@ -190,10 +190,10 @@ export default function Events() {
     }
   };
 
-  const today = new Date();
-  const oneMonthFromNow = new Date();
+  const today = startOfDay(new Date());
+  const oneMonthFromNow = new Date(today);
   oneMonthFromNow.setMonth(today.getMonth() + 1);
-  const threeMonthsFromNow = new Date();
+  const threeMonthsFromNow = new Date(today);
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
   // Filter active (non-archived) events
@@ -203,12 +203,12 @@ export default function Events() {
   const archivedEvents = allEvents?.filter((e) => e.archived) || [];
 
   const thisMonthEvents = activeEvents.filter((e) => {
-    const eventDate = new Date(e.eventDate);
+    const eventDate = startOfDay(parseISO(e.eventDate));
     return eventDate >= today && eventDate <= oneMonthFromNow;
   });
 
   const nextThreeMonthsEvents = activeEvents.filter((e) => {
-    const eventDate = new Date(e.eventDate);
+    const eventDate = startOfDay(parseISO(e.eventDate));
     return eventDate >= today && eventDate <= threeMonthsFromNow;
   });
 

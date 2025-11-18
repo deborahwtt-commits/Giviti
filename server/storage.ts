@@ -259,8 +259,13 @@ export class DatabaseStorage implements IStorage {
     if (!event) return undefined;
 
     const currentDate = new Date(event.eventDate);
+    const today = new Date();
     const nextYearDate = new Date(currentDate);
-    nextYearDate.setFullYear(currentDate.getFullYear() + 1);
+    
+    // Keep adding years until the date is in the future
+    do {
+      nextYearDate.setFullYear(nextYearDate.getFullYear() + 1);
+    } while (nextYearDate <= today);
 
     const [updated] = await db
       .update(events)
