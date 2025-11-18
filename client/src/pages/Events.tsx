@@ -111,6 +111,70 @@ export default function Events() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      return await apiRequest(`/api/events/${eventId}/archive`, "PATCH");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Evento arquivado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao arquivar evento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const advanceYearMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      return await apiRequest(`/api/events/${eventId}/advance-year`, "PATCH");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Evento atualizado para o próximo ano.",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sessão Expirada",
+          description: "Você foi desconectado. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar evento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const calculateDaysUntil = (eventDate: string) => {
     const today = new Date();
     const event = new Date(eventDate);
@@ -152,6 +216,18 @@ export default function Events() {
   const handleDelete = (eventId: string) => {
     if (window.confirm("Tem certeza que deseja deletar este evento?")) {
       deleteMutation.mutate(eventId);
+    }
+  };
+
+  const handleArchive = (eventId: string) => {
+    if (window.confirm("Tem certeza que deseja encerrar este evento?")) {
+      archiveMutation.mutate(eventId);
+    }
+  };
+
+  const handleAdvanceYear = (eventId: string) => {
+    if (window.confirm("Deseja atualizar este evento para o próximo ano?")) {
+      advanceYearMutation.mutate(eventId);
     }
   };
 
@@ -224,6 +300,8 @@ export default function Events() {
                     onViewSuggestions={() => setLocation("/sugestoes")}
                     onEdit={handleEdit}
                     onDelete={() => handleDelete(event.id)}
+                    onArchive={() => handleArchive(event.id)}
+                    onAdvanceYear={() => handleAdvanceYear(event.id)}
                   />
                 ))}
               </div>
@@ -241,6 +319,8 @@ export default function Events() {
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onEdit={handleEdit}
                       onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
                     />
                   ))}
                 </div>
@@ -265,6 +345,8 @@ export default function Events() {
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onEdit={handleEdit}
                       onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
                     />
                   ))}
                 </div>
