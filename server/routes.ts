@@ -1,8 +1,8 @@
-// API routes for Giviti - Following Replit Auth blueprint
+// API routes for Giviti - Email/password authentication
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { isAdmin } from "./middleware/authMiddleware";
 import {
   insertRecipientSchema,
@@ -21,7 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/recipients - Get all recipients for authenticated user
   app.get("/api/recipients", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const recipientsList = await storage.getRecipients(userId);
       res.json(recipientsList);
     } catch (error) {
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/recipients - Create a new recipient
   app.post("/api/recipients", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const validatedData = insertRecipientSchema.parse(req.body);
       const newRecipient = await storage.createRecipient(userId, validatedData);
       res.status(201).json(newRecipient);
@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/recipients/:id - Get a specific recipient
   app.get("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const recipient = await storage.getRecipient(id, userId);
       
@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/recipients/:id - Update a recipient
   app.put("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const validatedData = insertRecipientSchema.partial().parse(req.body);
       const updated = await storage.updateRecipient(id, userId, validatedData);
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/recipients/:id - Delete a recipient
   app.delete("/api/recipients/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const deleted = await storage.deleteRecipient(id, userId);
       
@@ -134,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/events - Get all events for authenticated user
   app.get("/api/events", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { upcoming } = req.query;
       
       let eventsList;
@@ -154,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/events - Create a new event
   app.post("/api/events", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { recipientIds = [], ...eventData } = req.body;
       const validatedData = insertEventSchema.parse(eventData);
       
@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/events/:id - Get a specific event
   app.get("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const event = await storage.getEvent(id, userId);
       
@@ -206,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/events/:id - Update an event
   app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const { recipientIds, ...eventData } = req.body;
       const validatedData = insertEventSchema.partial().parse(eventData);
@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/events/:id - Delete an event
   app.delete("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const deleted = await storage.deleteEvent(id, userId);
       
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/events/:id/archive - Archive an event
   app.patch("/api/events/:id/archive", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const archived = await storage.archiveEvent(id, userId);
       
@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/events/:id/advance-year - Advance event to next year
   app.patch("/api/events/:id/advance-year", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const advanced = await storage.advanceEventToNextYear(id, userId);
       
@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/gifts - Get all user gifts
   app.get("/api/gifts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const gifts = await storage.getUserGifts(userId);
       res.json(gifts);
     } catch (error) {
@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/gifts - Create a new user gift
   app.post("/api/gifts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const validatedData = insertUserGiftSchema.parse(req.body);
       
       // Verify that the recipient belongs to the user
@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/gifts/:id - Update user gift (toggle favorite/purchased)
   app.put("/api/gifts/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const { isFavorite, isPurchased } = req.body;
       
@@ -389,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/gifts/:id - Delete a user gift
   app.delete("/api/gifts/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { id } = req.params;
       const deleted = await storage.deleteUserGift(id, userId);
       
@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/stats - Get user statistics
   app.get("/api/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const stats = await storage.getStats(userId);
       res.json(stats);
     } catch (error) {
@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/profile - Get user profile
   app.get("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const profile = await storage.getUserProfile(userId);
       
       if (!profile) {
@@ -463,7 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/profile - Create or update user profile
   app.post("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const validatedData = insertUserProfileSchema.parse(req.body);
       const profile = await storage.upsertUserProfile(userId, validatedData);
       res.json(profile);
@@ -482,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/recipients/:id/profile - Get recipient profile
   app.get("/api/recipients/:id/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const recipientId = req.params.id;
       const profile = await storage.getRecipientProfile(recipientId, userId);
       
@@ -500,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/recipients/:id/profile - Create or update recipient profile
   app.post("/api/recipients/:id/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const recipientId = req.params.id;
       const validatedData = insertRecipientProfileSchema.parse(req.body);
       const profile = await storage.upsertRecipientProfile(recipientId, userId, validatedData);
