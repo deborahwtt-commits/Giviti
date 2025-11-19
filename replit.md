@@ -94,7 +94,7 @@ Preferred communication style: Simple, everyday language.
 ### Event Archive and Advance Features (November 18, 2025)
 ✅ **Implemented Past Event Management with Archive and Advance to Next Year**
 - Past events (daysUntil < 0) display "Passou há X dias" in destructive color
-- Past events show "Encerrar" (Archive) and "Próximo Ano" (Advance) buttons
+- Past events show "Encerrar" (Archive) and "Atualizar para o próximo ano" (Advance) buttons
 - Future events show "Faltam X dias" with standard buttons (Ver Sugestões, Edit, Delete)
 
 **Database Schema:**

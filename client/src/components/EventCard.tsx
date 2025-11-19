@@ -102,7 +102,7 @@ export default function EventCard({
                   data-testid={`button-advance-year-${event.id}`}
                 >
                   <CalendarClock className="w-3 h-3 mr-2" />
-                  Próximo Ano
+                  Atualizar para o próximo ano
                 </Button>
               )}
               <Button
