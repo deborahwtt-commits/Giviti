@@ -6,6 +6,16 @@ import EventForm from "@/components/EventForm";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -17,6 +27,8 @@ import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithRecipients | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [eventToArchive, setEventToArchive] = useState<string | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -226,9 +238,16 @@ export default function Events() {
   };
 
   const handleArchive = (eventId: string) => {
-    if (window.confirm("Tem certeza que deseja arquivar este evento?")) {
-      archiveMutation.mutate(eventId);
+    setEventToArchive(eventId);
+    setArchiveDialogOpen(true);
+  };
+
+  const confirmArchive = () => {
+    if (eventToArchive) {
+      archiveMutation.mutate(eventToArchive);
     }
+    setArchiveDialogOpen(false);
+    setEventToArchive(null);
   };
 
   const handleAdvanceYear = (eventId: string) => {
@@ -415,6 +434,23 @@ export default function Events() {
             recipientIds: editingEvent.recipients.map(r => r.id),
           } : undefined}
         />
+
+        <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+          <AlertDialogContent data-testid="dialog-archive-event">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Arquivar evento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja arquivar este evento?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-archive">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmArchive} data-testid="button-confirm-archive">
+                Arquivar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

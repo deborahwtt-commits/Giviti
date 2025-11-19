@@ -124,7 +124,8 @@ Preferred communication style: Simple, everyday language.
 - Archiving removes event from active views, moves to "Arquivados" tab
 - Advancing always results in a future event (prevents advancing to still-past dates)
 - UI updates immediately after mutations via React Query cache invalidation
-- Confirmation dialogs for both archive and advance operations
+- Custom AlertDialog for archive confirmation with title "Arquivar evento"
+- Standard window.confirm for advance-year confirmation
 
 **Testing:** ✅ E2E tests passed
 - Archive past event → appears in "Arquivados" tab
