@@ -117,7 +117,10 @@ export default function Header({
               variant="ghost"
               size="icon"
               className="hidden md:flex"
-              onClick={() => window.location.href = "/api/logout"}
+              onClick={async () => {
+                await fetch("/api/logout", { method: "POST", credentials: "include" });
+                window.location.href = "/";
+              }}
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4" />
@@ -187,7 +190,10 @@ export default function Header({
               <Button
                 variant="ghost"
                 className="w-full justify-start px-3"
-                onClick={() => window.location.href = "/api/logout"}
+                onClick={async () => {
+                  await fetch("/api/logout", { method: "POST", credentials: "include" });
+                  window.location.href = "/";
+                }}
                 data-testid="button-mobile-logout"
               >
                 <LogOut className="w-4 h-4 mr-2" />

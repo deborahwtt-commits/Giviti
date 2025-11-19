@@ -89,7 +89,7 @@ export default function Landing() {
 
       toast({
         title: "Login realizado com sucesso!",
-        description: `Bem-vindo de volta, ${data.firstName || data.email}!`,
+        description: `Bem-vindo de volta${data.firstName ? `, ${data.firstName}` : ''}!`,
       });
       setLocation("/dashboard");
     },
@@ -123,7 +123,7 @@ export default function Landing() {
 
       toast({
         title: "Conta criada com sucesso!",
-        description: `Bem-vindo, ${data.firstName || data.email}!`,
+        description: `Bem-vindo${data.firstName ? `, ${data.firstName}` : ''}!`,
       });
       setLocation("/dashboard");
     },
