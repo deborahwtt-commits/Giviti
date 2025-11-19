@@ -25,10 +25,11 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
 
-// Users table - mandatory for Replit Auth
+// Users table - now supports email/password authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").notNull().unique(),
+  passwordHash: varchar("password_hash").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -37,8 +38,33 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  role: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const registerUserSchema = insertUserSchema
+  .extend({
+    password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+    confirmPassword: z.string(),
+  })
+  .omit({ passwordHash: true })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
+
+export const loginUserSchema = z.object({
+  email: z.string().email("E-mail inválido"),
+  password: z.string().min(1, "Senha é obrigatória"),
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type RegisterUser = z.infer<typeof registerUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
 
 // Recipients table (presenteados)
 export const recipients = pgTable("recipients", {
