@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerUserSchema, loginUserSchema, type RegisterUser, type LoginUser } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
@@ -97,18 +97,22 @@ export default function Landing() {
       }
       return await apiRequest(`/api/register?${params.toString()}`, "POST", data) as any;
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
         localStorage.setItem(SAVED_EMAIL_KEY, registerForm.getValues("email"));
       }
 
+      // Invalidate auth query to update authentication state
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
       toast({
         title: "Conta criada com sucesso!",
-        description: `Bem-vindo${data.firstName ? `, ${data.firstName}` : ''}!`,
+        description: `Bem-vindo${data.firstName ? `, ${data.firstName}` : ''}! Complete seu perfil para começar.`,
       });
-      setLocation("/dashboard");
+      // Redirect new users to profile questionnaire
+      setLocation("/perfil");
     },
     onError: (error: any) => {
       toast({

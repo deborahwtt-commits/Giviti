@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **User Profile**: 12-question personality questionnaire including "Gifts to Avoid" field (256 chars).
 - **Recipient Profiles**: Detailed personality questionnaires for enhanced suggestions, including a "Gifts to Avoid" field (255 chars).
 - **Pagination and Filtering**: Client-side filtering and pagination for gift suggestions.
-- **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
+- **Authentication**: Email/password registration and login with session persistence and bcrypt hashing. New users are automatically redirected to profile questionnaire page (/perfil) after registration.
 - **Admin Panel**: Role-based access control for administrative statistics.
 
 ## External Dependencies
