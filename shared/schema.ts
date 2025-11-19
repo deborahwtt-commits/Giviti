@@ -188,6 +188,7 @@ export const userProfiles = pgTable("user_profiles", {
   giftPriority: varchar("gift_priority"),
   giftGivingStyle: varchar("gift_giving_style"),
   specialTalent: varchar("special_talent"),
+  giftsToAvoid: varchar("gifts_to_avoid", { length: 256 }),
   isCompleted: boolean("is_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

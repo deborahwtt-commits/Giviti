@@ -45,7 +45,8 @@ Preferred communication style: Simple, everyday language.
 - **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
 - **Event Tracking**: Manage important dates.
 - **Gift Management**: Save/track purchased and favorited gifts.
-- **Recipient Profiles**: Detailed personality questionnaires for enhanced suggestions, including a "Gifts to Avoid" field.
+- **User Profile**: 12-question personality questionnaire including preferences and "Gifts to Avoid" field (256 chars).
+- **Recipient Profiles**: Detailed personality questionnaires for enhanced suggestions, including a "Gifts to Avoid" field (255 chars).
 - **Pagination and Filtering**: Client-side filtering and pagination for gift suggestions.
 
 ## External Dependencies
@@ -131,3 +132,31 @@ Preferred communication style: Simple, everyday language.
 - Archive past event → appears in "Arquivados" tab
 - Advance past event → becomes future with correct date, status, and buttons
 - Date calculations accurate across timezone boundaries
+
+### User Profile "Gifts to Avoid" Field (November 19, 2025)
+✅ **Added "Gifts to Avoid" Question to User Profile Questionnaire**
+- New Question 12: "O que você não gosta de ganhar?"
+- Text field with 256 character limit
+- Helps personalize gift suggestions by filtering out unwanted gift types
+
+**Database Schema:**
+- Added `giftsToAvoid: varchar("gifts_to_avoid", { length: 256 })` to userProfiles table
+- Migration applied successfully using `npm run db:push`
+
+**Frontend Updates:**
+- **Profile.tsx**: Added Question 12 with Textarea component
+  - Character counter showing X/256 caracteres
+  - Placeholder text with examples
+  - data-testid: "textarea-gifts-to-avoid"
+
+**User Experience:**
+- Optional field - users can skip if they prefer
+- Saves with profile via POST /api/profile
+- Data persists across sessions
+- Complements existing recipient profile "gifts to avoid" field
+
+**Testing:** ✅ E2E tests passed
+- Field renders correctly on profile page
+- Character counter works accurately
+- Data saves successfully
+- Saved data persists after page reload

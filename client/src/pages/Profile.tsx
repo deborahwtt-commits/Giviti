@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Loader2, User, Sparkles } from "lucide-react";
@@ -399,6 +400,26 @@ export default function Profile() {
                 ))}
               </div>
             </RadioGroup>
+          </Card>
+
+          {/* Question 12 - Gifts to Avoid */}
+          <Card className="p-6">
+            <Label htmlFor="gifts-to-avoid" className="text-base font-semibold mb-4 block">
+              12. O que você não gosta de ganhar?
+            </Label>
+            <Textarea
+              id="gifts-to-avoid"
+              placeholder="Ex: Roupas, perfumes, chocolates, livros de autoajuda..."
+              value={watch("giftsToAvoid") || ""}
+              onChange={(e) => setValue("giftsToAvoid", e.target.value)}
+              maxLength={256}
+              rows={3}
+              className="resize-none"
+              data-testid="textarea-gifts-to-avoid"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {watch("giftsToAvoid")?.length || 0}/256 caracteres
+            </p>
           </Card>
 
           <div className="flex justify-end gap-4 pt-6">
