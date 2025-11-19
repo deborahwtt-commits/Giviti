@@ -1,9 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Gift, Heart, Calendar, Sparkles } from "lucide-react";
+import { useState } from "react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 
 export default function Landing() {
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+
+  const handleLogin = () => {
+    const params = new URLSearchParams();
+    if (keepLoggedIn) {
+      params.set("remember", "true");
+    }
+    window.location.href = `/api/login?${params.toString()}`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
@@ -32,16 +45,34 @@ export default function Landing() {
             Descubra presentes personalizados para cada pessoa especial da sua vida.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              size="lg"
-              className="text-lg px-8 py-6 bg-primary border border-primary-border"
-              onClick={() => window.location.href = "/api/login"}
-              data-testid="button-login"
-            >
-              <Gift className="w-5 h-5 mr-2" />
-              Começar Agora
-            </Button>
+          <div className="flex flex-col gap-6 justify-center items-center">
+            <div className="flex items-center space-x-3 bg-background/20 backdrop-blur-md border border-white/30 rounded-lg px-4 py-3">
+              <Checkbox
+                id="keep-logged-in"
+                checked={keepLoggedIn}
+                onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
+                className="border-white/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                data-testid="checkbox-keep-logged-in"
+              />
+              <Label
+                htmlFor="keep-logged-in"
+                className="text-white text-base font-medium cursor-pointer"
+                data-testid="label-keep-logged-in"
+              >
+                Manter-me logado neste navegador
+              </Label>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Button
+                size="lg"
+                className="text-lg px-8 py-6 bg-primary border border-primary-border"
+                onClick={handleLogin}
+                data-testid="button-login"
+              >
+                <Gift className="w-5 h-5 mr-2" />
+                Começar Agora
+              </Button>
             <Button
               size="lg"
               variant="outline"
@@ -53,6 +84,7 @@ export default function Landing() {
             >
               Saiba Mais
             </Button>
+          </div>
           </div>
         </div>
       </section>
@@ -119,15 +151,31 @@ export default function Landing() {
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
             Entre agora e comece a organizar seus presenteados, eventos e descobrir sugestões personalizadas.
           </p>
-          <Button
-            size="lg"
-            className="text-lg px-8 py-6"
-            onClick={() => window.location.href = "/api/login"}
-            data-testid="button-cta-login"
-          >
-            <Gift className="w-5 h-5 mr-2" />
-            Entrar com Replit
-          </Button>
+          <div className="flex flex-col gap-4 items-center">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="keep-logged-in-footer"
+                checked={keepLoggedIn}
+                onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
+                data-testid="checkbox-keep-logged-in-footer"
+              />
+              <Label
+                htmlFor="keep-logged-in-footer"
+                className="text-foreground text-sm font-medium cursor-pointer"
+              >
+                Manter-me logado neste navegador
+              </Label>
+            </div>
+            <Button
+              size="lg"
+              className="text-lg px-8 py-6"
+              onClick={handleLogin}
+              data-testid="button-cta-login"
+            >
+              <Gift className="w-5 h-5 mr-2" />
+              Entrar com Replit
+            </Button>
+          </div>
         </div>
       </section>
 
