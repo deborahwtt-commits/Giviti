@@ -36,7 +36,8 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: true,
-      maxAge: sessionTtl,
+      // maxAge will be set based on user preference during login
+      maxAge: undefined,
     },
   });
 }
@@ -103,6 +104,13 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);
+    
+    // Store remember preference in session for use during callback
+    const remember = req.query.remember === "true";
+    if (req.session) {
+      (req.session as any).rememberMe = remember;
+    }
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -114,7 +122,30 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
-    })(req, res, next);
+    })(req, res, (err: any) => {
+      if (err) {
+        return next(err);
+      }
+      
+      // Set cookie maxAge based on rememberMe preference
+      const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+      const rememberMe = (req.session as any)?.rememberMe;
+      
+      if (req.session) {
+        if (rememberMe) {
+          // Keep logged in for 1 week
+          req.session.cookie.maxAge = sessionTtl;
+        } else {
+          // Session cookie - expires when browser closes
+          req.session.cookie.maxAge = undefined;
+        }
+        
+        // Clean up temporary flag
+        delete (req.session as any).rememberMe;
+      }
+      
+      res.redirect("/");
+    });
   });
 
   app.get("/api/logout", (req, res) => {
