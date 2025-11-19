@@ -29,9 +29,10 @@ import { eq, and, gte, sql, inArray } from "drizzle-orm";
 
 // Storage interface with all CRUD operations
 export interface IStorage {
-  // User operations - MANDATORY for Replit Auth
+  // User operations - email/password authentication
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User>;
 
   // Recipient operations
   createRecipient(userId: string, recipient: InsertRecipient): Promise<Recipient>;
@@ -82,29 +83,26 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // ========== User Operations (MANDATORY for Replit Auth) ==========
+  // ========== User Operations (Email/Password Authentication) ==========
   
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const existingUser = await this.getUser(userData.id!);
-    
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+    return user;
+  }
+
+  async createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
-          role: existingUser?.role || "user",
-          updatedAt: new Date(),
-        },
+      .values({
+        email: email.toLowerCase(),
+        passwordHash,
+        firstName,
+        lastName,
       })
       .returning();
     return user;
