@@ -29,6 +29,8 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState<EventWithRecipients | null>(null);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [eventToArchive, setEventToArchive] = useState<string | null>(null);
+  const [advanceYearDialogOpen, setAdvanceYearDialogOpen] = useState(false);
+  const [eventToAdvance, setEventToAdvance] = useState<string | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -251,9 +253,16 @@ export default function Events() {
   };
 
   const handleAdvanceYear = (eventId: string) => {
-    if (window.confirm("Deseja atualizar este evento para o próximo ano?")) {
-      advanceYearMutation.mutate(eventId);
+    setEventToAdvance(eventId);
+    setAdvanceYearDialogOpen(true);
+  };
+
+  const confirmAdvanceYear = () => {
+    if (eventToAdvance) {
+      advanceYearMutation.mutate(eventToAdvance);
     }
+    setAdvanceYearDialogOpen(false);
+    setEventToAdvance(null);
   };
 
   const handleCloseForm = () => {
@@ -447,6 +456,23 @@ export default function Events() {
               <AlertDialogCancel data-testid="button-cancel-archive">Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={confirmArchive} data-testid="button-confirm-archive">
                 Arquivar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={advanceYearDialogOpen} onOpenChange={setAdvanceYearDialogOpen}>
+          <AlertDialogContent data-testid="dialog-advance-year-event">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Alterar evento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja atualizar este evento para o próximo ano?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-advance-year">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmAdvanceYear} data-testid="button-confirm-advance-year">
+                Atualizar
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

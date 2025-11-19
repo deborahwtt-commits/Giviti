@@ -125,7 +125,7 @@ Preferred communication style: Simple, everyday language.
 - Advancing always results in a future event (prevents advancing to still-past dates)
 - UI updates immediately after mutations via React Query cache invalidation
 - Custom AlertDialog for archive confirmation with title "Arquivar evento"
-- Standard window.confirm for advance-year confirmation
+- Custom AlertDialog for advance-year confirmation with title "Alterar evento"
 
 **Testing:** ✅ E2E tests passed
 - Archive past event → appears in "Arquivados" tab
