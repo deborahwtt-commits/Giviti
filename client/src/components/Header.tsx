@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Menu, X, Sun, Moon, LogOut, User } from "lucide-react";
+import { Gift, Menu, X, Sun, Moon, LogOut, User, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +18,7 @@ export default function Header({
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   
   const { data: upcomingEvents } = useQuery<Event[]>({
     queryKey: ["/api/events", { upcoming: "true" }],
@@ -89,6 +89,19 @@ export default function Header({
               )}
             </Button>
 
+            {isAdmin && (
+              <Link href="/admin">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden md:flex"
+                  data-testid="button-admin"
+                >
+                  <Shield className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
+
             <Link href="/perfil">
               <Button
                 variant="ghost"
@@ -149,6 +162,18 @@ export default function Header({
                   )}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start px-3"
+                    data-testid="button-mobile-admin"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
               <Link href="/perfil" onClick={() => setMobileMenuOpen(false)}>
                 <Button
                   variant="ghost"

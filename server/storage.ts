@@ -60,6 +60,15 @@ export interface IStorage {
   // Stats
   getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number }>;
   
+  // Admin stats
+  getAdminStats(): Promise<{ 
+    totalUsers: number; 
+    totalRecipients: number; 
+    totalEvents: number; 
+    totalSuggestions: number;
+    totalGiftsPurchased: number;
+  }>;
+  
   // Gift Suggestions
   getGiftSuggestions(filters?: { category?: string; minPrice?: number; maxPrice?: number; tags?: string[] }): Promise<GiftSuggestion[]>;
   
@@ -81,13 +90,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = await this.getUser(userData.id!);
+    
     const [user] = await db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          role: existingUser?.role || "user",
           updatedAt: new Date(),
         },
       })
@@ -549,6 +564,45 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return profile;
+  }
+
+  // ========== Admin Stats ==========
+
+  async getAdminStats(): Promise<{
+    totalUsers: number;
+    totalRecipients: number;
+    totalEvents: number;
+    totalSuggestions: number;
+    totalGiftsPurchased: number;
+  }> {
+    const userCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users);
+
+    const recipientCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(recipients);
+
+    const eventCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events);
+
+    const suggestionCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(giftSuggestions);
+
+    const purchasedGiftCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userGifts)
+      .where(eq(userGifts.isPurchased, true));
+
+    return {
+      totalUsers: userCount[0]?.count || 0,
+      totalRecipients: recipientCount[0]?.count || 0,
+      totalEvents: eventCount[0]?.count || 0,
+      totalSuggestions: suggestionCount[0]?.count || 0,
+      totalGiftsPurchased: purchasedGiftCount[0]?.count || 0,
+    };
   }
 }
 

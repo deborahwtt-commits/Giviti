@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { isAdmin } from "./middleware/authMiddleware";
 import {
   insertRecipientSchema,
   insertEventSchema,
@@ -513,6 +514,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error saving recipient profile:", error);
       res.status(500).json({ message: "Failed to save recipient profile" });
+    }
+  });
+
+  // ========== Admin Routes ==========
+
+  // GET /api/admin/stats - Get global platform statistics (admin only)
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch admin statistics" });
     }
   });
 

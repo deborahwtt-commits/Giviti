@@ -138,6 +138,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
+    const dbUser = await storage.getUser(user.claims.sub);
+    if (dbUser) {
+      user.role = dbUser.role;
+    }
     return next();
   }
 
@@ -151,6 +155,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
+    const dbUser = await storage.getUser(user.claims.sub);
+    if (dbUser) {
+      user.role = dbUser.role;
+    }
     return next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });

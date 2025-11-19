@@ -13,6 +13,7 @@ import Events from "@/pages/Events";
 import Suggestions from "@/pages/Suggestions";
 import GiftManagement from "@/pages/GiftManagement";
 import Profile from "@/pages/Profile";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedApp() {
@@ -52,6 +53,7 @@ function AuthenticatedApp() {
         <Route path="/sugestoes" component={Suggestions} />
         <Route path="/presentes" component={GiftManagement} />
         <Route path="/perfil" component={Profile} />
+        <Route path="/admin" component={Admin} />
         <Route component={NotFound} />
       </Switch>
     </div>
