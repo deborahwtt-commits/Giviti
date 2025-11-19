@@ -160,3 +160,64 @@ Preferred communication style: Simple, everyday language.
 - Character counter works accurately
 - Data saves successfully
 - Saved data persists after page reload
+
+### Admin Panel RBAC Security Fix (November 19, 2025)
+✅ **Fixed Critical Security Vulnerability in Role Persistence**
+- Issue: User roles were being reset to "user" on OIDC re-login, demoting admins
+- Solution: Modified `storage.upsertUser` to preserve existing role during OIDC updates
+
+**Database Schema:**
+- `users` table has `role` field (varchar, default: "user")
+- Roles: "admin" (platform management) and "user" (normal users)
+
+**Backend Security:**
+- `isAdmin` middleware fetches fresh user from DB using `req.user.claims.sub`
+- `upsertUser` preserves existing role while updating OIDC profile data
+- Admin stats endpoint (`/api/admin/stats`) protected by `isAuthenticated` + `isAdmin`
+
+**Frontend:**
+- Admin button (Shield icon) visible only when `user.role === 'admin'`
+- Admin page shows 5 platform statistics (users, recipients, events, suggestions, gifts)
+- Non-admins redirected to homepage if attempting to access /admin
+
+**Testing:** ✅ E2E tests passed
+- Regular users cannot access admin features
+- Admin promotion persists across logins
+- All admin statistics display correctly
+
+### "Keep Me Logged In" Feature (November 19, 2025)
+✅ **Implemented Session Persistence Control**
+- Users can choose to stay logged in for 7 days or logout when browser closes
+- Checkbox "Manter-me logado neste navegador" on Landing page
+- Default: checked (persistent session)
+
+**Frontend Implementation:**
+- Landing page has two login sections (hero and footer), each with synchronized checkbox
+- State managed with `useState(true)` - checked by default
+- Login handler adds `?remember=true` query parameter if checkbox is checked
+- Data-testids: "checkbox-keep-logged-in" and "checkbox-keep-logged-in-footer"
+
+**Backend Implementation:**
+- `/api/login` captures `?remember=true` query parameter
+- Stores preference temporarily in `req.session.rememberMe`
+- `/api/callback` post-authentication:
+  - If rememberMe = true: sets `cookie.maxAge = 7 days` (persistent cookie)
+  - If rememberMe = false/undefined: sets `cookie.maxAge = undefined` (session cookie - expires on browser close)
+  - Cleans up temporary `rememberMe` flag
+
+**Session Behavior:**
+- **Checkbox checked**: Cookie persists for 7 days (user stays logged in across browser sessions)
+- **Checkbox unchecked**: Session cookie (expires when browser closes)
+- Modified `getSession()` in `replitAuth.ts` to defer maxAge setting until callback
+
+**User Experience:**
+- Non-authenticated users always see Landing page first (enforced in App.tsx)
+- After successful login, redirected to Dashboard with personalized greeting
+- Both login buttons (hero and footer) respect same checkbox state
+
+**Testing:** ✅ E2E tests passed
+- Checkbox visible and functional in both sections
+- Login with checkbox checked creates persistent cookie (7 days)
+- Login with checkbox unchecked creates session cookie (expires: -1)
+- Both flows redirect correctly to Dashboard
+- Cookie expiry behavior validated via browser inspection
