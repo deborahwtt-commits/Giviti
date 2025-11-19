@@ -91,7 +91,7 @@ export default function EventCard({
                   data-testid={`button-archive-${event.id}`}
                 >
                   <Archive className="w-3 h-3 mr-2" />
-                  Encerrar
+                  Arquivar
                 </Button>
               )}
               {onAdvanceYear && (

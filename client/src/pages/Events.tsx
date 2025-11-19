@@ -226,7 +226,7 @@ export default function Events() {
   };
 
   const handleArchive = (eventId: string) => {
-    if (window.confirm("Tem certeza que deseja encerrar este evento?")) {
+    if (window.confirm("Tem certeza que deseja arquivar este evento?")) {
       archiveMutation.mutate(eventId);
     }
   };
