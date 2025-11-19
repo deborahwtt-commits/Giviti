@@ -64,7 +64,7 @@ export default function Landing() {
       }
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
@@ -72,6 +72,9 @@ export default function Landing() {
       } else {
         localStorage.removeItem(SAVED_EMAIL_KEY);
       }
+
+      // Invalidate auth query to trigger re-fetch and update authentication state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
         title: "Login realizado com sucesso!",
@@ -104,8 +107,8 @@ export default function Landing() {
         localStorage.setItem(SAVED_EMAIL_KEY, registerForm.getValues("email"));
       }
 
-      // Invalidate auth query to update authentication state
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Invalidate auth query to trigger re-fetch and update authentication state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
         title: "Conta criada com sucesso!",
