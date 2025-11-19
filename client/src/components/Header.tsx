@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Menu, X, Sun, Moon, LogOut, User, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Event } from "@shared/schema";
 
 interface HeaderProps {
@@ -17,8 +19,9 @@ export default function Header({
   isDark = false,
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isAuthenticated, isAdmin } = useAuth();
+  const { toast } = useToast();
   
   const { data: upcomingEvents } = useQuery<Event[]>({
     queryKey: ["/api/events", { upcoming: "true" }],
@@ -26,6 +29,30 @@ export default function Header({
   });
   
   const upcomingEventsCount = upcomingEvents?.length || 0;
+
+  // Logout mutation with proper error handling
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/logout", "POST");
+    },
+    onSuccess: () => {
+      // Invalidate user query to clear auth state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Redirect to landing page
+      setLocation("/");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao fazer logout",
+        description: error.message || "Não foi possível sair da conta",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   const navItems = [
     { path: "/", label: "Dashboard" },
@@ -117,10 +144,8 @@ export default function Header({
               variant="ghost"
               size="icon"
               className="hidden md:flex"
-              onClick={async () => {
-                await fetch("/api/logout", { method: "POST", credentials: "include" });
-                window.location.href = "/";
-              }}
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4" />
@@ -190,10 +215,8 @@ export default function Header({
               <Button
                 variant="ghost"
                 className="w-full justify-start px-3"
-                onClick={async () => {
-                  await fetch("/api/logout", { method: "POST", credentials: "include" });
-                  window.location.href = "/";
-                }}
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
                 data-testid="button-mobile-logout"
               >
                 <LogOut className="w-4 h-4 mr-2" />

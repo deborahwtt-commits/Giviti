@@ -16,12 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 
-const SAVED_CREDENTIALS_KEY = "giviti_saved_credentials";
-
-interface SavedCredentials {
-  email: string;
-  password: string;
-}
+const SAVED_EMAIL_KEY = "giviti_saved_email";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -51,18 +46,12 @@ export default function Landing() {
     },
   });
 
-  // Auto-fill saved credentials on mount
+  // Auto-fill saved email on mount
   useEffect(() => {
-    const saved = localStorage.getItem(SAVED_CREDENTIALS_KEY);
-    if (saved) {
-      try {
-        const { email, password }: SavedCredentials = JSON.parse(saved);
-        loginForm.setValue("email", email);
-        loginForm.setValue("password", password);
-        setKeepLoggedIn(true);
-      } catch (error) {
-        console.error("Error loading saved credentials:", error);
-      }
+    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
+    if (savedEmail) {
+      loginForm.setValue("email", savedEmail);
+      setKeepLoggedIn(true);
     }
   }, [loginForm]);
 
@@ -76,15 +65,12 @@ export default function Landing() {
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: (data: any) => {
-      // Save credentials if "keep logged in" is checked
+      // Save email if "keep logged in" is checked
+      // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
-        const credentials: SavedCredentials = {
-          email: loginForm.getValues("email"),
-          password: loginForm.getValues("password"),
-        };
-        localStorage.setItem(SAVED_CREDENTIALS_KEY, JSON.stringify(credentials));
+        localStorage.setItem(SAVED_EMAIL_KEY, loginForm.getValues("email"));
       } else {
-        localStorage.removeItem(SAVED_CREDENTIALS_KEY);
+        localStorage.removeItem(SAVED_EMAIL_KEY);
       }
 
       toast({
@@ -112,13 +98,10 @@ export default function Landing() {
       return await apiRequest(`/api/register?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: (data: any) => {
-      // Save credentials if "keep logged in" is checked
+      // Save email if "keep logged in" is checked
+      // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
-        const credentials: SavedCredentials = {
-          email: registerForm.getValues("email"),
-          password: registerForm.getValues("password"),
-        };
-        localStorage.setItem(SAVED_CREDENTIALS_KEY, JSON.stringify(credentials));
+        localStorage.setItem(SAVED_EMAIL_KEY, registerForm.getValues("email"));
       }
 
       toast({

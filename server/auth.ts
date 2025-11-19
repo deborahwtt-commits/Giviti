@@ -55,18 +55,28 @@ export async function setupAuth(app: Express): Promise<void> {
         validatedData.lastName ?? undefined
       );
 
-      // Create session
-      req.session.userId = newUser.id;
-      
-      // Handle "remember me" functionality
-      const remember = req.query.remember === "true";
-      if (remember) {
-        req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-      }
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Error regenerating session:", err);
+          return res.status(500).json({ message: "Erro ao criar conta" });
+        }
 
-      // Return user without password hash
-      const { passwordHash: _, ...userWithoutPassword } = newUser;
-      res.status(201).json(userWithoutPassword);
+        // Create session
+        req.session.userId = newUser.id;
+        
+        // Handle "remember me" functionality
+        const remember = req.query.remember === "true";
+        if (remember) {
+          req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+        } else {
+          req.session.cookie.maxAge = undefined; // Session cookie (expires on browser close)
+        }
+
+        // Return user without password hash
+        const { passwordHash: _, ...userWithoutPassword } = newUser;
+        res.status(201).json(userWithoutPassword);
+      });
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({
@@ -96,18 +106,28 @@ export async function setupAuth(app: Express): Promise<void> {
         return res.status(401).json({ message: "E-mail ou senha incorretos" });
       }
 
-      // Create session
-      req.session.userId = user.id;
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Error regenerating session:", err);
+          return res.status(500).json({ message: "Erro ao fazer login" });
+        }
 
-      // Handle "remember me" functionality
-      const remember = req.query.remember === "true";
-      if (remember) {
-        req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-      }
+        // Create session
+        req.session.userId = user.id;
 
-      // Return user without password hash
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+        // Handle "remember me" functionality
+        const remember = req.query.remember === "true";
+        if (remember) {
+          req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+        } else {
+          req.session.cookie.maxAge = undefined; // Session cookie (expires on browser close)
+        }
+
+        // Return user without password hash
+        const { passwordHash: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({
@@ -145,7 +165,9 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
       return res.status(401).json({ message: "Usuário não encontrado" });
     }
 
-    req.user = user;
+    // Store user without password hash in request
+    const { passwordHash, ...userWithoutPassword } = user;
+    req.user = userWithoutPassword as any;
     next();
   } catch (error) {
     console.error("Error in isAuthenticated middleware:", error);
