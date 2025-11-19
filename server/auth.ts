@@ -12,21 +12,6 @@ const PgSession = connectPgSimple(session);
 
 const SALT_ROUNDS = 10;
 
-declare module "express-session" {
-  interface SessionData {
-    userId?: string;
-  }
-}
-
-// Extend Express Request to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}
-
 export async function setupAuth(app: Express): Promise<void> {
   // Session configuration
   const sessionMiddleware = session({
