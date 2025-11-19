@@ -35,6 +35,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/logout", isAuthenticated, (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        console.error("Error destroying session:", err);
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
   // ========== Recipient Routes ==========
 
   // GET /api/recipients - Get all recipients for authenticated user
