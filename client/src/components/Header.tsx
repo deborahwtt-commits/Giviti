@@ -35,9 +35,10 @@ export default function Header({
     mutationFn: async () => {
       return await apiRequest("/api/logout", "POST");
     },
-    onSuccess: () => {
-      // Invalidate user query to clear auth state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      // Invalidate and refetch auth query to update authentication state
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       // Redirect to landing page
       setLocation("/");
     },
