@@ -1,9 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Loader2, Users, Gift, Calendar, Package, ShoppingCart } from "lucide-react";
+import { 
+  Loader2, 
+  Users, 
+  Gift, 
+  Calendar, 
+  Package, 
+  ShoppingCart, 
+  Heart,
+  TrendingUp,
+  UserPlus,
+  CalendarPlus
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
+import { AdminStatsCard } from "@/components/admin/AdminStatsCard";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { User } from "@shared/schema";
 
 interface AdminStats {
@@ -14,6 +27,25 @@ interface AdminStats {
   totalGiftsPurchased: number;
 }
 
+interface AdvancedStats {
+  userStats: {
+    total: number;
+    active: number;
+    byRole: Record<string, number>;
+  };
+  giftStats: {
+    totalSuggestions: number;
+    purchasedGifts: number;
+    favoriteGifts: number;
+  };
+  topCategories: Array<{ category: string; count: number }>;
+  recentActivity: {
+    newUsersToday: number;
+    newEventsToday: number;
+    giftsMarkedTodayAsPurchased: number;
+  };
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -21,11 +53,11 @@ export default function Admin() {
     queryKey: ["/api/auth/user"],
   });
 
-  const isAdmin = user?.role === "admin";
+  const hasAdminAccess = user?.role === "admin" || user?.role === "manager" || user?.role === "support";
 
-  const { data: stats, isLoading, error } = useQuery<AdminStats>({
-    queryKey: ["/api/admin/stats"],
-    enabled: isAdmin,
+  const { data: advancedStats, isLoading, error } = useQuery<AdvancedStats>({
+    queryKey: ["/api/admin/advanced-stats"],
+    enabled: hasAdminAccess,
     meta: {
       onError: (error: any) => {
         if (error?.status === 401) {
@@ -50,7 +82,7 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasAdminAccess) {
     setLocation("/");
     return null;
   }
@@ -79,96 +111,116 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-12">
+        <AdminPageHeader
+          title="Painel Administrativo"
+          description="Visão geral completa das estatísticas da plataforma"
+        />
+
+        {/* Atividade Recente */}
         <div className="mb-8">
-          <h1 className="font-heading font-semibold text-3xl text-foreground mb-2">
-            Painel Administrativo
-          </h1>
-          <p className="text-muted-foreground">
-            Visão geral das estatísticas da plataforma
-          </p>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            Atividade de Hoje
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <AdminStatsCard
+              title="Novos Usuários Hoje"
+              value={advancedStats?.recentActivity.newUsersToday || 0}
+              icon={UserPlus}
+            />
+            <AdminStatsCard
+              title="Novos Eventos Hoje"
+              value={advancedStats?.recentActivity.newEventsToday || 0}
+              icon={CalendarPlus}
+            />
+            <AdminStatsCard
+              title="Presentes Comprados Hoje"
+              value={advancedStats?.recentActivity.giftsMarkedTodayAsPurchased || 0}
+              icon={ShoppingCart}
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Total de Usuários
-                </p>
-                <p className="text-3xl font-bold" data-testid="stat-total-users">
-                  {stats?.totalUsers || 0}
-                </p>
+        {/* Estatísticas de Usuários */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Usuários da Plataforma
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AdminStatsCard
+              title="Total de Usuários"
+              value={advancedStats?.userStats.total || 0}
+              icon={Users}
+            />
+            <AdminStatsCard
+              title="Usuários Ativos"
+              value={advancedStats?.userStats.active || 0}
+              icon={Users}
+              description={`${Math.round(((advancedStats?.userStats.active || 0) / (advancedStats?.userStats.total || 1)) * 100)}% ativos`}
+            />
+            <Card className="p-6">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Usuários por Perfil
+              </h3>
+              <div className="space-y-2">
+                {Object.entries(advancedStats?.userStats.byRole || {}).map(([role, count]) => (
+                  <div key={role} className="flex justify-between items-center">
+                    <span className="text-sm capitalize">{role}</span>
+                    <span className="font-semibold">{count}</span>
+                  </div>
+                ))}
               </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
+        </div>
 
-          <Card className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Total de Destinatários
-                </p>
-                <p className="text-3xl font-bold" data-testid="stat-total-recipients">
-                  {stats?.totalRecipients || 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Gift className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </Card>
+        {/* Estatísticas de Presentes */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Gift className="w-5 h-5" />
+            Presentes e Sugestões
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <AdminStatsCard
+              title="Sugestões na Base"
+              value={advancedStats?.giftStats.totalSuggestions || 0}
+              icon={Package}
+            />
+            <AdminStatsCard
+              title="Presentes Comprados"
+              value={advancedStats?.giftStats.purchasedGifts || 0}
+              icon={ShoppingCart}
+            />
+            <AdminStatsCard
+              title="Presentes Favoritos"
+              value={advancedStats?.giftStats.favoriteGifts || 0}
+              icon={Heart}
+            />
+          </div>
+        </div>
 
+        {/* Top Categorias */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            Categorias Mais Populares
+          </h2>
           <Card className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Total de Eventos
-                </p>
-                <p className="text-3xl font-bold" data-testid="stat-total-events">
-                  {stats?.totalEvents || 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Sugestões na Base
-                </p>
-                <p className="text-3xl font-bold" data-testid="stat-total-suggestions">
-                  {stats?.totalSuggestions || 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Package className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Presentes Comprados
-                </p>
-                <p className="text-3xl font-bold" data-testid="stat-total-gifts-purchased">
-                  {stats?.totalGiftsPurchased || 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-primary" />
-              </div>
+            <div className="space-y-3">
+              {advancedStats?.topCategories.slice(0, 5).map((cat, index) => (
+                <div key={cat.category} className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-lg text-muted-foreground">#{index + 1}</span>
+                    <span className="font-medium">{cat.category}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{cat.count} presentes</span>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
+
       </main>
     </div>
   );

@@ -3,19 +3,29 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { isAdmin } from "./middleware/authMiddleware";
+import { isAdmin, hasRole, isActive } from "./middleware/authMiddleware";
 import {
   insertRecipientSchema,
   insertEventSchema,
   insertUserGiftSchema,
   insertUserProfileSchema,
   insertRecipientProfileSchema,
+  insertCategorySchema,
+  insertOccasionSchema,
+  insertPriceRangeSchema,
+  insertRelationshipTypeSchema,
+  insertSystemSettingSchema,
+  insertAuditLogSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
+import { registerAdminRoutes } from "./adminRoutes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
+  
+  // Register all administrative routes
+  registerAdminRoutes(app);
 
   // ========== Auth Routes ==========
 

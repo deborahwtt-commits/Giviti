@@ -8,6 +8,12 @@ import {
   giftSuggestions,
   userProfiles,
   recipientProfiles,
+  categories,
+  occasions,
+  priceRanges,
+  relationshipTypes,
+  systemSettings,
+  auditLogs,
   type User,
   type UpsertUser,
   type Recipient,
@@ -23,6 +29,18 @@ import {
   type InsertUserProfile,
   type RecipientProfile,
   type InsertRecipientProfile,
+  type Category,
+  type InsertCategory,
+  type Occasion,
+  type InsertOccasion,
+  type PriceRange,
+  type InsertPriceRange,
+  type RelationshipType,
+  type InsertRelationshipType,
+  type SystemSetting,
+  type InsertSystemSetting,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -80,6 +98,59 @@ export interface IStorage {
   // Recipient Profile operations
   getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined>;
   upsertRecipientProfile(recipientId: string, userId: string, profile: InsertRecipientProfile): Promise<RecipientProfile>;
+  
+  // ========== ADMIN MODULE OPERATIONS ==========
+  
+  // User Management (Admin)
+  getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
+  updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>): Promise<User | undefined>;
+  updateUserLastLogin(userId: string): Promise<void>;
+  
+  // Categories Management
+  getCategories(includeInactive?: boolean): Promise<Category[]>;
+  getCategory(id: string): Promise<Category | undefined>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: string): Promise<boolean>;
+  
+  // Occasions Management
+  getOccasions(includeInactive?: boolean): Promise<Occasion[]>;
+  getOccasion(id: string): Promise<Occasion | undefined>;
+  createOccasion(occasion: InsertOccasion): Promise<Occasion>;
+  updateOccasion(id: string, updates: Partial<InsertOccasion>): Promise<Occasion | undefined>;
+  deleteOccasion(id: string): Promise<boolean>;
+  
+  // Price Ranges Management
+  getPriceRanges(includeInactive?: boolean): Promise<PriceRange[]>;
+  getPriceRange(id: string): Promise<PriceRange | undefined>;
+  createPriceRange(priceRange: InsertPriceRange): Promise<PriceRange>;
+  updatePriceRange(id: string, updates: Partial<InsertPriceRange>): Promise<PriceRange | undefined>;
+  deletePriceRange(id: string): Promise<boolean>;
+  
+  // Relationship Types Management
+  getRelationshipTypes(includeInactive?: boolean): Promise<RelationshipType[]>;
+  getRelationshipType(id: string): Promise<RelationshipType | undefined>;
+  createRelationshipType(relationshipType: InsertRelationshipType): Promise<RelationshipType>;
+  updateRelationshipType(id: string, updates: Partial<InsertRelationshipType>): Promise<RelationshipType | undefined>;
+  deleteRelationshipType(id: string): Promise<boolean>;
+  
+  // System Settings Management
+  getSystemSettings(publicOnly?: boolean): Promise<SystemSetting[]>;
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  upsertSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
+  deleteSystemSetting(key: string): Promise<boolean>;
+  
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(filters?: { userId?: string; resource?: string; limit?: number }): Promise<AuditLog[]>;
+  
+  // Advanced Admin Stats & Reports
+  getAdvancedStats(): Promise<{
+    userStats: { total: number; active: number; byRole: Record<string, number> };
+    giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
+    topCategories: Array<{ category: string; count: number }>;
+    recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -562,6 +633,357 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return profile;
+  }
+
+  // ========== ADMIN MODULE IMPLEMENTATIONS ==========
+  
+  // User Management (Admin)
+  async getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]> {
+    let query = db.select().from(users);
+    
+    const conditions = [];
+    if (filters?.role) {
+      conditions.push(eq(users.role, filters.role));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(users.isActive, filters.isActive));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(users.createdAt);
+  }
+  
+  async updateUser(
+    userId: string,
+    updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>
+  ): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+  
+  async updateUserLastLogin(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+  
+  // Categories Management
+  async getCategories(includeInactive = false): Promise<Category[]> {
+    let query = db.select().from(categories);
+    
+    if (!includeInactive) {
+      query = query.where(eq(categories.isActive, true)) as any;
+    }
+    
+    return await query.orderBy(categories.name);
+  }
+  
+  async getCategory(id: string): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
+  }
+  
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const [newCategory] = await db.insert(categories).values(category).returning();
+    return newCategory;
+  }
+  
+  async updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category | undefined> {
+    const [updated] = await db
+      .update(categories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(categories.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteCategory(id: string): Promise<boolean> {
+    const result = await db.delete(categories).where(eq(categories.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Occasions Management
+  async getOccasions(includeInactive = false): Promise<Occasion[]> {
+    let query = db.select().from(occasions);
+    
+    if (!includeInactive) {
+      query = query.where(eq(occasions.isActive, true)) as any;
+    }
+    
+    return await query.orderBy(occasions.name);
+  }
+  
+  async getOccasion(id: string): Promise<Occasion | undefined> {
+    const [occasion] = await db.select().from(occasions).where(eq(occasions.id, id));
+    return occasion;
+  }
+  
+  async createOccasion(occasion: InsertOccasion): Promise<Occasion> {
+    const [newOccasion] = await db.insert(occasions).values(occasion).returning();
+    return newOccasion;
+  }
+  
+  async updateOccasion(id: string, updates: Partial<InsertOccasion>): Promise<Occasion | undefined> {
+    const [updated] = await db
+      .update(occasions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(occasions.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteOccasion(id: string): Promise<boolean> {
+    const result = await db.delete(occasions).where(eq(occasions.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Price Ranges Management
+  async getPriceRanges(includeInactive = false): Promise<PriceRange[]> {
+    let query = db.select().from(priceRanges);
+    
+    if (!includeInactive) {
+      query = query.where(eq(priceRanges.isActive, true)) as any;
+    }
+    
+    return await query.orderBy(priceRanges.minPrice);
+  }
+  
+  async getPriceRange(id: string): Promise<PriceRange | undefined> {
+    const [priceRange] = await db.select().from(priceRanges).where(eq(priceRanges.id, id));
+    return priceRange;
+  }
+  
+  async createPriceRange(priceRange: InsertPriceRange): Promise<PriceRange> {
+    const [newPriceRange] = await db.insert(priceRanges).values(priceRange).returning();
+    return newPriceRange;
+  }
+  
+  async updatePriceRange(id: string, updates: Partial<InsertPriceRange>): Promise<PriceRange | undefined> {
+    const [updated] = await db
+      .update(priceRanges)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(priceRanges.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deletePriceRange(id: string): Promise<boolean> {
+    const result = await db.delete(priceRanges).where(eq(priceRanges.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Relationship Types Management
+  async getRelationshipTypes(includeInactive = false): Promise<RelationshipType[]> {
+    let query = db.select().from(relationshipTypes);
+    
+    if (!includeInactive) {
+      query = query.where(eq(relationshipTypes.isActive, true)) as any;
+    }
+    
+    return await query.orderBy(relationshipTypes.name);
+  }
+  
+  async getRelationshipType(id: string): Promise<RelationshipType | undefined> {
+    const [relationshipType] = await db.select().from(relationshipTypes).where(eq(relationshipTypes.id, id));
+    return relationshipType;
+  }
+  
+  async createRelationshipType(relationshipType: InsertRelationshipType): Promise<RelationshipType> {
+    const [newRelationshipType] = await db.insert(relationshipTypes).values(relationshipType).returning();
+    return newRelationshipType;
+  }
+  
+  async updateRelationshipType(id: string, updates: Partial<InsertRelationshipType>): Promise<RelationshipType | undefined> {
+    const [updated] = await db
+      .update(relationshipTypes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(relationshipTypes.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteRelationshipType(id: string): Promise<boolean> {
+    const result = await db.delete(relationshipTypes).where(eq(relationshipTypes.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // System Settings Management
+  async getSystemSettings(publicOnly = false): Promise<SystemSetting[]> {
+    let query = db.select().from(systemSettings);
+    
+    if (publicOnly) {
+      query = query.where(eq(systemSettings.isPublic, true)) as any;
+    }
+    
+    return await query.orderBy(systemSettings.key);
+  }
+  
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+    return setting;
+  }
+  
+  async upsertSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting> {
+    const existing = await this.getSystemSetting(setting.key);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(systemSettings)
+        .set({ ...setting, updatedAt: new Date() })
+        .where(eq(systemSettings.key, setting.key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(systemSettings).values(setting).returning();
+      return created;
+    }
+  }
+  
+  async deleteSystemSetting(key: string): Promise<boolean> {
+    const result = await db.delete(systemSettings).where(eq(systemSettings.key, key)).returning();
+    return result.length > 0;
+  }
+  
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [newLog] = await db.insert(auditLogs).values(log).returning();
+    return newLog;
+  }
+  
+  async getAuditLogs(filters?: { userId?: string; resource?: string; limit?: number }): Promise<AuditLog[]> {
+    let query = db.select().from(auditLogs);
+    
+    const conditions = [];
+    if (filters?.userId) {
+      conditions.push(eq(auditLogs.userId, filters.userId));
+    }
+    if (filters?.resource) {
+      conditions.push(eq(auditLogs.resource, filters.resource));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    query = query.orderBy(sql`${auditLogs.createdAt} DESC`) as any;
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return await query;
+  }
+  
+  // Advanced Admin Stats & Reports
+  async getAdvancedStats(): Promise<{
+    userStats: { total: number; active: number; byRole: Record<string, number> };
+    giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
+    topCategories: Array<{ category: string; count: number }>;
+    recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // User stats
+    const totalUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users);
+    
+    const activeUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.isActive, true));
+    
+    const usersByRole = await db
+      .select({
+        role: users.role,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(users)
+      .groupBy(users.role);
+    
+    const byRole: Record<string, number> = {};
+    usersByRole.forEach((r) => {
+      byRole[r.role] = r.count;
+    });
+    
+    // Gift stats
+    const totalSuggestions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(giftSuggestions);
+    
+    const purchasedGifts = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userGifts)
+      .where(eq(userGifts.isPurchased, true));
+    
+    const favoriteGifts = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userGifts)
+      .where(eq(userGifts.isFavorite, true));
+    
+    // Top categories
+    const topCategoriesResult = await db
+      .select({
+        category: giftSuggestions.category,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(giftSuggestions)
+      .groupBy(giftSuggestions.category)
+      .orderBy(sql`count(*) DESC`)
+      .limit(10);
+    
+    // Recent activity
+    const newUsersToday = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(gte(users.createdAt, today));
+    
+    const newEventsToday = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events)
+      .where(gte(events.createdAt, today));
+    
+    const giftsMarkedTodayAsPurchased = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userGifts)
+      .where(and(
+        eq(userGifts.isPurchased, true),
+        gte(userGifts.purchasedAt, today)
+      ));
+    
+    return {
+      userStats: {
+        total: totalUsers[0]?.count || 0,
+        active: activeUsers[0]?.count || 0,
+        byRole,
+      },
+      giftStats: {
+        totalSuggestions: totalSuggestions[0]?.count || 0,
+        purchasedGifts: purchasedGifts[0]?.count || 0,
+        favoriteGifts: favoriteGifts[0]?.count || 0,
+      },
+      topCategories: topCategoriesResult.map((r) => ({
+        category: r.category,
+        count: r.count,
+      })),
+      recentActivity: {
+        newUsersToday: newUsersToday[0]?.count || 0,
+        newEventsToday: newEventsToday[0]?.count || 0,
+        giftsMarkedTodayAsPurchased: giftsMarkedTodayAsPurchased[0]?.count || 0,
+      },
+    };
   }
 
   // ========== Admin Stats ==========
