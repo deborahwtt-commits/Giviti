@@ -36,11 +36,11 @@ export default function Header({
       return await apiRequest("/api/logout", "POST");
     },
     onSuccess: async () => {
-      // Invalidate and refetch auth query to update authentication state
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      // Redirect to landing page
-      setLocation("/");
+      // Clear all cached data
+      queryClient.clear();
+      
+      // Force reload to landing page to ensure complete logout
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({
