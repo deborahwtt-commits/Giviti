@@ -20,7 +20,7 @@ export default function Header({
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, hasAdminAccess } = useAuth();
   const { toast } = useToast();
   
   const { data: upcomingEvents } = useQuery<Event[]>({
@@ -117,7 +117,7 @@ export default function Header({
               )}
             </Button>
 
-            {isAdmin && (
+            {hasAdminAccess && (
               <Link href="/admin">
                 <Button
                   variant="ghost"
@@ -191,7 +191,7 @@ export default function Header({
                   )}
                 </Link>
               ))}
-              {isAdmin && (
+              {hasAdminAccess && (
                 <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
                   <Button
                     variant="ghost"

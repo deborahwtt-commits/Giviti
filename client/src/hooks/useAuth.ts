@@ -8,10 +8,13 @@ export function useAuth() {
     retry: false,
   });
 
+  const hasAdminAccess = user?.role === "admin" || user?.role === "manager" || user?.role === "support";
+
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
+    hasAdminAccess,
   };
 }
