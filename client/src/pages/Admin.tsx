@@ -17,6 +17,7 @@ import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 import { AdminStatsCard } from "@/components/admin/AdminStatsCard";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import type { User } from "@shared/schema";
 
 interface AdminStats {
@@ -111,10 +112,15 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-12">
-        <AdminPageHeader
-          title="Painel Administrativo"
-          description="Visão geral completa das estatísticas da plataforma"
-        />
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="font-heading font-semibold text-3xl text-foreground mb-2" data-testid="admin-page-title">
+              Painel Administrativo
+            </h1>
+            <p className="text-muted-foreground">Visão geral completa das estatísticas da plataforma</p>
+          </div>
+          <CreateUserDialog />
+        </div>
 
         {/* Atividade Recente */}
         <div className="mb-8">

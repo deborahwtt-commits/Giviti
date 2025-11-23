@@ -10,7 +10,8 @@ import {
   insertRelationshipTypeSchema,
   insertSystemSettingSchema,
 } from "@shared/schema";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+import bcrypt from "bcrypt";
 
 export function registerAdminRoutes(app: Express) {
   // Helper function to create audit log
@@ -50,6 +51,54 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // POST /api/admin/users - Create new user
+  app.post("/api/admin/users", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
+    try {
+      // Validate request body with Zod schema
+      const createUserSchema = z.object({
+        email: z.string().email("E-mail inválido"),
+        password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
+        firstName: z.string().min(1, "Nome é obrigatório"),
+        lastName: z.string().min(1, "Sobrenome é obrigatório"),
+        role: z.enum(["user", "admin", "manager", "support", "readonly"]).optional(),
+      });
+      
+      const validatedData = createUserSchema.parse(req.body);
+      const { email, password, firstName, lastName, role } = validatedData;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create user
+      let newUser = await storage.createUser(email, passwordHash, firstName, lastName);
+      
+      // Update role if specified and different from default
+      if (role && role !== "user") {
+        newUser = await storage.updateUser(newUser.id, { role }) || newUser;
+      }
+      
+      await createAudit(req, "CREATE", "user", newUser.id, { email, firstName, lastName, role });
+      
+      const { passwordHash: _, ...sanitizedUser } = newUser;
+      res.status(201).json(sanitizedUser);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
     }
   });
 
