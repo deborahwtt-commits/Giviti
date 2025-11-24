@@ -418,6 +418,7 @@ export const collaborativeEvents = pgTable("collaborative_events", {
 
 export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents).omit({
   id: true,
+  ownerId: true,  // Omit ownerId - will be set from authenticated user
   createdAt: true,
   updatedAt: true,
 });

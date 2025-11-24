@@ -62,15 +62,22 @@ export function registerCollabEventsRoutes(app: Express) {
       const userId = (req as AuthenticatedRequest).user.id;
       const validatedData = insertCollaborativeEventSchema.parse(req.body);
       
-      const event = await storage.createCollaborativeEvent(userId, validatedData);
+      // Add ownerId from authenticated user
+      const eventData = {
+        ...validatedData,
+        ownerId: userId,
+      };
+      
+      const event = await storage.createCollaborativeEvent(userId, eventData);
       
       // Add the creator as a participant with owner role
       await storage.addParticipant(event.id, {
         eventId: event.id,
         userId,
         role: "owner",
-        status: "confirmed",
-        joinedAt: new Date(),
+        status: "accepted",
+        participantData: null,
+        inviteToken: null,
       });
       
       res.status(201).json(event);

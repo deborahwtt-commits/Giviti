@@ -184,11 +184,31 @@ New feature for collaborative event planning supporting Secret Santa, themed nig
 - **Deduplicated results**: Automatic deduplication when JOIN returns multiple rows
 - **Optimized access checks**: `getCollaborativeEvent()` supports optional userId for admin/share-link contexts
 
-### Phase 2: Secret Santa Flow (Planned)
-- Auto-draw algorithm with exclusion rules
+### Phase 2: Secret Santa Flow (In Progress - Nov 24, 2025)
+
+#### Completed ✅
+- **Task 1**: CreateRoleDialog component
+  - Form with conditional budget field for Secret Santa
+  - Form validation with react-hook-form + Zod
+  - Mutation to POST `/api/collab-events` with ownerId from session
+- **Task 2**: RoleDetail page (`/role/:id`)
+  - 3 tabs: Visão Geral, Participantes, Configurações
+  - Type-safe event rendering with fallbacks
+  - Wouter-based navigation (no full page reloads)
+  - Budget display for Secret Santa events
+- **Task 3**: Participant management interface
+  - AddParticipantDialog for adding by email+name
+  - Dropdown menu with status updates (pending/accepted/declined)
+  - Remove participant with AlertDialog confirmation
+  - Owner cannot be removed (UI protection)
+  - Query invalidation after mutations
+
+#### Remaining (Planned)
+- **Task 4**: Auto-draw algorithm with exclusion rules
+- **Task 5**: Participant view of Secret Santa results (who they drew)
+- **Task 6**: Wishlist functionality (participant preferences)
 - Pair management and reveal scheduling
 - Participant notifications
-- Budget limits and wish lists
 
 ### Phase 3: Collective Gifts (Planned)
 - Payment tracking per participant
