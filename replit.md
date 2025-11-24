@@ -140,6 +140,11 @@ Reusable admin components in `client/src/components/admin/`:
 ### Overview
 New feature for collaborative event planning supporting Secret Santa, themed nights, collective gifts, and creative challenges.
 
+**Nomenclatura Importante:**
+- **"Eventos"** = Ocasiões de presentes (aniversários, datas comemorativas) → Página `/eventos`
+- **"Rolês"** = Eventos colaborativos (amigo secreto, festas temáticas, etc) → Página `/role`
+- Interface usa "Criar Rolê" em vez de "Criar Evento" para evitar confusão
+
 ### Phase 1: Foundation ✅ COMPLETED (Nov 24, 2025)
 
 #### Database Schema (6 new tables)

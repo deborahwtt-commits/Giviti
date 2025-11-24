@@ -59,12 +59,12 @@ export default function CollaborativeEvents() {
         <div className="space-y-2">
           <h1 className="text-4xl font-heading font-bold">Planeje seu rolê!</h1>
           <p className="text-muted-foreground">
-            Organize eventos colaborativos com seus amigos
+            Organize rolês colaborativos com seus amigos
           </p>
         </div>
-        <Button size="lg" data-testid="button-create-event">
+        <Button size="lg" data-testid="button-create-role">
           <Plus className="w-5 h-5 mr-2" />
-          Criar Evento
+          Criar Rolê
         </Button>
       </div>
 
@@ -74,13 +74,13 @@ export default function CollaborativeEvents() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Calendar className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Nenhum evento ainda</h3>
+            <h3 className="text-xl font-semibold mb-2">Nenhum rolê ainda</h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              Comece criando seu primeiro evento colaborativo! Organize amigo secreto, noites temáticas e muito mais.
+              Comece criando seu primeiro rolê! Organize amigo secreto, noites temáticas e muito mais.
             </p>
-            <Button size="lg" data-testid="button-create-first-event">
+            <Button size="lg" data-testid="button-create-first-role">
               <Plus className="w-5 h-5 mr-2" />
-              Criar Primeiro Evento
+              Criar Primeiro Rolê
             </Button>
           </CardContent>
         </Card>
