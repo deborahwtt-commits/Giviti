@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles } from "lucide-react";
 import { format } from "date-fns";
+import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import type { CollaborativeEvent } from "@shared/schema";
 import type { LucideIcon } from "lucide-react";
 
 export default function CollaborativeEvents() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: events, isLoading } = useQuery<CollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
   });
@@ -62,7 +64,11 @@ export default function CollaborativeEvents() {
             Organize rolês colaborativos com seus amigos
           </p>
         </div>
-        <Button size="lg" data-testid="button-create-role">
+        <Button 
+          size="lg" 
+          onClick={() => setCreateDialogOpen(true)}
+          data-testid="button-create-role"
+        >
           <Plus className="w-5 h-5 mr-2" />
           Criar Rolê
         </Button>
@@ -78,7 +84,11 @@ export default function CollaborativeEvents() {
             <p className="text-muted-foreground mb-6 max-w-md">
               Comece criando seu primeiro rolê! Organize amigo secreto, noites temáticas e muito mais.
             </p>
-            <Button size="lg" data-testid="button-create-first-role">
+            <Button 
+              size="lg" 
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid="button-create-first-role"
+            >
               <Plus className="w-5 h-5 mr-2" />
               Criar Primeiro Rolê
             </Button>
@@ -154,6 +164,11 @@ export default function CollaborativeEvents() {
           })}
         </div>
       )}
+
+      <CreateRoleDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </div>
   );
 }
