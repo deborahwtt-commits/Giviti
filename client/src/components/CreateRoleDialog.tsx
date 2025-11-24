@@ -108,12 +108,12 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       const payload = {
         name: data.name,
         eventType: data.eventType,
-        eventDate: data.eventDate || undefined,
-        location: data.location || undefined,
-        description: data.description || undefined,
+        eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null,
+        location: data.location || null,
+        description: data.description || null,
         isPublic: data.isPublic,
         status: "active" as const,
-        typeSpecificData: Object.keys(typeSpecificData).length > 0 ? typeSpecificData : undefined,
+        typeSpecificData: Object.keys(typeSpecificData).length > 0 ? typeSpecificData : null,
       };
 
       const response = await apiRequest("/api/collab-events", "POST", payload);
