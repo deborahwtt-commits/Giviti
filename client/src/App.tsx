@@ -15,6 +15,7 @@ import GiftManagement from "@/pages/GiftManagement";
 import Profile from "@/pages/Profile";
 import Admin from "@/pages/Admin";
 import UserList from "@/pages/UserList";
+import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedApp() {
@@ -55,6 +56,7 @@ function AuthenticatedApp() {
         <Route path="/sugestoes" component={Suggestions} />
         <Route path="/presentes" component={GiftManagement} />
         <Route path="/perfil" component={Profile} />
+        <Route path="/role" component={CollaborativeEvents} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route component={NotFound} />

@@ -14,6 +14,12 @@ import {
   relationshipTypes,
   systemSettings,
   auditLogs,
+  collaborativeEvents,
+  collaborativeEventParticipants,
+  collaborativeEventLinks,
+  secretSantaPairs,
+  collectiveGiftContributions,
+  collaborativeEventTasks,
   type User,
   type UpsertUser,
   type Recipient,
@@ -41,6 +47,18 @@ import {
   type InsertSystemSetting,
   type AuditLog,
   type InsertAuditLog,
+  type CollaborativeEvent,
+  type InsertCollaborativeEvent,
+  type CollaborativeEventParticipant,
+  type InsertCollaborativeEventParticipant,
+  type CollaborativeEventLink,
+  type InsertCollaborativeEventLink,
+  type SecretSantaPair,
+  type InsertSecretSantaPair,
+  type CollectiveGiftContribution,
+  type InsertCollectiveGiftContribution,
+  type CollaborativeEventTask,
+  type InsertCollaborativeEventTask,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -157,6 +175,29 @@ export interface IStorage {
   getUserRecipientsCount(userId: string): Promise<number>;
   getUserPurchasedGiftsCount(userId: string): Promise<number>;
   getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>>;
+  
+  // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
+  
+  // Collaborative Event Operations
+  createCollaborativeEvent(ownerId: string, event: InsertCollaborativeEvent): Promise<CollaborativeEvent>;
+  getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]>;
+  getCollaborativeEvent(id: string, userId?: string): Promise<CollaborativeEvent | undefined>;
+  updateCollaborativeEvent(id: string, userId: string, updates: Partial<InsertCollaborativeEvent>): Promise<CollaborativeEvent | undefined>;
+  deleteCollaborativeEvent(id: string, userId: string): Promise<boolean>;
+  
+  // Participant Operations
+  addParticipant(eventId: string, participant: InsertCollaborativeEventParticipant): Promise<CollaborativeEventParticipant>;
+  getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]>;
+  getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
+  removeParticipant(id: string, eventId: string): Promise<boolean>;
+  
+  // Share Link Operations
+  createShareLink(link: InsertCollaborativeEventLink): Promise<CollaborativeEventLink>;
+  getShareLink(token: string): Promise<CollaborativeEventLink | undefined>;
+  getShareLinksByEvent(eventId: string): Promise<CollaborativeEventLink[]>;
+  incrementShareLinkUse(token: string): Promise<void>;
+  revokeShareLink(token: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1108,6 +1149,254 @@ export class DatabaseStorage implements IStorage {
       recipientsCount: row.recipients_count,
       purchasedGiftsCount: row.purchased_gifts_count,
     }));
+  }
+
+  // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
+
+  async createCollaborativeEvent(ownerId: string, event: InsertCollaborativeEvent): Promise<CollaborativeEvent> {
+    const [newEvent] = await db
+      .insert(collaborativeEvents)
+      .values({
+        ...event,
+        ownerId,
+      })
+      .returning();
+    return newEvent;
+  }
+
+  async getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]> {
+    // Get user email for email-only participant matching
+    const [user] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    const userEmail = user?.email;
+
+    // Single optimized query: fetch events where user is owner OR participant (by userId or email)
+    const events = await db
+      .select({
+        id: collaborativeEvents.id,
+        ownerId: collaborativeEvents.ownerId,
+        name: collaborativeEvents.name,
+        eventType: collaborativeEvents.eventType,
+        eventDate: collaborativeEvents.eventDate,
+        location: collaborativeEvents.location,
+        description: collaborativeEvents.description,
+        isPublic: collaborativeEvents.isPublic,
+        status: collaborativeEvents.status,
+        typeSpecificData: collaborativeEvents.typeSpecificData,
+        createdAt: collaborativeEvents.createdAt,
+        updatedAt: collaborativeEvents.updatedAt,
+      })
+      .from(collaborativeEvents)
+      .leftJoin(
+        collaborativeEventParticipants,
+        eq(collaborativeEvents.id, collaborativeEventParticipants.eventId)
+      )
+      .where(
+        sql`(
+          ${collaborativeEvents.ownerId} = ${userId}
+          OR ${collaborativeEventParticipants.userId} = ${userId}
+          ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+        )`
+      );
+
+    // Deduplicate (since LEFT JOIN can return multiple rows per event)
+    const uniqueEvents = Array.from(
+      new Map(events.map(event => [event.id, event])).values()
+    );
+
+    return uniqueEvents;
+  }
+
+  async getCollaborativeEvent(id: string, userId?: string): Promise<CollaborativeEvent | undefined> {
+    // If no userId provided, fetch event without access check (for admin/share links)
+    if (!userId) {
+      const [event] = await db
+        .select()
+        .from(collaborativeEvents)
+        .where(eq(collaborativeEvents.id, id));
+      return event;
+    }
+
+    // Get user email for email-only participant matching
+    const [user] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    const userEmail = user?.email;
+
+    // Single optimized query: check owner OR participant (by userId or email)
+    const [event] = await db
+      .select({
+        id: collaborativeEvents.id,
+        ownerId: collaborativeEvents.ownerId,
+        name: collaborativeEvents.name,
+        eventType: collaborativeEvents.eventType,
+        eventDate: collaborativeEvents.eventDate,
+        location: collaborativeEvents.location,
+        description: collaborativeEvents.description,
+        isPublic: collaborativeEvents.isPublic,
+        status: collaborativeEvents.status,
+        typeSpecificData: collaborativeEvents.typeSpecificData,
+        createdAt: collaborativeEvents.createdAt,
+        updatedAt: collaborativeEvents.updatedAt,
+      })
+      .from(collaborativeEvents)
+      .leftJoin(
+        collaborativeEventParticipants,
+        eq(collaborativeEvents.id, collaborativeEventParticipants.eventId)
+      )
+      .where(
+        and(
+          eq(collaborativeEvents.id, id),
+          sql`(
+            ${collaborativeEvents.ownerId} = ${userId}
+            OR ${collaborativeEventParticipants.userId} = ${userId}
+            ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+          )`
+        )
+      );
+
+    return event;
+  }
+
+  async updateCollaborativeEvent(id: string, userId: string, updates: Partial<InsertCollaborativeEvent>): Promise<CollaborativeEvent | undefined> {
+    const [updatedEvent] = await db
+      .update(collaborativeEvents)
+      .set({
+        ...updates,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(collaborativeEvents.id, id),
+          eq(collaborativeEvents.ownerId, userId)
+        )
+      )
+      .returning();
+
+    return updatedEvent;
+  }
+
+  async deleteCollaborativeEvent(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(collaborativeEvents)
+      .where(
+        and(
+          eq(collaborativeEvents.id, id),
+          eq(collaborativeEvents.ownerId, userId)
+        )
+      )
+      .returning();
+
+    return result.length > 0;
+  }
+
+  // ========== Participant Operations ==========
+
+  async addParticipant(eventId: string, participant: InsertCollaborativeEventParticipant): Promise<CollaborativeEventParticipant> {
+    const [newParticipant] = await db
+      .insert(collaborativeEventParticipants)
+      .values({
+        ...participant,
+        eventId,
+      })
+      .returning();
+    return newParticipant;
+  }
+
+  async getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]> {
+    return await db
+      .select()
+      .from(collaborativeEventParticipants)
+      .where(eq(collaborativeEventParticipants.eventId, eventId));
+  }
+
+  async getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [participant] = await db
+      .select()
+      .from(collaborativeEventParticipants)
+      .where(eq(collaborativeEventParticipants.id, id));
+    return participant;
+  }
+
+  async updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        status,
+        joinedAt: status === 'confirmed' ? sql`now()` : undefined,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async removeParticipant(id: string, eventId: string): Promise<boolean> {
+    const result = await db
+      .delete(collaborativeEventParticipants)
+      .where(
+        and(
+          eq(collaborativeEventParticipants.id, id),
+          eq(collaborativeEventParticipants.eventId, eventId)
+        )
+      )
+      .returning();
+
+    return result.length > 0;
+  }
+
+  // ========== Share Link Operations ==========
+
+  async createShareLink(link: InsertCollaborativeEventLink): Promise<CollaborativeEventLink> {
+    const [newLink] = await db
+      .insert(collaborativeEventLinks)
+      .values(link)
+      .returning();
+    return newLink;
+  }
+
+  async getShareLink(token: string): Promise<CollaborativeEventLink | undefined> {
+    const [link] = await db
+      .select()
+      .from(collaborativeEventLinks)
+      .where(eq(collaborativeEventLinks.token, token));
+    return link;
+  }
+
+  async getShareLinksByEvent(eventId: string): Promise<CollaborativeEventLink[]> {
+    return await db
+      .select()
+      .from(collaborativeEventLinks)
+      .where(eq(collaborativeEventLinks.eventId, eventId));
+  }
+
+  async incrementShareLinkUse(token: string): Promise<void> {
+    await db
+      .update(collaborativeEventLinks)
+      .set({
+        useCount: sql`${collaborativeEventLinks.useCount} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventLinks.token, token));
+  }
+
+  async revokeShareLink(token: string): Promise<boolean> {
+    const result = await db
+      .update(collaborativeEventLinks)
+      .set({
+        isActive: false,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventLinks.token, token))
+      .returning();
+
+    return result.length > 0;
   }
 }
 

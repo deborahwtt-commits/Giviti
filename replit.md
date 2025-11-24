@@ -134,3 +134,71 @@ Reusable admin components in `client/src/components/admin/`:
 - **Audit Log Viewer**: Reporting interface for viewing and filtering audit logs
 - **Admin Sidebar Navigation**: Dedicated navigation for accessing all admin sections
 - **Role-based UI Gating**: Client-side permission checks to show/hide features based on user role
+
+## Collaborative Events ("Planeje seu rolê!")
+
+### Overview
+New feature for collaborative event planning supporting Secret Santa, themed nights, collective gifts, and creative challenges.
+
+### Phase 1: Foundation ✅ COMPLETED (Nov 24, 2025)
+
+#### Database Schema (6 new tables)
+- **collaborative_events**: Main event table with ownerId, eventType (secret_santa, themed_night, collective_gift, creative_challenge), typeSpecificData (JSONB), status (draft, active, completed, cancelled)
+- **collaborative_event_participants**: Participants with userId/email/name, role (owner, organizer, participant), status (pending, accepted, declined), inviteToken, participantData (JSONB)
+- **collaborative_event_links**: Share links with unique token, permissions, expiration, useCount
+- **secret_santa_pairs**: Secret Santa pairings (giverParticipantId, receiverParticipantId, revealDate)
+- **collective_gift_contributions**: Payment tracking (participantId, amountDue, amountPaid, isPaid)
+- **collaborative_event_tasks**: Task lists for themed nights (title, description, assignedTo, isCompleted, priority)
+
+#### Storage Layer
+- **Optimized Queries**: Single JOIN queries for event access checking owner OR participant (by userId or email)
+- **Email-only Participants**: Support for participants invited by email before account creation
+- **Access Control**: Proper authorization for owner, userId-based participants, and email-matched participants
+- **14 Storage Methods**: Full CRUD for events, participants, and share links
+
+#### API Routes (`/api/collab-events`)
+- **Event CRUD**: GET /, GET /:id, POST /, PATCH /:id, DELETE /:id
+- **Participants**: GET /:id/participants, POST /:id/participants, PATCH /:eventId/participants/:participantId/status, DELETE /:eventId/participants/:participantId
+- **Share Links**: GET /:id/share-links, POST /:id/share-links, DELETE /share-links/:token
+- **Security**: All routes protected with `isAuthenticated` middleware, helper `canAccessEvent()` for authorization
+- **Validation**: Zod schema refinement requires userId OR (email + name) to prevent orphan participant records
+
+#### Frontend
+- **Navigation**: "Planeje seu rolê!" menu item → `/role`
+- **Event Listing Page**: Card-based layout with event types using Lucide icons:
+  - Secret Santa: `Gift` icon
+  - Themed Night: `PartyPopper` icon
+  - Collective Gift: `Heart` icon
+  - Creative Challenge: `Sparkles` icon
+- **Empty State**: CTA to create first event
+- **Skeleton Loading**: Smooth loading experience
+- **Design Compliance**: Follows candy-color design guidelines, NO emoji literals
+
+#### Performance Optimizations
+- **Single-query fetching**: `getCollaborativeEvents()` uses one LEFT JOIN instead of multiple round trips
+- **Deduplicated results**: Automatic deduplication when JOIN returns multiple rows
+- **Optimized access checks**: `getCollaborativeEvent()` supports optional userId for admin/share-link contexts
+
+### Phase 2: Secret Santa Flow (Planned)
+- Auto-draw algorithm with exclusion rules
+- Pair management and reveal scheduling
+- Participant notifications
+- Budget limits and wish lists
+
+### Phase 3: Collective Gifts (Planned)
+- Payment tracking per participant
+- Amount due/paid status
+- Payment reminders
+- Integration with payment methods
+
+### Phase 4: Themed Nights (Planned)
+- Task board with assignments
+- Priority levels
+- Completion tracking
+- Task notifications
+
+### Phase 5: Creative Challenges (Planned)
+- Challenge submission system
+- Voting mechanism
+- Winner selection
+- Challenge history

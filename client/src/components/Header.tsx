@@ -60,6 +60,7 @@ export default function Header({
     { path: "/presenteados", label: "Presenteados" },
     { path: "/eventos", label: "Eventos" },
     { path: "/sugestoes", label: "Sugestões" },
+    { path: "/role", label: "Planeje seu rolê!" },
   ];
 
   return (

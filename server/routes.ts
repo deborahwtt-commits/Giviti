@@ -19,6 +19,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
+import { registerCollabEventsRoutes } from "./collabEventsRoutes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
@@ -26,6 +27,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register all administrative routes
   registerAdminRoutes(app);
+  
+  // Register collaborative events routes (Planeje seu rolê!)
+  registerCollabEventsRoutes(app);
 
   // ========== Auth Routes ==========
 

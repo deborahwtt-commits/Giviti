@@ -393,3 +393,180 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// ========================================
+// COLLABORATIVE EVENTS (Planeje seu rolê!)
+// ========================================
+
+// Collaborative events table - main table for hangout planning
+export const collaborativeEvents = pgTable("collaborative_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerId: varchar("owner_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  eventType: varchar("event_type").notNull(), // secret_santa, themed_night, collective_gift, creative_challenge
+  eventDate: timestamp("event_date"),
+  location: varchar("location"),
+  description: text("description"),
+  isPublic: boolean("is_public").default(false).notNull(),
+  status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
+  typeSpecificData: jsonb("type_specific_data"), // JSON for type-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCollaborativeEvent = z.infer<typeof insertCollaborativeEventSchema>;
+export type CollaborativeEvent = typeof collaborativeEvents.$inferSelect;
+
+// Collaborative event participants table
+export const collaborativeEventParticipants = pgTable("collaborative_event_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  userId: varchar("user_id")
+    .references(() => users.id, { onDelete: "cascade" }),
+  email: varchar("email"),
+  name: varchar("name"),
+  role: varchar("role").notNull().default("participant"), // owner, participant
+  status: varchar("status").notNull().default("invited"), // invited, confirmed, declined
+  inviteToken: varchar("invite_token").unique(),
+  participantData: jsonb("participant_data"), // For wishlists, preferences, etc.
+  joinedAt: timestamp("joined_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .refine(
+    (data) => !!(data.userId || (data.email && data.name)),
+    {
+      message: "Either userId or both email and name must be provided",
+      path: ["userId"],
+    }
+  );
+
+export type InsertCollaborativeEventParticipant = z.infer<typeof insertCollaborativeEventParticipantSchema>;
+export type CollaborativeEventParticipant = typeof collaborativeEventParticipants.$inferSelect;
+
+// Collaborative event share links table
+export const collaborativeEventLinks = pgTable("collaborative_event_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  permissions: varchar("permissions").notNull().default("view"), // view, edit, admin
+  expiresAt: timestamp("expires_at"),
+  maxUses: integer("max_uses"),
+  useCount: integer("use_count").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollaborativeEventLinkSchema = createInsertSchema(collaborativeEventLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCollaborativeEventLink = z.infer<typeof insertCollaborativeEventLinkSchema>;
+export type CollaborativeEventLink = typeof collaborativeEventLinks.$inferSelect;
+
+// Secret Santa pairs table - for amigo secreto
+export const secretSantaPairs = pgTable("secret_santa_pairs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  giverParticipantId: varchar("giver_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  receiverParticipantId: varchar("receiver_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  isRevealed: boolean("is_revealed").default(false).notNull(),
+  revealedAt: timestamp("revealed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecretSantaPairSchema = createInsertSchema(secretSantaPairs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSecretSantaPair = z.infer<typeof insertSecretSantaPairSchema>;
+export type SecretSantaPair = typeof secretSantaPairs.$inferSelect;
+
+// Collective gift contributions table
+export const collectiveGiftContributions = pgTable("collective_gift_contributions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  participantId: varchar("participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  amountDue: integer("amount_due").notNull(),
+  amountPaid: integer("amount_paid").default(0).notNull(),
+  isPaid: boolean("is_paid").default(false).notNull(),
+  paidAt: timestamp("paid_at"),
+  paymentNotes: text("payment_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollectiveGiftContributionSchema = createInsertSchema(collectiveGiftContributions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCollectiveGiftContribution = z.infer<typeof insertCollectiveGiftContributionSchema>;
+export type CollectiveGiftContribution = typeof collectiveGiftContributions.$inferSelect;
+
+// Collaborative event tasks table - for themed nights
+export const collaborativeEventTasks = pgTable("collaborative_event_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  assignedToParticipantId: varchar("assigned_to_participant_id")
+    .references(() => collaborativeEventParticipants.id, { onDelete: "set null" }),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  completedAt: timestamp("completed_at"),
+  dueDate: timestamp("due_date"),
+  priority: varchar("priority").default("medium"), // low, medium, high
+  createdBy: varchar("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollaborativeEventTaskSchema = createInsertSchema(collaborativeEventTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCollaborativeEventTask = z.infer<typeof insertCollaborativeEventTaskSchema>;
+export type CollaborativeEventTask = typeof collaborativeEventTasks.$inferSelect;
