@@ -416,7 +416,13 @@ export const collaborativeEvents = pgTable("collaborative_events", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents).omit({
+export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents, {
+  eventDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+    if (!val) return null;
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
+}).omit({
   id: true,
   ownerId: true,  // Omit ownerId - will be set from authenticated user
   createdAt: true,

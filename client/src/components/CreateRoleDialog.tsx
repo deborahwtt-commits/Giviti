@@ -26,19 +26,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Gift, PartyPopper, Heart, Sparkles } from "lucide-react";
+import { Gift, PartyPopper, Heart, Sparkles, Calendar as CalendarIcon, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { CollaborativeEvent } from "@shared/schema";
 
 const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge"]),
-  eventDate: z.string().optional(),
+  eventDate: z.date().optional().nullable(),
   location: z.string().max(200).optional(),
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
@@ -87,7 +96,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
     defaultValues: {
       name: "",
       eventType: undefined,
-      eventDate: "",
+      eventDate: undefined,
       location: "",
       description: "",
       isPublic: false,
@@ -108,7 +117,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       const payload = {
         name: data.name,
         eventType: data.eventType,
-        eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null,
+        eventDate: data.eventDate ? data.eventDate.toISOString() : null,
         location: data.location || null,
         description: data.description || null,
         isPublic: data.isPublic,
@@ -243,15 +252,112 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               control={form.control}
               name="eventDate"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Data e Hora (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="datetime-local"
-                      data-testid="input-event-date"
-                      {...field}
-                    />
-                  </FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          data-testid="button-select-date"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? (
+                            format(field.value, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+                          ) : (
+                            <span>Selecione a data e hora</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3 space-y-3">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const currentTime = field.value || new Date();
+                              date.setHours(currentTime.getHours());
+                              date.setMinutes(currentTime.getMinutes());
+                              field.onChange(date);
+                            }
+                          }}
+                          initialFocus
+                          locale={ptBR}
+                          data-testid="calendar-event-date"
+                        />
+                        <div className="flex items-center gap-2 border-t pt-3">
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">
+                              Hora
+                            </label>
+                            <Select
+                              value={field.value ? field.value.getHours().toString() : "12"}
+                              onValueChange={(hour) => {
+                                const date = field.value || new Date();
+                                date.setHours(parseInt(hour));
+                                field.onChange(new Date(date));
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-hour">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => (
+                                  <SelectItem key={i} value={i.toString()}>
+                                    {i.toString().padStart(2, "0")}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">
+                              Minuto
+                            </label>
+                            <Select
+                              value={field.value ? field.value.getMinutes().toString() : "0"}
+                              onValueChange={(minute) => {
+                                const date = field.value || new Date();
+                                date.setMinutes(parseInt(minute));
+                                field.onChange(new Date(date));
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-minute">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 60 }, (_, i) => (
+                                  <SelectItem key={i} value={i.toString()}>
+                                    {i.toString().padStart(2, "0")}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {field.value && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="mt-5"
+                              onClick={() => field.onChange(null)}
+                              data-testid="button-clear-date"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Clique para selecionar data e hora do evento
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
