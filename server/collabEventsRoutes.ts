@@ -160,14 +160,26 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Get event to check type
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
       // Inject eventId from route params (avoid redundancy in request body)
       const validatedData = insertCollaborativeEventParticipantSchema.parse({
         ...req.body,
         eventId: id,
       });
       
-      // Generate invite token if not confirmed
-      if (validatedData.status !== "confirmed") {
+      // For Secret Santa events, override status to "pending" (schema default is "invited")
+      // This ensures Secret Santa participants start with pending status
+      if (event.eventType === "secret_santa" && !req.body.status) {
+        validatedData.status = "pending";
+      }
+      
+      // Generate invite token if not accepted
+      if (validatedData.status !== "accepted") {
         validatedData.inviteToken = crypto.randomBytes(32).toString("hex");
       }
       

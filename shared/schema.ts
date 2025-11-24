@@ -443,7 +443,7 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
   email: varchar("email"),
   name: varchar("name"),
   role: varchar("role").notNull().default("participant"), // owner, participant
-  status: varchar("status").notNull().default("invited"), // invited, confirmed, declined
+  status: varchar("status").notNull().default("invited"), // invited, pending, accepted, declined
   inviteToken: varchar("invite_token").unique(),
   participantData: jsonb("participant_data"), // For wishlists, preferences, etc.
   joinedAt: timestamp("joined_at"),
@@ -451,7 +451,9 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants)
+export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants, {
+  status: z.enum(["invited", "pending", "accepted", "declined"]).default("invited"),
+})
   .omit({
     id: true,
     createdAt: true,
