@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import type { LucideIcon } from "lucide-react";
 
 export default function CollaborativeEvents() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { data: events, isLoading } = useQuery<CollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
   });
@@ -109,6 +111,14 @@ export default function CollaborativeEvents() {
                 key={event.id}
                 className="hover-elevate active-elevate-2 cursor-pointer transition-all"
                 data-testid={`card-event-${event.id}`}
+                onClick={() => setLocation(`/role/${event.id}`)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setLocation(`/role/${event.id}`);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 mb-2">

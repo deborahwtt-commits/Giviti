@@ -17,6 +17,7 @@ import Admin from "@/pages/Admin";
 import UserList from "@/pages/UserList";
 import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
+import RoleDetail from "@/pages/RoleDetail";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -57,6 +58,7 @@ function AuthenticatedApp() {
         <Route path="/presentes" component={GiftManagement} />
         <Route path="/perfil" component={Profile} />
         <Route path="/role" component={CollaborativeEvents} />
+        <Route path="/role/:id" component={RoleDetail} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route component={NotFound} />
