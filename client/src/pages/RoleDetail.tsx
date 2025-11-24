@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { AddParticipantDialog } from "@/components/AddParticipantDialog";
 import {
@@ -67,8 +68,10 @@ const statusLabels: Record<string, string> = {
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
+  const [confirmDrawOpen, setConfirmDrawOpen] = useState(false);
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -108,6 +111,96 @@ export default function RoleDetail() {
       return response.json();
     },
     enabled: !!id && !!event,
+  });
+
+  // Calculate if current user is owner
+  const isOwner = event && user && event.ownerId === user.id;
+
+  // Owner-only query: draw status is restricted to event owners
+  const { data: drawStatus, isLoading: drawStatusLoading } = useQuery<{
+    isDrawPerformed: boolean;
+    pairsCount?: number;
+    confirmedParticipantsCount?: number;
+    totalParticipantsCount?: number;
+    isOwner: boolean;
+  }>({
+    queryKey: ["/api/collab-events", id, "draw-status"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/draw-status`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao verificar status do sorteio");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
+  });
+
+  const removeParticipantMutation = useMutation({
+    mutationFn: async (participantId: string) => {
+      return await apiRequest(`/api/collab-events/${id}/participants/${participantId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Participante removido",
+        description: "O participante foi removido com sucesso.",
+      });
+      setParticipantToRemove(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover participante",
+        description: error.message,
+        variant: "destructive",
+      });
+      setParticipantToRemove(null);
+    },
+  });
+
+  const updateParticipantStatusMutation = useMutation({
+    mutationFn: async ({ participantId, status }: { participantId: string; status: "pending" | "accepted" | "declined" }) => {
+      return await apiRequest(`/api/collab-events/${id}/participants/${participantId}/status`, "PATCH", { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Status atualizado",
+        description: "O status do participante foi atualizado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const performDrawMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/collab-events/${id}/draw`, "POST", {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
+      toast({
+        title: "Sorteio realizado!",
+        description: data.message || "O sorteio foi realizado com sucesso.",
+      });
+      setConfirmDrawOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao realizar sorteio",
+        description: error.message,
+        variant: "destructive",
+      });
+      setConfirmDrawOpen(false);
+    },
   });
 
   if (eventLoading) {
@@ -161,49 +254,14 @@ export default function RoleDetail() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const removeParticipantMutation = useMutation({
-    mutationFn: async (participantId: string) => {
-      return await apiRequest("DELETE", `/api/collab-events/${id}/participants/${participantId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Participante removido",
-        description: "O participante foi removido com sucesso.",
-      });
-      setParticipantToRemove(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao remover participante",
-        description: error.message,
-        variant: "destructive",
-      });
-      setParticipantToRemove(null);
-    },
-  });
-
-  const updateParticipantStatusMutation = useMutation({
-    mutationFn: async ({ participantId, status }: { participantId: string; status: "pending" | "accepted" | "declined" }) => {
-      return await apiRequest("PATCH", `/api/collab-events/${id}/participants/${participantId}/status`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Status atualizado",
-        description: "O status do participante foi atualizado com sucesso.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar status",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const budgetLimit =
+    event.eventType === "secret_santa" &&
+    event.typeSpecificData &&
+    typeof event.typeSpecificData === "object" &&
+    "budgetLimit" in event.typeSpecificData &&
+    typeof (event.typeSpecificData as { budgetLimit?: unknown }).budgetLimit === "number"
+      ? (event.typeSpecificData as { budgetLimit: number }).budgetLimit
+      : null;
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -305,11 +363,7 @@ export default function RoleDetail() {
               </CardContent>
             </Card>
 
-            {event.eventType === "secret_santa" && 
-             event.typeSpecificData && 
-             typeof event.typeSpecificData === "object" &&
-             "budgetLimit" in event.typeSpecificData &&
-             typeof (event.typeSpecificData as { budgetLimit?: unknown }).budgetLimit === "number" && (
+            {budgetLimit !== null && (
               <Card>
                 <CardHeader>
                   <CardTitle>Configurações do Amigo Secreto</CardTitle>
@@ -318,7 +372,7 @@ export default function RoleDetail() {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Limite de Orçamento</p>
                     <p className="text-2xl font-bold text-primary" data-testid="text-budget-limit">
-                      R$ {(event.typeSpecificData as { budgetLimit: number }).budgetLimit}
+                      R$ {budgetLimit}
                     </p>
                   </div>
                 </CardContent>
@@ -326,7 +380,7 @@ export default function RoleDetail() {
             )}
           </div>
 
-          {event.eventType === "secret_santa" && (
+          {event.eventType === "secret_santa" && isOwner && (
             <Card>
               <CardHeader>
                 <CardTitle>Status do Sorteio</CardTitle>
@@ -335,20 +389,66 @@ export default function RoleDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Sorteio ainda não realizado
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Funcionalidade será implementada em breve
-                    </p>
+                {drawStatusLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                  <Button variant="default" disabled data-testid="button-draw-secret-santa">
-                    <Gift className="w-4 h-4 mr-2" />
-                    Realizar Sorteio
-                  </Button>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {drawStatus && drawStatus.isDrawPerformed ? (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-green-600 dark:text-green-500">
+                            Sorteio realizado!
+                          </p>
+                          {drawStatus.isOwner && drawStatus.pairsCount && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {drawStatus.pairsCount} pares criados
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-600 dark:text-green-500" />
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                            Concluído
+                          </Badge>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {drawStatus?.isOwner ? (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                Sorteio ainda não realizado
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) confirmado(s)
+                                {(drawStatus?.confirmedParticipantsCount || 0) < 3 && 
+                                  " (mínimo: 3)"}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="default" 
+                              onClick={() => setConfirmDrawOpen(true)}
+                              disabled={(drawStatus?.confirmedParticipantsCount || 0) < 3}
+                              data-testid="button-draw-secret-santa"
+                            >
+                              <Gift className="w-4 h-4 mr-2" />
+                              Realizar Sorteio
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center py-4">
+                            <p className="text-sm text-muted-foreground">
+                              Aguardando o organizador realizar o sorteio
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -537,6 +637,32 @@ export default function RoleDetail() {
         open={addParticipantOpen}
         onOpenChange={setAddParticipantOpen}
       />
+
+      <AlertDialog open={confirmDrawOpen} onOpenChange={setConfirmDrawOpen}>
+        <AlertDialogContent data-testid="dialog-confirm-draw">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Sorteio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja realizar o sorteio do Amigo Secreto? Todos os participantes confirmados serão incluídos.
+              <br /><br />
+              <strong>Participantes confirmados:</strong> {drawStatus?.confirmedParticipantsCount || 0}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-draw">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => performDrawMutation.mutate()}
+              disabled={performDrawMutation.isPending}
+              data-testid="button-confirm-draw"
+            >
+              {performDrawMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Realizar Sorteio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={participantToRemove !== null}

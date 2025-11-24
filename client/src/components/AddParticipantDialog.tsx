@@ -54,7 +54,7 @@ export function AddParticipantDialog({
 
   const addParticipantMutation = useMutation({
     mutationFn: async (data: AddParticipantFormValues) => {
-      return await apiRequest("POST", `/api/collab-events/${eventId}/participants`, data);
+      return await apiRequest(`/api/collab-events/${eventId}/participants`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", eventId, "participants"] });

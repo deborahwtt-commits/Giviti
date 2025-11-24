@@ -198,6 +198,12 @@ export interface IStorage {
   getShareLinksByEvent(eventId: string): Promise<CollaborativeEventLink[]>;
   incrementShareLinkUse(token: string): Promise<void>;
   revokeShareLink(token: string): Promise<boolean>;
+  
+  // Secret Santa Operations
+  savePairs(eventId: string, pairs: InsertSecretSantaPair[]): Promise<SecretSantaPair[]>;
+  getPairsByEvent(eventId: string): Promise<SecretSantaPair[]>;
+  getPairForParticipant(eventId: string, participantId: string): Promise<SecretSantaPair | undefined>;
+  deletePairsByEvent(eventId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1394,6 +1400,52 @@ export class DatabaseStorage implements IStorage {
         updatedAt: sql`now()`,
       })
       .where(eq(collaborativeEventLinks.token, token))
+      .returning();
+
+    return result.length > 0;
+  }
+
+  // ========== Secret Santa Operations ==========
+
+  async savePairs(eventId: string, pairs: InsertSecretSantaPair[]): Promise<SecretSantaPair[]> {
+    const pairsWithEventId = pairs.map(pair => ({
+      ...pair,
+      eventId,
+    }));
+
+    const insertedPairs = await db
+      .insert(secretSantaPairs)
+      .values(pairsWithEventId)
+      .returning();
+
+    return insertedPairs;
+  }
+
+  async getPairsByEvent(eventId: string): Promise<SecretSantaPair[]> {
+    return await db
+      .select()
+      .from(secretSantaPairs)
+      .where(eq(secretSantaPairs.eventId, eventId));
+  }
+
+  async getPairForParticipant(eventId: string, participantId: string): Promise<SecretSantaPair | undefined> {
+    const [pair] = await db
+      .select()
+      .from(secretSantaPairs)
+      .where(
+        and(
+          eq(secretSantaPairs.eventId, eventId),
+          eq(secretSantaPairs.giverParticipantId, participantId)
+        )
+      );
+
+    return pair;
+  }
+
+  async deletePairsByEvent(eventId: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaPairs)
+      .where(eq(secretSantaPairs.eventId, eventId))
       .returning();
 
     return result.length > 0;
