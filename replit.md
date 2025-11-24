@@ -95,7 +95,7 @@ All routes prefixed with `/api/admin/` in dedicated `server/adminRoutes.ts`:
 ### Admin Frontend Components
 
 Reusable admin components in `client/src/components/admin/`:
-- **AdminStatsCard**: Display statistics with icons and optional trends
+- **AdminStatsCard**: Display statistics with icons, optional trends, and optional onClick for navigation
 - **AdminPageHeader**: Consistent page headers with titles, descriptions, and actions
 - **Admin Dashboard**: Advanced statistics including user activity, gift stats, top categories, and quick access links
 
@@ -106,7 +106,7 @@ Reusable admin components in `client/src/components/admin/`:
 - **Complete Backend API**: All CRUD endpoints for users, categories, occasions, price ranges, relationship types, system settings, and audit logs
 - **Role-based Access Control**: Server-side middleware (`hasRole`) enforces permissions on all admin routes (admin, manager, support have full access)
 - **Audit Logging**: All admin actions automatically logged with user, action, resource, details, and IP address
-- **Reusable Components**: AdminStatsCard and AdminPageHeader for consistent admin UI
+- **Reusable Components**: AdminStatsCard (with clickable support), AdminPageHeader, and CreateUserDialog for consistent admin UI
 - **Create User Feature**: Complete user creation interface in admin panel with:
   - Form validation (Zod on both frontend and backend)
   - Password hashing with bcrypt
@@ -114,9 +114,18 @@ Reusable admin components in `client/src/components/admin/`:
   - Duplicate email check
   - Success/error notifications
   - Automatic statistics refresh
+- **User List Feature**: Detailed user listing accessible from "Total de Usuários" card in admin panel:
+  - Optimized backend query using CTEs (Common Table Expressions) to eliminate N+1 pattern
+  - Displays: Nome, E-mail, Perfil, Data de Criação, Total de Eventos, Total de Presenteados, Total de Presentes Comprados
+  - Type-safe interface with proper createdAt handling (ISO string)
+  - Complete error handling with toast notifications and retry UI
+  - Clickable AdminStatsCard navigation with visual feedback
+  - Route: `/admin/usuarios`
+  - Performance-optimized for large user bases
 
 #### Next Steps (Not Yet Implemented)
-- **User Management UI**: Interface for viewing, editing, and managing users with filtering and pagination
+- **User Edit/Delete**: Interface for editing and deleting users with confirmation dialogs
+- **User Filtering**: Add filters for role, active status, and search by name/email
 - **Category Management UI**: Pages for creating, editing, and deleting gift categories
 - **Occasion Management UI**: Interface for managing special occasions and events
 - **Price Range Management UI**: Tools for defining and updating price ranges
