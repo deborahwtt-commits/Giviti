@@ -54,6 +54,21 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // GET /api/admin/users/detailed - Get all users with aggregated stats
+  app.get("/api/admin/users/detailed", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
+    try {
+      const usersWithStats = await storage.getAllUsersWithStats();
+      
+      // Remove password hashes from response
+      const sanitizedUsers = usersWithStats.map(({ passwordHash, ...user }) => user);
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching detailed users:", error);
+      res.status(500).json({ message: "Failed to fetch detailed users" });
+    }
+  });
+
   // POST /api/admin/users - Create new user
   app.post("/api/admin/users", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
     try {

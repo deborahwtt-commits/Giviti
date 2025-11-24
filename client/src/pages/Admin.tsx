@@ -158,6 +158,7 @@ export default function Admin() {
               title="Total de Usuários"
               value={advancedStats?.userStats.total || 0}
               icon={Users}
+              onClick={() => setLocation("/admin/usuarios")}
             />
             <AdminStatsCard
               title="Usuários Ativos"

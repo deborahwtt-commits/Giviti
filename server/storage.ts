@@ -151,6 +151,12 @@ export interface IStorage {
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
   }>;
+  
+  // User statistics for detailed user list
+  getUserEventsCount(userId: string): Promise<number>;
+  getUserRecipientsCount(userId: string): Promise<number>;
+  getUserPurchasedGiftsCount(userId: string): Promise<number>;
+  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1023,6 +1029,85 @@ export class DatabaseStorage implements IStorage {
       totalSuggestions: suggestionCount[0]?.count || 0,
       totalGiftsPurchased: purchasedGiftCount[0]?.count || 0,
     };
+  }
+
+  // ========== User Statistics for Detailed User List ==========
+
+  async getUserEventsCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events)
+      .where(eq(events.userId, userId));
+    
+    return result[0]?.count || 0;
+  }
+
+  async getUserRecipientsCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(recipients)
+      .where(eq(recipients.userId, userId));
+    
+    return result[0]?.count || 0;
+  }
+
+  async getUserPurchasedGiftsCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userGifts)
+      .where(and(
+        eq(userGifts.userId, userId),
+        eq(userGifts.isPurchased, true)
+      ));
+    
+    return result[0]?.count || 0;
+  }
+
+  async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>> {
+    // Optimized query using CTEs to aggregate all stats in a single round trip
+    const result = await db.execute(sql`
+      WITH user_events AS (
+        SELECT user_id, COUNT(*)::int AS events_count
+        FROM events
+        GROUP BY user_id
+      ),
+      user_recipients AS (
+        SELECT user_id, COUNT(*)::int AS recipients_count
+        FROM recipients
+        GROUP BY user_id
+      ),
+      user_purchased_gifts AS (
+        SELECT user_id, COUNT(*)::int AS purchased_gifts_count
+        FROM user_gifts
+        WHERE is_purchased = true
+        GROUP BY user_id
+      )
+      SELECT 
+        u.*,
+        COALESCE(ue.events_count, 0) AS events_count,
+        COALESCE(ur.recipients_count, 0) AS recipients_count,
+        COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count
+      FROM users u
+      LEFT JOIN user_events ue ON u.id = ue.user_id
+      LEFT JOIN user_recipients ur ON u.id = ur.user_id
+      LEFT JOIN user_purchased_gifts upg ON u.id = upg.user_id
+      ORDER BY u.created_at DESC
+    `);
+
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      email: row.email,
+      passwordHash: row.password_hash,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      role: row.role,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      lastLogin: row.last_login,
+      eventsCount: row.events_count,
+      recipientsCount: row.recipients_count,
+      purchasedGiftsCount: row.purchased_gifts_count,
+    }));
   }
 }
 

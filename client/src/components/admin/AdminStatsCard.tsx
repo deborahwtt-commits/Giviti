@@ -10,6 +10,7 @@ interface AdminStatsCardProps {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 }
 
 export function AdminStatsCard({
@@ -18,9 +19,14 @@ export function AdminStatsCard({
   icon: Icon,
   description,
   trend,
+  onClick,
 }: AdminStatsCardProps) {
   return (
-    <Card className="p-6" data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+    <Card
+      className={`p-6 ${onClick ? "cursor-pointer hover-elevate active-elevate-2" : ""}`}
+      data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, "-")}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-muted-foreground mb-1">
