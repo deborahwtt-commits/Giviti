@@ -1,12 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { AddParticipantDialog } from "@/components/AddParticipantDialog";
 import {
   Gift,
   PartyPopper,
@@ -21,6 +39,11 @@ import {
   Loader2,
   UserPlus,
   Share2,
+  Trash2,
+  MoreVertical,
+  Check,
+  Clock,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,6 +67,8 @@ const statusLabels: Record<string, string> = {
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
+  const [addParticipantOpen, setAddParticipantOpen] = useState(false);
+  const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -135,6 +160,50 @@ export default function RoleDetail() {
     }
     return name.slice(0, 2).toUpperCase();
   };
+
+  const removeParticipantMutation = useMutation({
+    mutationFn: async (participantId: string) => {
+      return await apiRequest("DELETE", `/api/collab-events/${id}/participants/${participantId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Participante removido",
+        description: "O participante foi removido com sucesso.",
+      });
+      setParticipantToRemove(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover participante",
+        description: error.message,
+        variant: "destructive",
+      });
+      setParticipantToRemove(null);
+    },
+  });
+
+  const updateParticipantStatusMutation = useMutation({
+    mutationFn: async ({ participantId, status }: { participantId: string; status: "pending" | "accepted" | "declined" }) => {
+      return await apiRequest("PATCH", `/api/collab-events/${id}/participants/${participantId}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Status atualizado",
+        description: "O status do participante foi atualizado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -295,7 +364,12 @@ export default function RoleDetail() {
                     Gerencie os participantes do seu rolê
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm" data-testid="button-invite-participants">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddParticipantOpen(true)}
+                  data-testid="button-invite-participants"
+                >
                   <UserPlus className="w-4 h-4 mr-2" />
                   Convidar
                 </Button>
@@ -351,6 +425,7 @@ export default function RoleDetail() {
                                 ? "secondary"
                                 : "destructive"
                             }
+                            data-testid={`badge-participant-status-${participant.id}`}
                           >
                             {participant.status === "accepted"
                               ? "Confirmado"
@@ -360,6 +435,64 @@ export default function RoleDetail() {
                           </Badge>
                         </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-participant-menu-${participant.id}`}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => updateParticipantStatusMutation.mutate({
+                              participantId: participant.id,
+                              status: "accepted"
+                            })}
+                            disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
+                            data-testid={`menu-item-accept-${participant.id}`}
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            Confirmar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => updateParticipantStatusMutation.mutate({
+                              participantId: participant.id,
+                              status: "pending"
+                            })}
+                            disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
+                            data-testid={`menu-item-pending-${participant.id}`}
+                          >
+                            <Clock className="w-4 h-4 mr-2" />
+                            Marcar Pendente
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => updateParticipantStatusMutation.mutate({
+                              participantId: participant.id,
+                              status: "declined"
+                            })}
+                            disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
+                            data-testid={`menu-item-decline-${participant.id}`}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Recusar
+                          </DropdownMenuItem>
+                          {participant.role !== "owner" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setParticipantToRemove(participant.id)}
+                                className="text-destructive focus:text-destructive"
+                                data-testid={`menu-item-remove-${participant.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Remover
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
@@ -367,7 +500,12 @@ export default function RoleDetail() {
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">Nenhum participante ainda</p>
-                  <Button variant="outline" className="mt-4" data-testid="button-add-first-participant">
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setAddParticipantOpen(true)}
+                    data-testid="button-add-first-participant"
+                  >
                     <UserPlus className="w-4 h-4 mr-2" />
                     Adicionar Primeiro Participante
                   </Button>
@@ -393,6 +531,40 @@ export default function RoleDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AddParticipantDialog
+        eventId={id!}
+        open={addParticipantOpen}
+        onOpenChange={setAddParticipantOpen}
+      />
+
+      <AlertDialog
+        open={participantToRemove !== null}
+        onOpenChange={(open) => !open && setParticipantToRemove(null)}
+      >
+        <AlertDialogContent data-testid="dialog-confirm-remove-participant">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Participante</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este participante? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-remove">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => participantToRemove && removeParticipantMutation.mutate(participantToRemove)}
+              disabled={removeParticipantMutation.isPending}
+              data-testid="button-confirm-remove"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeParticipantMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
