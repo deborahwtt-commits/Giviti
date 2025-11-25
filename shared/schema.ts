@@ -452,7 +452,7 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
 });
 
 export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants, {
-  status: z.enum(["invited", "pending", "accepted", "declined"]).default("invited"),
+  status: z.enum(["invited", "pending", "accepted", "declined"]).default("pending"),
 })
   .omit({
     id: true,
