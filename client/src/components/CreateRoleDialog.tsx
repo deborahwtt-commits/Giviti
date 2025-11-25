@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Gift, PartyPopper, Heart, Sparkles, Calendar as CalendarIcon, X } from "lucide-react";
+import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -79,12 +79,6 @@ const eventTypeOptions = [
     label: "Presente Coletivo",
     icon: Heart,
     description: "Vaquinha para presente compartilhado",
-  },
-  {
-    value: "creative_challenge",
-    label: "Desafio Criativo",
-    icon: Sparkles,
-    description: "Competição com votação",
   },
 ];
 

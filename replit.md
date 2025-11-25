@@ -41,7 +41,8 @@ Preferred communication style: Simple, everyday language.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, and advanced statistics.
-- **Collaborative Events**: Support for Secret Santa, themed nights, collective gifts, and creative challenges with participant management, draw algorithms (for Secret Santa), and shareable links.
+- **Collaborative Events**: Support for Secret Santa, themed nights, and collective gifts with participant management, draw algorithms (for Secret Santa), and shareable links.
+  - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
 
 ## External Dependencies
 - **Database Service**: Neon PostgreSQL (serverless database).
