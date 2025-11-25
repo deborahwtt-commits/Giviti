@@ -70,10 +70,16 @@ export function registerCollabEventsRoutes(app: Express) {
       
       const event = await storage.createCollaborativeEvent(userId, eventData);
       
+      // Get user details to include name in participant
+      const user = await storage.getUser(userId);
+      const ownerName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : null;
+      
       // Add the creator as a participant with owner role
       await storage.addParticipant(event.id, {
         eventId: event.id,
         userId,
+        name: ownerName,
+        email: user?.email || null,
         role: "owner",
         status: "accepted",
         participantData: null,
