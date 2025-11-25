@@ -37,12 +37,14 @@ Preferred communication style: Simple, everyday language.
 ### Feature Specifications
 - **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
+  - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, and advanced statistics.
 - **Collaborative Events**: Support for Secret Santa, themed nights, and collective gifts with participant management, draw algorithms (for Secret Santa), and shareable links.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
+  - **Date Validation**: Rolês follow the same date validation rules as regular events - only today or future dates are allowed.
 
 ## External Dependencies
 - **Database Service**: Neon PostgreSQL (serverless database).
