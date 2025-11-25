@@ -39,7 +39,7 @@ import { Switch } from "@/components/ui/switch";
 import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { CollaborativeEvent } from "@shared/schema";
@@ -52,6 +52,14 @@ const createRoleSchema = z.object({
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
+}).refine((data) => {
+  if (!data.eventDate) return true;
+  const today = startOfDay(new Date());
+  const selectedDate = startOfDay(data.eventDate);
+  return selectedDate >= today;
+}, {
+  message: "A data do rolê deve ser hoje ou no futuro",
+  path: ["eventDate"],
 });
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>;

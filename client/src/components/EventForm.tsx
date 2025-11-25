@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { startOfDay } from "date-fns";
 
 interface EventFormProps {
   isOpen: boolean;
@@ -50,6 +52,7 @@ export default function EventForm({
   recipients = [],
   initialEvent,
 }: EventFormProps) {
+  const { toast } = useToast();
   const [eventName, setEventName] = useState(initialEvent?.eventName || "");
   const [eventType, setEventType] = useState(initialEvent?.eventType || "");
   const [eventDate, setEventDate] = useState(initialEvent?.eventDate || "");
@@ -79,6 +82,22 @@ export default function EventForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate date is not in the past
+    if (eventDate) {
+      const selectedDate = startOfDay(new Date(eventDate));
+      const today = startOfDay(new Date());
+      
+      if (selectedDate < today) {
+        toast({
+          title: "Data inválida",
+          description: "A data do evento deve ser hoje ou no futuro",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     const data = {
       ...(initialEvent?.id && { id: initialEvent.id }),
       eventName,
@@ -139,6 +158,7 @@ export default function EventForm({
               type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
               required
               data-testid="input-event-date"
             />

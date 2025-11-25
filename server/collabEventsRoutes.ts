@@ -62,6 +62,28 @@ export function registerCollabEventsRoutes(app: Express) {
       const userId = (req as AuthenticatedRequest).user.id;
       const validatedData = insertCollaborativeEventSchema.parse(req.body);
       
+      // Validate event date is not in the past
+      if (validatedData.eventDate) {
+        const eventDate = new Date(validatedData.eventDate);
+        
+        // Check if date is valid
+        if (isNaN(eventDate.getTime())) {
+          return res.status(400).json({ 
+            error: "Data inválida" 
+          });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        if (eventDate < today) {
+          return res.status(400).json({ 
+            error: "A data do rolê deve ser hoje ou no futuro" 
+          });
+        }
+      }
+      
       // Add ownerId from authenticated user
       const eventData = {
         ...validatedData,
@@ -101,6 +123,28 @@ export function registerCollabEventsRoutes(app: Express) {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
+      
+      // Validate event date is not in the past if being updated
+      if (req.body.eventDate !== undefined) {
+        const eventDate = new Date(req.body.eventDate);
+        
+        // Check if date is valid
+        if (isNaN(eventDate.getTime())) {
+          return res.status(400).json({ 
+            error: "Data inválida" 
+          });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        if (eventDate < today) {
+          return res.status(400).json({ 
+            error: "A data do rolê deve ser hoje ou no futuro" 
+          });
+        }
+      }
       
       const event = await storage.updateCollaborativeEvent(id, userId, req.body);
       

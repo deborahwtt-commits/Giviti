@@ -175,6 +175,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { recipientIds = [], ...eventData } = req.body;
       const validatedData = insertEventSchema.parse(eventData);
       
+      // Validate event date is not in the past
+      if (validatedData.eventDate) {
+        const eventDate = new Date(validatedData.eventDate);
+        
+        // Check if date is valid
+        if (isNaN(eventDate.getTime())) {
+          return res.status(400).json({ 
+            message: "Data inválida" 
+          });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        if (eventDate < today) {
+          return res.status(400).json({ 
+            message: "A data do evento deve ser hoje ou no futuro" 
+          });
+        }
+      }
+      
       // Verify that all recipients belong to the user
       if (recipientIds.length > 0) {
         const userRecipients = await storage.getRecipients(userId);
@@ -227,6 +249,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { recipientIds, ...eventData } = req.body;
       const validatedData = insertEventSchema.partial().parse(eventData);
+      
+      // Validate event date is not in the past if being updated
+      if (validatedData.eventDate !== undefined) {
+        const eventDate = new Date(validatedData.eventDate);
+        
+        // Check if date is valid
+        if (isNaN(eventDate.getTime())) {
+          return res.status(400).json({ 
+            message: "Data inválida" 
+          });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        if (eventDate < today) {
+          return res.status(400).json({ 
+            message: "A data do evento deve ser hoje ou no futuro" 
+          });
+        }
+      }
       
       // If recipientIds is being updated, verify they belong to the user
       if (recipientIds !== undefined) {
