@@ -300,10 +300,6 @@ export default function RoleDetail() {
             <Share2 className="w-4 h-4 mr-2" />
             Compartilhar
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-add-participant">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Adicionar
-          </Button>
         </div>
       </div>
 
