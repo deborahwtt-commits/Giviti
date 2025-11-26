@@ -1343,19 +1343,6 @@ export class DatabaseStorage implements IStorage {
     return updatedParticipant;
   }
 
-  async updateParticipantRole(id: string, role: string): Promise<CollaborativeEventParticipant | undefined> {
-    const [updatedParticipant] = await db
-      .update(collaborativeEventParticipants)
-      .set({
-        role,
-        updatedAt: sql`now()`,
-      })
-      .where(eq(collaborativeEventParticipants.id, id))
-      .returning();
-
-    return updatedParticipant;
-  }
-
   async removeParticipant(id: string, eventId: string): Promise<boolean> {
     const result = await db
       .delete(collaborativeEventParticipants)

@@ -20,14 +20,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { AddParticipantDialog } from "@/components/AddParticipantDialog";
-import { ChangeParticipantRoleDialog } from "@/components/admin/ChangeParticipantRoleDialog";
 import {
   Gift,
   PartyPopper,
@@ -47,7 +45,6 @@ import {
   Check,
   Clock,
   X,
-  ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -75,12 +72,6 @@ export default function RoleDetail() {
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
   const [confirmDrawOpen, setConfirmDrawOpen] = useState(false);
-  const [changeRoleDialogOpen, setChangeRoleDialogOpen] = useState(false);
-  const [participantToChangeRole, setParticipantToChangeRole] = useState<{
-    id: string;
-    name: string;
-    role: string;
-  } | null>(null);
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -584,28 +575,8 @@ export default function RoleDetail() {
                             <X className="w-4 h-4 mr-2" />
                             Recusar
                           </DropdownMenuItem>
-                          {isOwner && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setParticipantToChangeRole({
-                                    id: participant.id,
-                                    name: participant.name || participant.email || "Participante",
-                                    role: participant.role,
-                                  });
-                                  setChangeRoleDialogOpen(true);
-                                }}
-                                data-testid={`menu-item-change-role-${participant.id}`}
-                              >
-                                <ShieldCheck className="w-4 h-4 mr-2" />
-                                Alterar Perfil
-                              </DropdownMenuItem>
-                            </>
-                          )}
                           {participant.role !== "owner" && (
                             <>
-                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => setParticipantToRemove(participant.id)}
                                 className="text-destructive focus:text-destructive"
@@ -662,22 +633,6 @@ export default function RoleDetail() {
         open={addParticipantOpen}
         onOpenChange={setAddParticipantOpen}
       />
-
-      {participantToChangeRole && (
-        <ChangeParticipantRoleDialog
-          open={changeRoleDialogOpen}
-          onOpenChange={(open) => {
-            setChangeRoleDialogOpen(open);
-            if (!open) {
-              setParticipantToChangeRole(null);
-            }
-          }}
-          eventId={id!}
-          participantId={participantToChangeRole.id}
-          participantName={participantToChangeRole.name}
-          currentRole={participantToChangeRole.role}
-        />
-      )}
 
       <AlertDialog open={confirmDrawOpen} onOpenChange={setConfirmDrawOpen}>
         <AlertDialogContent data-testid="dialog-confirm-draw">
