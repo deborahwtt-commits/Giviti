@@ -17,6 +17,15 @@ export default function CollaborativeEvents() {
     queryKey: ["/api/collab-events"],
   });
 
+  // Fetch themed night categories
+  const { data: categories } = useQuery<Array<{ id: string; name: string; description: string | null }>>({
+    queryKey: ["/api/themed-night-categories"],
+    enabled: !!events && events.some(e => e.eventType === "themed_night" && e.themedNightCategoryId),
+  });
+
+  // Create a map for quick category lookup
+  const categoryMap = new Map(categories?.map(cat => [cat.id, cat]) || []);
+
   // Event type display information
   const eventTypeInfo: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
     secret_santa: { label: "Amigo Secreto", color: "destructive", Icon: Gift },
@@ -150,6 +159,14 @@ export default function CollaborativeEvents() {
                       <MapPin className="w-4 h-4" />
                       <span className="line-clamp-1" data-testid="text-event-location">
                         {event.location}
+                      </span>
+                    </div>
+                  )}
+                  {event.eventType === "themed_night" && event.themedNightCategoryId && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <PartyPopper className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-foreground" data-testid="text-category-name">
+                        {categoryMap.get(event.themedNightCategoryId)?.name || "Carregando..."}
                       </span>
                     </div>
                   )}
