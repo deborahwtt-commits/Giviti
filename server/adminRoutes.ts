@@ -8,6 +8,7 @@ import {
   insertOccasionSchema,
   insertPriceRangeSchema,
   insertRelationshipTypeSchema,
+  insertThemedNightCategorySchema,
   insertSystemSettingSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
@@ -452,6 +453,80 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting relationship type:", error);
       res.status(500).json({ message: "Failed to delete relationship type" });
+    }
+  });
+
+  // ========== Themed Night Categories Management Routes ==========
+
+  // GET /api/admin/themed-night-categories - Get all themed night categories
+  app.get("/api/admin/themed-night-categories", isAuthenticated, hasRole("admin", "manager", "support", "readonly"), async (req: any, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === "true";
+      const categories = await storage.getThemedNightCategories(includeInactive);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching themed night categories:", error);
+      res.status(500).json({ message: "Failed to fetch themed night categories" });
+    }
+  });
+
+  // POST /api/admin/themed-night-categories - Create themed night category
+  app.post("/api/admin/themed-night-categories", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const validatedData = insertThemedNightCategorySchema.parse(req.body);
+      const category = await storage.createThemedNightCategory(validatedData);
+      
+      await createAudit(req, "CREATE", "themed_night_category", category.id, validatedData);
+      
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid themed night category data", errors: error.errors });
+      }
+      console.error("Error creating themed night category:", error);
+      res.status(500).json({ message: "Failed to create themed night category" });
+    }
+  });
+
+  // PUT /api/admin/themed-night-categories/:id - Update themed night category
+  app.put("/api/admin/themed-night-categories/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertThemedNightCategorySchema.partial().parse(req.body);
+      const category = await storage.updateThemedNightCategory(id, validatedData);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Themed night category not found" });
+      }
+      
+      await createAudit(req, "UPDATE", "themed_night_category", id, validatedData);
+      
+      res.json(category);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid themed night category data", errors: error.errors });
+      }
+      console.error("Error updating themed night category:", error);
+      res.status(500).json({ message: "Failed to update themed night category" });
+    }
+  });
+
+  // DELETE /api/admin/themed-night-categories/:id - Delete themed night category
+  app.delete("/api/admin/themed-night-categories/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteThemedNightCategory(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Themed night category not found" });
+      }
+      
+      await createAudit(req, "DELETE", "themed_night_category", id);
+      
+      res.json({ message: "Themed night category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting themed night category:", error);
+      res.status(500).json({ message: "Failed to delete themed night category" });
     }
   });
 

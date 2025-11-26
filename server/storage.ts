@@ -14,6 +14,7 @@ import {
   relationshipTypes,
   systemSettings,
   auditLogs,
+  themedNightCategories,
   collaborativeEvents,
   collaborativeEventParticipants,
   collaborativeEventLinks,
@@ -47,6 +48,8 @@ import {
   type InsertSystemSetting,
   type AuditLog,
   type InsertAuditLog,
+  type ThemedNightCategory,
+  type InsertThemedNightCategory,
   type CollaborativeEvent,
   type InsertCollaborativeEvent,
   type CollaborativeEventParticipant,
@@ -151,6 +154,13 @@ export interface IStorage {
   createRelationshipType(relationshipType: InsertRelationshipType): Promise<RelationshipType>;
   updateRelationshipType(id: string, updates: Partial<InsertRelationshipType>): Promise<RelationshipType | undefined>;
   deleteRelationshipType(id: string): Promise<boolean>;
+  
+  // Themed Night Categories Management
+  getThemedNightCategories(includeInactive?: boolean): Promise<ThemedNightCategory[]>;
+  getThemedNightCategory(id: string): Promise<ThemedNightCategory | undefined>;
+  createThemedNightCategory(category: InsertThemedNightCategory): Promise<ThemedNightCategory>;
+  updateThemedNightCategory(id: string, updates: Partial<InsertThemedNightCategory>): Promise<ThemedNightCategory | undefined>;
+  deleteThemedNightCategory(id: string): Promise<boolean>;
   
   // System Settings Management
   getSystemSettings(publicOnly?: boolean): Promise<SystemSetting[]>;
@@ -868,6 +878,41 @@ export class DatabaseStorage implements IStorage {
   
   async deleteRelationshipType(id: string): Promise<boolean> {
     const result = await db.delete(relationshipTypes).where(eq(relationshipTypes.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Themed Night Categories Management
+  async getThemedNightCategories(includeInactive = false): Promise<ThemedNightCategory[]> {
+    let query = db.select().from(themedNightCategories);
+    
+    if (!includeInactive) {
+      query = query.where(eq(themedNightCategories.isActive, true)) as any;
+    }
+    
+    return await query.orderBy(themedNightCategories.name);
+  }
+  
+  async getThemedNightCategory(id: string): Promise<ThemedNightCategory | undefined> {
+    const [category] = await db.select().from(themedNightCategories).where(eq(themedNightCategories.id, id));
+    return category;
+  }
+  
+  async createThemedNightCategory(category: InsertThemedNightCategory): Promise<ThemedNightCategory> {
+    const [newCategory] = await db.insert(themedNightCategories).values(category).returning();
+    return newCategory;
+  }
+  
+  async updateThemedNightCategory(id: string, updates: Partial<InsertThemedNightCategory>): Promise<ThemedNightCategory | undefined> {
+    const [updated] = await db
+      .update(themedNightCategories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(themedNightCategories.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteThemedNightCategory(id: string): Promise<boolean> {
+    const result = await db.delete(themedNightCategories).where(eq(themedNightCategories.id, id)).returning();
     return result.length > 0;
   }
   
