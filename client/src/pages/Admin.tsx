@@ -211,6 +211,7 @@ export default function Admin() {
               title="Sugestões na Base"
               value={advancedStats?.giftStats.totalSuggestions || 0}
               icon={Package}
+              onClick={() => setLocation("/admin/sugestoes")}
             />
             <AdminStatsCard
               title="Presentes Comprados"

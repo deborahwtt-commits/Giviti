@@ -165,7 +165,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   priorityCheck: check("priority_check", sql`${table.priority} IS NULL OR ${table.priority} IN (1, 2, 3)`)
 }));
 
-export const insertGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
+const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
   priority: z.union([
     z.literal(1),
     z.literal(2),
@@ -178,12 +178,20 @@ export const insertGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
 }).omit({
   id: true,
   createdAt: true,
-}).refine(data => data.priceMax >= data.priceMin, {
-  message: "Preço máximo deve ser maior ou igual ao preço mínimo",
-  path: ["priceMax"],
 });
 
+export const insertGiftSuggestionSchema = baseGiftSuggestionSchema.refine(
+  data => data.priceMax >= data.priceMin, 
+  {
+    message: "Preço máximo deve ser maior ou igual ao preço mínimo",
+    path: ["priceMax"],
+  }
+);
+
+export const updateGiftSuggestionSchema = baseGiftSuggestionSchema.partial();
+
 export type InsertGiftSuggestion = z.infer<typeof insertGiftSuggestionSchema>;
+export type UpdateGiftSuggestion = z.infer<typeof updateGiftSuggestionSchema>;
 export type GiftSuggestion = typeof giftSuggestions.$inferSelect;
 
 // User gifts (saved/purchased)

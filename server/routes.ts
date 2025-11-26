@@ -17,6 +17,7 @@ import {
   insertSystemSettingSchema,
   insertAuditLogSchema,
   insertGiftSuggestionSchema,
+  updateGiftSuggestionSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -533,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/admin/gift-suggestions - Get all gift suggestions (Admin only)
-  app.get("/api/admin/gift-suggestions", isAuthenticated, hasRole(['admin', 'manager', 'support']), async (req: any, res) => {
+  app.get("/api/admin/gift-suggestions", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
     try {
       const suggestions = await storage.getGiftSuggestions();
       res.json(suggestions);
@@ -544,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/admin/gift-suggestions/:id - Get a specific gift suggestion (Admin only)
-  app.get("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager', 'support']), async (req: any, res) => {
+  app.get("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
     try {
       const { id } = req.params;
       const suggestion = await storage.getGiftSuggestion(id);
@@ -561,7 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/admin/gift-suggestions - Create a new gift suggestion (Admin only)
-  app.post("/api/admin/gift-suggestions", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+  app.post("/api/admin/gift-suggestions", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
     try {
       const validatedData = insertGiftSuggestionSchema.parse(req.body);
       const newSuggestion = await storage.createGiftSuggestion(validatedData);
@@ -579,10 +580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/admin/gift-suggestions/:id - Update a gift suggestion (Admin only)
-  app.patch("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+  app.patch("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertGiftSuggestionSchema.partial().parse(req.body);
+      const validatedData = updateGiftSuggestionSchema.parse(req.body);
       const updated = await storage.updateGiftSuggestion(id, validatedData);
       
       if (!updated) {
@@ -603,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/admin/gift-suggestions/:id - Delete a gift suggestion (Admin only)
-  app.delete("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+  app.delete("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteGiftSuggestion(id);
