@@ -34,7 +34,7 @@ export default function Dashboard() {
   });
 
   const { data: upcomingEvents, isLoading: eventsLoading, error: eventsError} = useQuery<EventWithRecipients[]>({
-    queryKey: ["/api/events", { upcoming: "true" }],
+    queryKey: ["/api/events?upcoming=true"],
   });
 
   const { data: suggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
@@ -130,11 +130,12 @@ export default function Dashboard() {
               {upcomingEvents.slice(0, 6).map((event) => (
                 <EventCard
                   key={event.id}
-                  eventName={event.eventName || event.eventType}
-                  recipientNames={event.recipients.map(r => r.name)}
+                  event={event}
                   daysUntil={calculateDaysUntil(event.eventDate)}
                   date={formatEventDate(event.eventDate)}
                   onViewSuggestions={() => setLocation("/sugestoes")}
+                  onEdit={() => setLocation("/eventos")}
+                  onDelete={() => {}}
                 />
               ))}
             </div>

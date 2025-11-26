@@ -33,6 +33,14 @@ Preferred communication style: Simple, everyday language.
 - **Suggestion Filtering**: Multi-criteria filtering (recipient, category, budget) with intelligent interest-based matching and pagination.
 - **Event Management**: Past events show archive/advance options; future events show standard options.
 - **Collaborative Events**: Specific UI for "Rolês" (collaborative events) with tabbed interfaces for overview, participants, and settings.
+- **Unified Event Display**: Main Events page (/eventos) shows both regular gift events and collaborative rolês in a single unified interface:
+  - UnifiedEventCard component handles both event types with visual distinction
+  - "Evento" badge for gift occasions, "Rolê" badge for collaborative events
+  - Rolês display event type badges (Amigo Secreto, Noite Temática, etc.)
+  - Clicking rolê cards navigates to detail page; events show full edit/delete actions
+  - Robust date handling supports string | Date | null with graceful "Sem data definida" messaging
+  - Time-based filters (this month, next 3 months) work for both types
+  - Archived tab includes both archived events and completed/cancelled rolês
 
 ### Feature Specifications
 - **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.

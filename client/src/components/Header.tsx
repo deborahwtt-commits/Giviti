@@ -24,7 +24,7 @@ export default function Header({
   const { toast } = useToast();
   
   const { data: upcomingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events", { upcoming: "true" }],
+    queryKey: ["/api/events?upcoming=true"],
     enabled: isAuthenticated,
   });
   
