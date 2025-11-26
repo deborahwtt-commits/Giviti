@@ -145,6 +145,38 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // PUT /api/admin/users/:id/profile - Update user profile
+  app.put("/api/admin/users/:id/profile", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify user exists
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Upsert profile
+      const updatedProfile = await storage.upsertUserProfile(id, req.body);
+      
+      // Get admin user info for audit
+      const adminUser = req.user!;
+      const adminName = `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.email;
+      
+      // Create audit log with admin name and timestamp
+      await createAudit(req, "UPDATE", "user_profile", id, {
+        ...req.body,
+        updatedBy: adminName,
+        updatedAt: new Date().toISOString(),
+      });
+      
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
+    }
+  });
+
   // ========== Categories Management Routes ==========
 
   // GET /api/admin/categories - Get all categories
