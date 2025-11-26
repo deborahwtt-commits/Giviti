@@ -32,6 +32,7 @@ import {
   type UserGift,
   type InsertUserGift,
   type GiftSuggestion,
+  type InsertGiftSuggestion,
   type UserProfile,
   type InsertUserProfile,
   type RecipientProfile,
@@ -111,6 +112,10 @@ export interface IStorage {
   
   // Gift Suggestions
   getGiftSuggestions(filters?: { category?: string; minPrice?: number; maxPrice?: number; tags?: string[] }): Promise<GiftSuggestion[]>;
+  getGiftSuggestion(id: string): Promise<GiftSuggestion | undefined>;
+  createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion>;
+  updateGiftSuggestion(id: string, updates: Partial<InsertGiftSuggestion>): Promise<GiftSuggestion | undefined>;
+  deleteGiftSuggestion(id: string): Promise<boolean>;
   
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
@@ -634,6 +639,38 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  async getGiftSuggestion(id: string): Promise<GiftSuggestion | undefined> {
+    const [suggestion] = await db
+      .select()
+      .from(giftSuggestions)
+      .where(eq(giftSuggestions.id, id));
+    return suggestion;
+  }
+
+  async createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion> {
+    const [newSuggestion] = await db
+      .insert(giftSuggestions)
+      .values(suggestion)
+      .returning();
+    return newSuggestion;
+  }
+
+  async updateGiftSuggestion(id: string, updates: Partial<InsertGiftSuggestion>): Promise<GiftSuggestion | undefined> {
+    const [updated] = await db
+      .update(giftSuggestions)
+      .set(updates)
+      .where(eq(giftSuggestions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGiftSuggestion(id: string): Promise<boolean> {
+    const result = await db
+      .delete(giftSuggestions)
+      .where(eq(giftSuggestions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // ========== User Profile ==========

@@ -16,6 +16,7 @@ import {
   insertRelationshipTypeSchema,
   insertSystemSettingSchema,
   insertAuditLogSchema,
+  insertGiftSuggestionSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -528,6 +529,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching gift suggestions:", error);
       res.status(500).json({ message: "Failed to fetch gift suggestions" });
+    }
+  });
+
+  // GET /api/admin/gift-suggestions - Get all gift suggestions (Admin only)
+  app.get("/api/admin/gift-suggestions", isAuthenticated, hasRole(['admin', 'manager', 'support']), async (req: any, res) => {
+    try {
+      const suggestions = await storage.getGiftSuggestions();
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching gift suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch gift suggestions" });
+    }
+  });
+
+  // GET /api/admin/gift-suggestions/:id - Get a specific gift suggestion (Admin only)
+  app.get("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager', 'support']), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const suggestion = await storage.getGiftSuggestion(id);
+      
+      if (!suggestion) {
+        return res.status(404).json({ message: "Gift suggestion not found" });
+      }
+      
+      res.json(suggestion);
+    } catch (error) {
+      console.error("Error fetching gift suggestion:", error);
+      res.status(500).json({ message: "Failed to fetch gift suggestion" });
+    }
+  });
+
+  // POST /api/admin/gift-suggestions - Create a new gift suggestion (Admin only)
+  app.post("/api/admin/gift-suggestions", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+    try {
+      const validatedData = insertGiftSuggestionSchema.parse(req.body);
+      const newSuggestion = await storage.createGiftSuggestion(validatedData);
+      res.status(201).json(newSuggestion);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid gift suggestion data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating gift suggestion:", error);
+      res.status(500).json({ message: "Failed to create gift suggestion" });
+    }
+  });
+
+  // PATCH /api/admin/gift-suggestions/:id - Update a gift suggestion (Admin only)
+  app.patch("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertGiftSuggestionSchema.partial().parse(req.body);
+      const updated = await storage.updateGiftSuggestion(id, validatedData);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Gift suggestion not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid gift suggestion data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating gift suggestion:", error);
+      res.status(500).json({ message: "Failed to update gift suggestion" });
+    }
+  });
+
+  // DELETE /api/admin/gift-suggestions/:id - Delete a gift suggestion (Admin only)
+  app.delete("/api/admin/gift-suggestions/:id", isAuthenticated, hasRole(['admin', 'manager']), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteGiftSuggestion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Gift suggestion not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting gift suggestion:", error);
+      res.status(500).json({ message: "Failed to delete gift suggestion" });
     }
   });
 
