@@ -50,24 +50,27 @@ export default function AdminGiftSuggestions() {
 
   const hasAdminAccess = user?.role === "admin" || user?.role === "manager";
 
-  const { data: suggestions, isLoading } = useQuery<GiftSuggestion[]>({
+  const { data: suggestions, isLoading, error } = useQuery<GiftSuggestion[]>({
     queryKey: ["/api/admin/gift-suggestions"],
     enabled: hasAdminAccess,
-    meta: {
-      onError: (error: any) => {
-        if (error?.status === 401) {
-          handleAuthError(toast, setLocation);
-        } else if (error?.status === 403) {
-          toast({
-            title: "Acesso negado",
-            description: "Você não tem permissão para acessar esta página.",
-            variant: "destructive",
-          });
-          setLocation("/admin");
-        }
-      },
-    },
   });
+
+  // Handle errors after query completes
+  if (error && !isLoading) {
+    const apiError = error as any;
+    if (apiError?.message?.includes('401')) {
+      handleAuthError(toast, setLocation);
+      return null;
+    } else if (apiError?.message?.includes('403')) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      setLocation("/admin");
+      return null;
+    }
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {

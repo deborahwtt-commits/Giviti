@@ -23,7 +23,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage
 - **Database**: PostgreSQL via Neon serverless.
 - **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`, `themed_night_categories`).
-  - **Gift Suggestions**: The `giftSuggestions` table includes a `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null. Enforced by database CHECK constraint created automatically via Drizzle schema.
+  - **Gift Suggestions**: The `giftSuggestions` table includes a `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null. Enforced by database CHECK constraint created automatically via Drizzle schema. Admins can now manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
@@ -50,7 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Gift Management**: Save/track purchased and favorited gifts.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
-- **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, and advanced statistics.
+- **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, gift suggestions management, and advanced statistics.
 - **Collaborative Events**: Support for Secret Santa, themed nights, and collective gifts with participant management, draw algorithms (for Secret Santa), and shareable links.
   - **Themed Night Categories**: Dynamic "Qual é a boa?" subcategory system for themed nights. Admins can create/manage categories (name, description, activity suggestions). When creating a "Noite Temática" rolê, users select from active categories. Category details displayed on event detail page.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
