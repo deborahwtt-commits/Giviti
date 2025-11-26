@@ -10,7 +10,8 @@ import {
   Heart,
   TrendingUp,
   UserPlus,
-  CalendarPlus
+  CalendarPlus,
+  Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -179,6 +180,23 @@ export default function Admin() {
                 ))}
               </div>
             </Card>
+          </div>
+        </div>
+
+        {/* Gestão de Rolês */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Gestão de Rolês Temáticos
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AdminStatsCard
+              title="Cadastro de Rolês"
+              value="Gerenciar"
+              icon={Sparkles}
+              description="Configurar categorias de Noite Temática"
+              onClick={() => setLocation("/admin/cadastro-roles")}
+            />
           </div>
         </div>
 

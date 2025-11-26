@@ -15,6 +15,7 @@ import GiftManagement from "@/pages/GiftManagement";
 import Profile from "@/pages/Profile";
 import Admin from "@/pages/Admin";
 import UserList from "@/pages/UserList";
+import ThemedNightCategories from "@/pages/ThemedNightCategories";
 import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
@@ -61,6 +62,7 @@ function AuthenticatedApp() {
         <Route path="/role/:id" component={RoleDetail} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
+        <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />
         <Route component={NotFound} />
       </Switch>
     </div>
