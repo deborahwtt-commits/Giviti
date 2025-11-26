@@ -398,6 +398,26 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 // COLLABORATIVE EVENTS (Planeje seu rolê!)
 // ========================================
 
+// Themed night categories table - configurable subcategories for themed nights
+export const themedNightCategories = pgTable("themed_night_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  suggestions: text("suggestions").array().notNull().default(sql`ARRAY[]::text[]`),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertThemedNightCategorySchema = createInsertSchema(themedNightCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertThemedNightCategory = z.infer<typeof insertThemedNightCategorySchema>;
+export type ThemedNightCategory = typeof themedNightCategories.$inferSelect;
+
 // Collaborative events table - main table for hangout planning
 export const collaborativeEvents = pgTable("collaborative_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -409,6 +429,8 @@ export const collaborativeEvents = pgTable("collaborative_events", {
   eventDate: timestamp("event_date"),
   location: varchar("location"),
   description: text("description"),
+  themedNightCategoryId: varchar("themed_night_category_id")
+    .references(() => themedNightCategories.id, { onDelete: "set null" }),
   isPublic: boolean("is_public").default(false).notNull(),
   status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
   typeSpecificData: jsonb("type_specific_data"), // JSON for type-specific settings
