@@ -9,6 +9,7 @@ import {
   insertPriceRangeSchema,
   insertRelationshipTypeSchema,
   insertSystemSettingSchema,
+  insertUserProfileSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import bcrypt from "bcrypt";
@@ -145,6 +146,27 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // GET /api/admin/users/:id/profile - Get user profile
+  app.get("/api/admin/users/:id/profile", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify user exists
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get profile (may be null if not created yet)
+      const profile = await storage.getUserProfile(id);
+      
+      res.json(profile || null);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
   // PUT /api/admin/users/:id/profile - Update user profile
   app.put("/api/admin/users/:id/profile", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
     try {
@@ -156,8 +178,11 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Upsert profile
-      const updatedProfile = await storage.upsertUserProfile(id, req.body);
+      // Validate request body with Zod schema
+      const validatedData = insertUserProfileSchema.partial().parse(req.body);
+      
+      // Upsert profile with validated data
+      const updatedProfile = await storage.upsertUserProfile(id, validatedData);
       
       // Get admin user info for audit
       const adminUser = req.user!;
@@ -165,13 +190,19 @@ export function registerAdminRoutes(app: Express) {
       
       // Create audit log with admin name and timestamp
       await createAudit(req, "UPDATE", "user_profile", id, {
-        ...req.body,
+        ...validatedData,
         updatedBy: adminName,
         updatedAt: new Date().toISOString(),
       });
       
       res.json(updatedProfile);
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
       console.error("Error updating user profile:", error);
       res.status(500).json({ message: "Failed to update user profile" });
     }

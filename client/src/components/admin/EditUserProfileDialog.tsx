@@ -61,7 +61,14 @@ export function EditUserProfileDialog({ userId, userName }: EditUserProfileDialo
   const { toast } = useToast();
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
-    queryKey: ["/api/profile", userId],
+    queryKey: ["/api/admin/users", userId, "profile"],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/users/${userId}/profile`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+      return response.json();
+    },
     enabled: open,
   });
 
@@ -109,7 +116,7 @@ export function EditUserProfileDialog({ userId, userName }: EditUserProfileDialo
       return await apiRequest(`/api/admin/users/${userId}/profile`, "PUT", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId, "profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users/detailed"] });
       toast({
         title: "Perfil atualizado",
