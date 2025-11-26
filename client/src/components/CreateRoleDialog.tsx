@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Dialog,
@@ -52,6 +52,7 @@ const createRoleSchema = z.object({
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
+  themedNightCategoryId: z.string().optional(),
 }).refine((data) => {
   if (!data.eventDate) return true;
   const today = startOfDay(new Date());
@@ -93,6 +94,20 @@ const eventTypeOptions = [
 export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) {
   const { toast } = useToast();
 
+  const { data: themedCategories = [], isLoading: isLoadingCategories, error: categoriesError } = useQuery<Array<{ id: string; name: string; description: string | null }>>({
+    queryKey: ["/api/themed-night-categories"],
+    enabled: open,
+  });
+
+  // Show toast error if categories fail to load
+  if (categoriesError && selectedType === "themed_night") {
+    toast({
+      title: "Erro ao carregar temas",
+      description: "Não foi possível carregar os temas disponíveis. Tente novamente.",
+      variant: "destructive",
+    });
+  }
+
   const form = useForm<CreateRoleFormData>({
     resolver: zodResolver(createRoleSchema),
     defaultValues: {
@@ -103,6 +118,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       description: "",
       isPublic: false,
       budgetLimit: "",
+      themedNightCategoryId: "",
     },
   });
 
@@ -124,6 +140,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         description: data.description || null,
         isPublic: data.isPublic,
         status: "active" as const,
+        themedNightCategoryId: data.eventType === "themed_night" && data.themedNightCategoryId ? data.themedNightCategoryId : null,
         typeSpecificData: Object.keys(typeSpecificData).length > 0 ? typeSpecificData : null,
       };
 
@@ -243,6 +260,57 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                     </FormControl>
                     <FormDescription>
                       Valor máximo sugerido para os presentes
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {selectedType === "themed_night" && (
+              <FormField
+                control={form.control}
+                name="themedNightCategoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Qual é a boa?</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isLoadingCategories}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-themed-category">
+                          <SelectValue placeholder={isLoadingCategories ? "Carregando temas..." : "Selecione o tema"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {themedCategories.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Nenhum tema disponível
+                          </div>
+                        ) : (
+                          themedCategories.map((category) => (
+                            <SelectItem
+                              key={category.id}
+                              value={category.id}
+                              data-testid={`option-category-${category.id}`}
+                            >
+                              <div>
+                                <div className="font-medium">{category.name}</div>
+                                {category.description && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {category.description}
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Escolha o tema da noite temática
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
