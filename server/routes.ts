@@ -64,6 +64,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/themed-night-categories/:id - Get a specific themed night category (public)
+  app.get("/api/themed-night-categories/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.getThemedNightCategory(id);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching themed night category:", error);
+      res.status(500).json({ message: "Failed to fetch themed night category" });
+    }
+  });
+
   // ========== Recipient Routes ==========
 
   // GET /api/recipients - Get all recipients for authenticated user

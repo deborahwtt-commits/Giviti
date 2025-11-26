@@ -113,6 +113,12 @@ export default function RoleDetail() {
     enabled: !!id && !!event,
   });
 
+  // Fetch themed night category if applicable
+  const { data: themedCategory } = useQuery<{ id: string; name: string; description: string | null }>({
+    queryKey: ["/api/themed-night-categories", event?.themedNightCategoryId],
+    enabled: !!event && event.eventType === "themed_night" && !!event.themedNightCategoryId,
+  });
+
   // Calculate if current user is owner
   const isOwner = event && user && event.ownerId === user.id;
 
@@ -354,6 +360,22 @@ export default function RoleDetail() {
                     <p className="text-sm text-muted-foreground" data-testid="text-event-description">
                       {event.description}
                     </p>
+                  </div>
+                )}
+                {event.eventType === "themed_night" && themedCategory && (
+                  <div className="flex items-start gap-3">
+                    <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Qual é a boa?</p>
+                      <p className="text-sm font-semibold" data-testid="text-themed-category-name">
+                        {themedCategory.name}
+                      </p>
+                      {themedCategory.description && (
+                        <p className="text-sm text-muted-foreground mt-1" data-testid="text-themed-category-description">
+                          {themedCategory.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>

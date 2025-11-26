@@ -99,15 +99,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
     enabled: open,
   });
 
-  // Show toast error if categories fail to load
-  if (categoriesError && selectedType === "themed_night") {
-    toast({
-      title: "Erro ao carregar temas",
-      description: "Não foi possível carregar os temas disponíveis. Tente novamente.",
-      variant: "destructive",
-    });
-  }
-
   const form = useForm<CreateRoleFormData>({
     resolver: zodResolver(createRoleSchema),
     defaultValues: {
@@ -123,6 +114,15 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
   });
 
   const selectedType = form.watch("eventType");
+
+  // Show toast error if categories fail to load
+  if (categoriesError && selectedType === "themed_night") {
+    toast({
+      title: "Erro ao carregar temas",
+      description: "Não foi possível carregar os temas disponíveis. Tente novamente.",
+      variant: "destructive",
+    });
+  }
 
   const createRoleMutation = useMutation({
     mutationFn: async (data: CreateRoleFormData) => {
