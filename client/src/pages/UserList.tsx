@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { EditUserDialog } from "@/components/admin/EditUserDialog";
 
 interface UserWithStats {
   id: string;
@@ -128,6 +129,7 @@ export default function UserList() {
               <TableHead className="text-center">Eventos</TableHead>
               <TableHead className="text-center">Presenteados</TableHead>
               <TableHead className="text-center">Presentes Comprados</TableHead>
+              <TableHead className="text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -165,11 +167,14 @@ export default function UserList() {
                   <TableCell className="text-center" data-testid={`text-gifts-${user.id}`}>
                     {user.purchasedGiftsCount}
                   </TableCell>
+                  <TableCell className="text-center">
+                    <EditUserDialog user={user} />
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <p className="text-muted-foreground">
                     Nenhum usuário encontrado
                   </p>
