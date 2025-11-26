@@ -123,8 +123,7 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
 
     // Hard guard: prevent self-demotion or self-deactivation
     if (isSelfEdit) {
-      const isDemoting = updates.role && 
-        (updates.role === "user" || updates.role === "support" || updates.role === "readonly");
+      const isDemoting = updates.role && updates.role !== "admin";
       const isDeactivating = updates.isActive === false;
       
       if (isDemoting || isDeactivating) {

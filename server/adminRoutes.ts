@@ -123,6 +123,20 @@ export function registerAdminRoutes(app: Express) {
       const { id } = req.params;
       const { firstName, lastName, role, isActive } = req.body;
       
+      // Backend validation: prevent self-demotion or self-deactivation
+      if (req.user!.id === id) {
+        if (role !== undefined && role !== "admin") {
+          return res.status(403).json({ 
+            message: "Você não pode remover suas próprias permissões administrativas. Peça a outro administrador para fazer isso." 
+          });
+        }
+        if (isActive === false) {
+          return res.status(403).json({ 
+            message: "Você não pode desativar sua própria conta. Peça a outro administrador para fazer isso." 
+          });
+        }
+      }
+      
       const updates: any = {};
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
