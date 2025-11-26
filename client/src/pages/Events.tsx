@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import EventCard from "@/components/EventCard";
+import UnifiedEventCard from "@/components/UnifiedEventCard";
 import EventForm from "@/components/EventForm";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import type { EventWithRecipients, Recipient } from "@shared/schema";
+import type { EventWithRecipients, Recipient, CollaborativeEvent } from "@shared/schema";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
+
+type UnifiedEvent = (EventWithRecipients & { type: 'event' }) | (CollaborativeEvent & { type: 'role' });
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -42,8 +44,12 @@ export default function Events() {
     queryKey: ["/api/events"],
   });
 
+  const { data: allRoles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
+    queryKey: ["/api/collab-events"],
+  });
+
   useEffect(() => {
-    const error = recipientsError || eventsError;
+    const error = recipientsError || eventsError || rolesError;
     if (error && isUnauthorizedError(error as Error)) {
       toast({
         title: "Sessão Expirada",
@@ -54,7 +60,7 @@ export default function Events() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [recipientsError, eventsError, toast]);
+  }, [recipientsError, eventsError, rolesError, toast]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -189,18 +195,20 @@ export default function Events() {
     },
   });
 
-  const calculateDaysUntil = (eventDate: string) => {
+  const calculateDaysUntil = (eventDate: string | Date | null) => {
+    if (!eventDate) return 0;
     const today = startOfDay(new Date());
-    const event = startOfDay(parseISO(eventDate));
+    const event = startOfDay(typeof eventDate === 'string' ? parseISO(eventDate) : eventDate);
     return differenceInDays(event, today);
   };
 
-  const formatEventDate = (dateString: string) => {
+  const formatEventDate = (dateString: string | Date | null) => {
+    if (!dateString) return 'Sem data definida';
     try {
-      const date = new Date(dateString);
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
       return format(date, "d 'de' MMM, yyyy");
     } catch {
-      return dateString;
+      return 'Data inválida';
     }
   };
 
@@ -210,19 +218,39 @@ export default function Events() {
   const threeMonthsFromNow = new Date(today);
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
-  // Filter active (non-archived) events
-  const activeEvents = allEvents?.filter((e) => !e.archived) || [];
+  // Combine events and roles into unified list
+  const eventsWithType: UnifiedEvent[] = (allEvents || []).map(e => ({ ...e, type: 'event' as const }));
+  const rolesWithType: UnifiedEvent[] = (allRoles || []).map(r => ({ ...r, type: 'role' as const }));
   
-  // Filter archived events
-  const archivedEvents = allEvents?.filter((e) => e.archived) || [];
+  const allItems: UnifiedEvent[] = [...eventsWithType, ...rolesWithType];
 
-  const thisMonthEvents = activeEvents.filter((e) => {
-    const eventDate = startOfDay(parseISO(e.eventDate));
+  // Filter active (non-archived) items
+  const activeItems = allItems.filter((item) => {
+    if (item.type === 'event') {
+      return !item.archived;
+    }
+    // Roles don't have archived status yet, so include all active roles
+    return item.status === 'active';
+  });
+  
+  // Filter archived items
+  const archivedItems = allItems.filter((item) => {
+    if (item.type === 'event') {
+      return item.archived;
+    }
+    // For roles, consider completed/cancelled as "archived"
+    return item.status === 'completed' || item.status === 'cancelled';
+  });
+
+  const thisMonthItems = activeItems.filter((item) => {
+    if (!item.eventDate) return false;
+    const eventDate = startOfDay(typeof item.eventDate === 'string' ? parseISO(item.eventDate) : item.eventDate);
     return eventDate >= today && eventDate <= oneMonthFromNow;
   });
 
-  const nextThreeMonthsEvents = activeEvents.filter((e) => {
-    const eventDate = startOfDay(parseISO(e.eventDate));
+  const nextThreeMonthsItems = activeItems.filter((item) => {
+    if (!item.eventDate) return false;
+    const eventDate = startOfDay(typeof item.eventDate === 'string' ? parseISO(item.eventDate) : item.eventDate);
     return eventDate >= today && eventDate <= threeMonthsFromNow;
   });
 
@@ -270,7 +298,7 @@ export default function Events() {
     setEditingEvent(null);
   };
 
-  if (eventsLoading) {
+  if (eventsLoading || rolesLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -303,118 +331,118 @@ export default function Events() {
           </Button>
         </div>
 
-        {allEvents && allEvents.length > 0 ? (
+        {allItems && allItems.length > 0 ? (
           <Tabs defaultValue="all" className="space-y-6">
             <TabsList>
               <TabsTrigger value="all" data-testid="tab-all-events">
-                Todos ({activeEvents.length})
+                Todos ({activeItems.length})
               </TabsTrigger>
               <TabsTrigger
                 value="thisMonth"
                 data-testid="tab-this-month-events"
               >
-                Este Mês ({thisMonthEvents.length})
+                Este Mês ({thisMonthItems.length})
               </TabsTrigger>
               <TabsTrigger
                 value="nextThreeMonths"
                 data-testid="tab-next-three-months-events"
               >
-                Próximos 3 Meses ({nextThreeMonthsEvents.length})
+                Próximos 3 Meses ({nextThreeMonthsItems.length})
               </TabsTrigger>
               <TabsTrigger value="archived" data-testid="tab-archived-events">
-                Arquivados ({archivedEvents.length})
+                Arquivados ({archivedItems.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    daysUntil={calculateDaysUntil(event.eventDate)}
-                    date={formatEventDate(event.eventDate)}
-                    onViewSuggestions={() => setLocation("/sugestoes")}
-                    onEdit={handleEdit}
-                    onDelete={() => handleDelete(event.id)}
-                    onArchive={() => handleArchive(event.id)}
-                    onAdvanceYear={() => handleAdvanceYear(event.id)}
+                {activeItems.map((item) => (
+                  <UnifiedEventCard
+                    key={item.id}
+                    item={item}
+                    daysUntil={calculateDaysUntil(item.eventDate)}
+                    date={formatEventDate(item.eventDate)}
+                    onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
+                    onEdit={item.type === 'event' ? handleEdit : undefined}
+                    onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
+                    onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
+                    onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
                   />
                 ))}
               </div>
             </TabsContent>
 
             <TabsContent value="thisMonth">
-              {thisMonthEvents.length > 0 ? (
+              {thisMonthItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {thisMonthEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      daysUntil={calculateDaysUntil(event.eventDate)}
-                      date={formatEventDate(event.eventDate)}
-                      onViewSuggestions={() => setLocation("/sugestoes")}
-                      onEdit={handleEdit}
-                      onDelete={() => handleDelete(event.id)}
-                      onArchive={() => handleArchive(event.id)}
-                      onAdvanceYear={() => handleAdvanceYear(event.id)}
+                  {thisMonthItems.map((item) => (
+                    <UnifiedEventCard
+                      key={item.id}
+                      item={item}
+                      daysUntil={calculateDaysUntil(item.eventDate)}
+                      date={formatEventDate(item.eventDate)}
+                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
+                      onEdit={item.type === 'event' ? handleEdit : undefined}
+                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
+                      onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
+                      onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento neste mês
+                    Nenhum evento ou rolê neste mês
                   </p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="nextThreeMonths">
-              {nextThreeMonthsEvents.length > 0 ? (
+              {nextThreeMonthsItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {nextThreeMonthsEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      daysUntil={calculateDaysUntil(event.eventDate)}
-                      date={formatEventDate(event.eventDate)}
-                      onViewSuggestions={() => setLocation("/sugestoes")}
-                      onEdit={handleEdit}
-                      onDelete={() => handleDelete(event.id)}
-                      onArchive={() => handleArchive(event.id)}
-                      onAdvanceYear={() => handleAdvanceYear(event.id)}
+                  {nextThreeMonthsItems.map((item) => (
+                    <UnifiedEventCard
+                      key={item.id}
+                      item={item}
+                      daysUntil={calculateDaysUntil(item.eventDate)}
+                      date={formatEventDate(item.eventDate)}
+                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
+                      onEdit={item.type === 'event' ? handleEdit : undefined}
+                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
+                      onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
+                      onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento nos próximos 3 meses
+                    Nenhum evento ou rolê nos próximos 3 meses
                   </p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="archived">
-              {archivedEvents.length > 0 ? (
+              {archivedItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {archivedEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      daysUntil={calculateDaysUntil(event.eventDate)}
-                      date={formatEventDate(event.eventDate)}
-                      onViewSuggestions={() => setLocation("/sugestoes")}
-                      onEdit={handleEdit}
-                      onDelete={() => handleDelete(event.id)}
+                  {archivedItems.map((item) => (
+                    <UnifiedEventCard
+                      key={item.id}
+                      item={item}
+                      daysUntil={calculateDaysUntil(item.eventDate)}
+                      date={formatEventDate(item.eventDate)}
+                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
+                      onEdit={item.type === 'event' ? handleEdit : undefined}
+                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento arquivado
+                    Nenhum evento ou rolê arquivado
                   </p>
                 </div>
               )}
