@@ -10,6 +10,7 @@ import {
   date,
   index,
   jsonb,
+  check,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -158,8 +159,17 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   priceMax: integer("price_max").notNull(),
   category: varchar("category").notNull(),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  priority: integer("priority"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  priorityCheck: check("priority_check", sql`${table.priority} IS NULL OR ${table.priority} IN (1, 2, 3)`)
+}));
+
+// Note: insertGiftSuggestionSchema intentionally not created
+// Gift suggestions are currently managed via seeding only (no API endpoints)
+// Priority values are enforced by database CHECK constraint: 1, 2, 3, or null
+// If API endpoints are added in the future, create validation schema with:
+// priority: z.union([z.literal(1), z.literal(2), z.literal(3), z.null()]).default(null)
 
 export type GiftSuggestion = typeof giftSuggestions.$inferSelect;
 

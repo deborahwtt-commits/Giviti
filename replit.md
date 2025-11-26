@@ -23,6 +23,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage
 - **Database**: PostgreSQL via Neon serverless.
 - **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`, `themed_night_categories`).
+  - **Gift Suggestions**: The `giftSuggestions` table includes a `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null. Enforced by database CHECK constraint created automatically via Drizzle schema.
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
