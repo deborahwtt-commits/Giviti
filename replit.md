@@ -22,7 +22,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 - **Database**: PostgreSQL via Neon serverless.
-- **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`).
+- **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`, `themed_night_categories`).
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
@@ -43,6 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, and advanced statistics.
 - **Collaborative Events**: Support for Secret Santa, themed nights, and collective gifts with participant management, draw algorithms (for Secret Santa), and shareable links.
+  - **Themed Night Categories**: Dynamic "Qual é a boa?" subcategory system for themed nights. Admins can create/manage categories (name, description, activity suggestions). When creating a "Noite Temática" rolê, users select from active categories. Category details displayed on event detail page.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
   - **Date Validation**: Rolês follow the same date validation rules as regular events - only today or future dates are allowed.
 
