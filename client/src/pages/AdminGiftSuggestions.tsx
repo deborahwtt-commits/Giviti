@@ -463,7 +463,17 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
             <Label htmlFor="category">Categoria Principal *</Label>
             <Select
               value={formData.category || "__none__"}
-              onValueChange={(value) => setFormData({ ...formData, category: value === "__none__" ? "" : value })}
+              onValueChange={(value) => {
+                const newCategory = value === "__none__" ? "" : value;
+                const selectedCategory = giftCategories.find(c => c.name === newCategory);
+                setFormData(prev => ({
+                  ...prev,
+                  category: newCategory,
+                  selectedCategoryIds: selectedCategory 
+                    ? prev.selectedCategoryIds.filter(id => id !== selectedCategory.id)
+                    : prev.selectedCategoryIds
+                }));
+              }}
             >
               <SelectTrigger data-testid="select-suggestion-category">
                 <SelectValue placeholder="Selecione uma categoria">
@@ -523,28 +533,33 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
               <Label>Categorias Adicionais</Label>
               <div className="mt-2 p-3 border rounded-md bg-muted/30 max-h-40 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-2">
-                  {giftCategories.map((category) => (
-                    <div key={category.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`category-${category.id}`}
-                        checked={formData.selectedCategoryIds.includes(category.id)}
-                        onCheckedChange={() => toggleCategory(category.id)}
-                        data-testid={`checkbox-category-${category.id}`}
-                      />
-                      <label
-                        htmlFor={`category-${category.id}`}
-                        className="text-sm cursor-pointer flex items-center gap-1"
-                      >
-                        {category.color && (
-                          <div 
-                            className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: category.color }}
-                          />
-                        )}
-                        {category.name}
-                      </label>
-                    </div>
-                  ))}
+                  {giftCategories.map((category) => {
+                    const isPrimaryCategory = formData.category === category.name;
+                    return (
+                      <div key={category.id} className={`flex items-center gap-2 ${isPrimaryCategory ? 'opacity-50' : ''}`}>
+                        <Checkbox
+                          id={`category-${category.id}`}
+                          checked={formData.selectedCategoryIds.includes(category.id)}
+                          onCheckedChange={() => toggleCategory(category.id)}
+                          disabled={isPrimaryCategory}
+                          data-testid={`checkbox-category-${category.id}`}
+                        />
+                        <label
+                          htmlFor={`category-${category.id}`}
+                          className={`text-sm flex items-center gap-1 ${isPrimaryCategory ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {category.color && (
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: category.color }}
+                            />
+                          )}
+                          {category.name}
+                          {isPrimaryCategory && <span className="text-xs text-muted-foreground ml-1">(principal)</span>}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               {formData.selectedCategoryIds.length > 0 && (
