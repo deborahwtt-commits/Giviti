@@ -158,6 +158,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   priceMin: integer("price_min").notNull(),
   priceMax: integer("price_max").notNull(),
   category: varchar("category").notNull(),
+  giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   priority: integer("priority"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -193,6 +194,72 @@ export const updateGiftSuggestionSchema = baseGiftSuggestionSchema.partial();
 export type InsertGiftSuggestion = z.infer<typeof insertGiftSuggestionSchema>;
 export type UpdateGiftSuggestion = z.infer<typeof updateGiftSuggestionSchema>;
 export type GiftSuggestion = typeof giftSuggestions.$inferSelect;
+
+// Gift Categories table (admin-managed)
+export const giftCategories = pgTable("gift_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertGiftCategorySchema = createInsertSchema(giftCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGiftCategory = z.infer<typeof insertGiftCategorySchema>;
+export type GiftCategory = typeof giftCategories.$inferSelect;
+
+// Gift Types table (Produto, Serviço, Experiência, etc.)
+export const giftTypes = pgTable("gift_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertGiftTypeSchema = createInsertSchema(giftTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGiftType = z.infer<typeof insertGiftTypeSchema>;
+export type GiftType = typeof giftTypes.$inferSelect;
+
+// Gift Suggestion Categories junction table (many-to-many)
+export const giftSuggestionCategories = pgTable("gift_suggestion_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  suggestionId: varchar("suggestion_id")
+    .notNull()
+    .references(() => giftSuggestions.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id")
+    .notNull()
+    .references(() => giftCategories.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGiftSuggestionCategorySchema = createInsertSchema(giftSuggestionCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertGiftSuggestionCategory = z.infer<typeof insertGiftSuggestionCategorySchema>;
+export type GiftSuggestionCategory = typeof giftSuggestionCategories.$inferSelect;
+
+// Extended gift suggestion type with categories and type
+export type GiftSuggestionWithRelations = GiftSuggestion & {
+  categories: GiftCategory[];
+  giftType?: GiftType | null;
+};
 
 // User gifts (saved/purchased)
 export const userGifts = pgTable("user_gifts", {
