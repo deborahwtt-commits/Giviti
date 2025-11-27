@@ -11,6 +11,7 @@ import {
   index,
   jsonb,
   check,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -155,7 +156,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   name: varchar("name").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
-  price: integer("price").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category").notNull(),
   giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
@@ -173,7 +174,10 @@ const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
     z.null()
   ]).default(null),
   tags: z.array(z.string()).min(1, "Adicione pelo menos uma tag"),
-  price: z.number().int().min(1, "Preço deve ser maior que zero"),
+  price: z.string().refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Preço deve ser maior que zero"),
 }).omit({
   id: true,
   createdAt: true,
@@ -272,7 +276,7 @@ export const userGifts = pgTable("user_gifts", {
   name: varchar("name").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
-  price: integer("price").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   purchaseUrl: text("purchase_url"),
   isFavorite: boolean("is_favorite").default(false),
   isPurchased: boolean("is_purchased").default(false),
