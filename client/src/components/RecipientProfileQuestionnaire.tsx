@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { MapPin } from "lucide-react";
 
 interface RecipientProfileQuestionnaireProps {
   formData: {
@@ -22,8 +24,25 @@ interface RecipientProfileQuestionnaireProps {
     budgetRange?: string;
     occasion?: string;
     giftsToAvoid?: string;
+    cidade?: string;
+    estado?: string;
+    pais?: string;
   };
   onChange: (field: string, value: string) => void;
+}
+
+function normalizeLocationInput(value: string): string {
+  return value
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s+/, '')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function isValidLocationText(value: string): boolean {
+  if (!value || value.trim() === '') return true;
+  return /^[a-zA-ZÀ-ÿ\s\-'.]+$/.test(value);
 }
 
 export default function RecipientProfileQuestionnaire({
@@ -421,6 +440,90 @@ export default function RecipientProfileQuestionnaire({
         <p className="text-xs text-muted-foreground text-right">
           {formData.giftsToAvoid?.length || 0}/255 caracteres
         </p>
+      </div>
+
+      {/* Question 10: Location - OPTIONAL */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-primary" />
+          <Label className="text-base font-medium">
+            10. Onde essa pessoa mora?
+            <span className="block text-sm font-normal text-muted-foreground mt-1">
+              (Opcional — ajuda a sugerir presentes regionais ou experiências locais)
+            </span>
+          </Label>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="cidade" className="text-sm font-medium">
+              Cidade
+            </Label>
+            <Input
+              id="cidade"
+              data-testid="input-cidade"
+              value={formData.cidade || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (isValidLocationText(value)) {
+                  onChange("cidade", normalizeLocationInput(value));
+                }
+              }}
+              placeholder="Digite a cidade (opcional)"
+              maxLength={100}
+              className={!isValidLocationText(formData.cidade || "") ? "border-destructive" : ""}
+            />
+            {formData.cidade && !isValidLocationText(formData.cidade) && (
+              <p className="text-xs text-destructive">Use apenas letras e espaços</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estado" className="text-sm font-medium">
+              Estado
+            </Label>
+            <Input
+              id="estado"
+              data-testid="input-estado"
+              value={formData.estado || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (isValidLocationText(value)) {
+                  onChange("estado", normalizeLocationInput(value));
+                }
+              }}
+              placeholder="Digite o estado (opcional)"
+              maxLength={100}
+              className={!isValidLocationText(formData.estado || "") ? "border-destructive" : ""}
+            />
+            {formData.estado && !isValidLocationText(formData.estado) && (
+              <p className="text-xs text-destructive">Use apenas letras e espaços</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pais" className="text-sm font-medium">
+              País
+            </Label>
+            <Input
+              id="pais"
+              data-testid="input-pais"
+              value={formData.pais || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (isValidLocationText(value)) {
+                  onChange("pais", normalizeLocationInput(value));
+                }
+              }}
+              placeholder="Digite o país (opcional)"
+              maxLength={100}
+              className={!isValidLocationText(formData.pais || "") ? "border-destructive" : ""}
+            />
+            {formData.pais && !isValidLocationText(formData.pais) && (
+              <p className="text-xs text-destructive">Use apenas letras e espaços</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
