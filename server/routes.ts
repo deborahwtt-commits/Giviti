@@ -562,7 +562,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             preco: s.price,
             prioridade: s.priority,
             categoria: s.category,
-            tags: s.tags
+            tags: s.tags,
+            cupom: s.cupom,
+            validadeCupom: s.validadeCupom
           })),
           paginacao: {
             pagina_atual: internalResult.page,
@@ -588,7 +590,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             preco: s.price,
             prioridade: s.priority,
             categoria: s.category,
-            tags: s.tags
+            tags: s.tags,
+            cupom: s.cupom,
+            validadeCupom: s.validadeCupom
           })),
           paginacao: {
             pagina_atual: internalResult.page,
@@ -693,6 +697,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             prioridade: s.priority,
             categoria: s.category,
             tags: s.tags,
+            cupom: s.cupom,
+            validadeCupom: s.validadeCupom,
             fonte: "interna" as const
           })),
           ...externalResults.map((r, i) => ({
@@ -705,6 +711,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             prioridade: null,
             categoria: null,
             tags: [],
+            cupom: null,
+            validadeCupom: null,
             fonte: "externa" as const
           }))
         ];
@@ -734,7 +742,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             preco: s.price,
             prioridade: s.priority,
             categoria: s.category,
-            tags: s.tags
+            tags: s.tags,
+            cupom: s.cupom,
+            validadeCupom: s.validadeCupom
           })),
           paginacao: {
             pagina_atual: internalResult.page,

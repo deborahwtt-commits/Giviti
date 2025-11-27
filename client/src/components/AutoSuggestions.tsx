@@ -12,9 +12,14 @@ import {
   Sparkles,
   Globe,
   Database,
-  AlertCircle
+  AlertCircle,
+  Ticket,
+  Calendar,
+  AlertTriangle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { format, parseISO, isBefore, startOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface AutoSuggestion {
   id: string;
@@ -27,6 +32,8 @@ interface AutoSuggestion {
   categoria: string | null;
   tags: string[];
   fonte?: "interna" | "externa";
+  cupom?: string | null;
+  validadeCupom?: string | null;
 }
 
 interface AutoSuggestionsResponse {
@@ -234,6 +241,14 @@ export default function AutoSuggestions({ recipientId, recipientName }: AutoSugg
                     </Button>
                   )}
                 </div>
+                
+                {/* Coupon Display */}
+                {suggestion.cupom && (
+                  <CouponBadgeCompact 
+                    cupom={suggestion.cupom} 
+                    validadeCupom={suggestion.validadeCupom} 
+                  />
+                )}
               </div>
             </div>
           </Card>
@@ -268,6 +283,54 @@ export default function AutoSuggestions({ recipientId, recipientName }: AutoSugg
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// Compact Coupon Badge for Auto Suggestions
+interface CouponBadgeCompactProps {
+  cupom: string;
+  validadeCupom?: string | null;
+}
+
+function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
+  const today = startOfDay(new Date());
+  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  if (isExpired) {
+    return (
+      <div 
+        className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs"
+        data-testid="coupon-badge-expired"
+      >
+        <AlertTriangle className="h-3 w-3" />
+        <span className="line-through">{cupom}</span>
+        <span>(expirado)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs"
+      data-testid="coupon-badge-active"
+    >
+      <Ticket className="h-3 w-3" />
+      <span className="font-medium">Cupom: {cupom}</span>
+      {validadeCupom && (
+        <span className="flex items-center gap-0.5">
+          <Calendar className="h-2.5 w-2.5" />
+          até {formatDate(validadeCupom)}
+        </span>
       )}
     </div>
   );
