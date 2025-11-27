@@ -860,6 +860,31 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(clicks).orderBy(sql`${clicks.clickCount} DESC`);
   }
 
+  async getTopClickedLinks(limit: number = 10): Promise<Array<{
+    id: string;
+    link: string;
+    clickCount: number;
+    updatedAt: Date | null;
+    suggestionName: string | null;
+    suggestionId: string | null;
+  }>> {
+    const result = await db
+      .select({
+        id: clicks.id,
+        link: clicks.link,
+        clickCount: clicks.clickCount,
+        updatedAt: clicks.updatedAt,
+        suggestionName: giftSuggestions.name,
+        suggestionId: giftSuggestions.id,
+      })
+      .from(clicks)
+      .leftJoin(giftSuggestions, eq(giftSuggestions.productUrl, clicks.link))
+      .orderBy(sql`${clicks.clickCount} DESC`)
+      .limit(limit);
+    
+    return result;
+  }
+
   // ========== User Profile ==========
 
   async getUserProfile(userId: string): Promise<UserProfile | undefined> {

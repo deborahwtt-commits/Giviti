@@ -613,4 +613,18 @@ export function registerAdminRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch advanced statistics" });
     }
   });
+
+  // ========== Click Analytics Routes ==========
+
+  // GET /api/admin/top-clicks - Get top clicked product links
+  app.get("/api/admin/top-clicks", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topClicks = await storage.getTopClickedLinks(limit);
+      res.json(topClicks);
+    } catch (error) {
+      console.error("Error fetching top clicks:", error);
+      res.status(500).json({ message: "Failed to fetch click analytics" });
+    }
+  });
 }
