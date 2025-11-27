@@ -12,7 +12,10 @@ import {
   UserPlus,
   CalendarPlus,
   Sparkles,
-  Tag
+  Tag,
+  MousePointerClick,
+  ExternalLink,
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -20,6 +23,9 @@ import { handleAuthError } from "@/lib/authUtils";
 import { AdminStatsCard } from "@/components/admin/AdminStatsCard";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import type { User } from "@shared/schema";
 
 interface AdminStats {
@@ -49,6 +55,15 @@ interface AdvancedStats {
   };
 }
 
+interface TopClickedLink {
+  id: string;
+  link: string;
+  clickCount: number;
+  updatedAt: string | null;
+  suggestionName: string | null;
+  suggestionId: string | null;
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -75,6 +90,11 @@ export default function Admin() {
         }
       },
     },
+  });
+
+  const { data: topClicks } = useQuery<TopClickedLink[]>({
+    queryKey: ["/api/admin/top-clicks"],
+    enabled: hasAdminAccess,
   });
 
   if (userLoading) {
@@ -252,6 +272,87 @@ export default function Admin() {
                 </div>
               ))}
             </div>
+          </Card>
+        </div>
+
+        {/* Links Mais Clicados */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MousePointerClick className="w-5 h-5" />
+            Links Mais Clicados
+          </h2>
+          <Card className="p-6" data-testid="top-clicks-section">
+            {topClicks && topClicks.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground w-12">#</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Sugestão</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">URL do Produto</th>
+                      <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">Cliques</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Último Clique</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topClicks.map((click, index) => (
+                      <tr 
+                        key={click.id} 
+                        className="border-b last:border-0 hover-elevate"
+                        data-testid={`top-click-row-${index}`}
+                      >
+                        <td className="py-3 px-2">
+                          <Badge variant={index < 3 ? "default" : "secondary"} className="w-8 justify-center">
+                            {index + 1}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="font-medium" data-testid={`click-suggestion-name-${index}`}>
+                            {click.suggestionName || "—"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <a 
+                            href={click.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline flex items-center gap-1 max-w-[300px] truncate"
+                            data-testid={`click-link-${index}`}
+                          >
+                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{click.link}</span>
+                          </a>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <Badge variant="outline" className="font-semibold" data-testid={`click-count-${index}`}>
+                            {click.clickCount}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {click.updatedAt ? (
+                            <span className="text-sm text-muted-foreground flex items-center justify-end gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(click.updatedAt), { 
+                                addSuffix: true, 
+                                locale: ptBR 
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MousePointerClick className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhum clique registrado ainda</p>
+                <p className="text-sm mt-1">Os cliques nos links de produtos aparecerão aqui</p>
+              </div>
+            )}
           </Card>
         </div>
 
