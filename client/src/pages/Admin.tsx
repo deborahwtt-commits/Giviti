@@ -11,7 +11,8 @@ import {
   TrendingUp,
   UserPlus,
   CalendarPlus,
-  Sparkles
+  Sparkles,
+  Tag
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -206,12 +207,19 @@ export default function Admin() {
             <Gift className="w-5 h-5" />
             Presentes e Sugestões
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <AdminStatsCard
               title="Sugestões na Base"
               value={advancedStats?.giftStats.totalSuggestions || 0}
               icon={Package}
               onClick={() => setLocation("/admin/sugestoes")}
+            />
+            <AdminStatsCard
+              title="Categorias e Tipos"
+              value="Gerenciar"
+              icon={Tag}
+              description="Configurar categorias e tipos de presentes"
+              onClick={() => setLocation("/admin/categorias-tipos")}
             />
             <AdminStatsCard
               title="Presentes Comprados"
