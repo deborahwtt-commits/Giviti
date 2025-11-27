@@ -155,8 +155,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   name: varchar("name").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
-  priceMin: integer("price_min").notNull(),
-  priceMax: integer("price_max").notNull(),
+  price: integer("price").notNull(),
   category: varchar("category").notNull(),
   giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
@@ -174,20 +173,13 @@ const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
     z.null()
   ]).default(null),
   tags: z.array(z.string()).min(1, "Adicione pelo menos uma tag"),
-  priceMin: z.number().int().min(0, "Preço mínimo deve ser maior ou igual a zero"),
-  priceMax: z.number().int().min(0, "Preço máximo deve ser maior ou igual a zero"),
+  price: z.number().int().min(1, "Preço deve ser maior que zero"),
 }).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertGiftSuggestionSchema = baseGiftSuggestionSchema.refine(
-  data => data.priceMax >= data.priceMin, 
-  {
-    message: "Preço máximo deve ser maior ou igual ao preço mínimo",
-    path: ["priceMax"],
-  }
-);
+export const insertGiftSuggestionSchema = baseGiftSuggestionSchema;
 
 export const updateGiftSuggestionSchema = baseGiftSuggestionSchema.partial();
 
