@@ -6,6 +6,9 @@ import {
   eventRecipients,
   userGifts,
   giftSuggestions,
+  giftCategories,
+  giftTypes,
+  giftSuggestionCategories,
   userProfiles,
   recipientProfiles,
   categories,
@@ -33,6 +36,13 @@ import {
   type InsertUserGift,
   type GiftSuggestion,
   type InsertGiftSuggestion,
+  type GiftCategory,
+  type InsertGiftCategory,
+  type GiftType,
+  type InsertGiftType,
+  type GiftSuggestionCategory,
+  type InsertGiftSuggestionCategory,
+  type GiftSuggestionWithRelations,
   type UserProfile,
   type InsertUserProfile,
   type RecipientProfile,
@@ -116,6 +126,24 @@ export interface IStorage {
   createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion>;
   updateGiftSuggestion(id: string, updates: Partial<InsertGiftSuggestion>): Promise<GiftSuggestion | undefined>;
   deleteGiftSuggestion(id: string): Promise<boolean>;
+  
+  // Gift Categories Management (Admin)
+  getGiftCategories(includeInactive?: boolean): Promise<GiftCategory[]>;
+  getGiftCategory(id: string): Promise<GiftCategory | undefined>;
+  createGiftCategory(category: InsertGiftCategory): Promise<GiftCategory>;
+  updateGiftCategory(id: string, updates: Partial<InsertGiftCategory>): Promise<GiftCategory | undefined>;
+  deleteGiftCategory(id: string): Promise<boolean>;
+  
+  // Gift Types Management (Admin)
+  getGiftTypes(includeInactive?: boolean): Promise<GiftType[]>;
+  getGiftType(id: string): Promise<GiftType | undefined>;
+  createGiftType(giftType: InsertGiftType): Promise<GiftType>;
+  updateGiftType(id: string, updates: Partial<InsertGiftType>): Promise<GiftType | undefined>;
+  deleteGiftType(id: string): Promise<boolean>;
+  
+  // Gift Suggestion Categories (many-to-many)
+  getSuggestionCategories(suggestionId: string): Promise<GiftCategory[]>;
+  setSuggestionCategories(suggestionId: string, categoryIds: string[]): Promise<void>;
   
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
@@ -671,6 +699,119 @@ export class DatabaseStorage implements IStorage {
       .delete(giftSuggestions)
       .where(eq(giftSuggestions.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ========== Gift Categories Management ==========
+
+  async getGiftCategories(includeInactive: boolean = false): Promise<GiftCategory[]> {
+    if (includeInactive) {
+      return db.select().from(giftCategories);
+    }
+    return db.select().from(giftCategories).where(eq(giftCategories.isActive, true));
+  }
+
+  async getGiftCategory(id: string): Promise<GiftCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(giftCategories)
+      .where(eq(giftCategories.id, id));
+    return category;
+  }
+
+  async createGiftCategory(category: InsertGiftCategory): Promise<GiftCategory> {
+    const [newCategory] = await db
+      .insert(giftCategories)
+      .values(category)
+      .returning();
+    return newCategory;
+  }
+
+  async updateGiftCategory(id: string, updates: Partial<InsertGiftCategory>): Promise<GiftCategory | undefined> {
+    const [updated] = await db
+      .update(giftCategories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(giftCategories.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGiftCategory(id: string): Promise<boolean> {
+    const result = await db
+      .delete(giftCategories)
+      .where(eq(giftCategories.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ========== Gift Types Management ==========
+
+  async getGiftTypes(includeInactive: boolean = false): Promise<GiftType[]> {
+    if (includeInactive) {
+      return db.select().from(giftTypes);
+    }
+    return db.select().from(giftTypes).where(eq(giftTypes.isActive, true));
+  }
+
+  async getGiftType(id: string): Promise<GiftType | undefined> {
+    const [giftType] = await db
+      .select()
+      .from(giftTypes)
+      .where(eq(giftTypes.id, id));
+    return giftType;
+  }
+
+  async createGiftType(giftType: InsertGiftType): Promise<GiftType> {
+    const [newGiftType] = await db
+      .insert(giftTypes)
+      .values(giftType)
+      .returning();
+    return newGiftType;
+  }
+
+  async updateGiftType(id: string, updates: Partial<InsertGiftType>): Promise<GiftType | undefined> {
+    const [updated] = await db
+      .update(giftTypes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(giftTypes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGiftType(id: string): Promise<boolean> {
+    const result = await db
+      .delete(giftTypes)
+      .where(eq(giftTypes.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ========== Gift Suggestion Categories (many-to-many) ==========
+
+  async getSuggestionCategories(suggestionId: string): Promise<GiftCategory[]> {
+    const relations = await db
+      .select({ categoryId: giftSuggestionCategories.categoryId })
+      .from(giftSuggestionCategories)
+      .where(eq(giftSuggestionCategories.suggestionId, suggestionId));
+    
+    if (relations.length === 0) return [];
+    
+    const categoryIds = relations.map(r => r.categoryId);
+    return db
+      .select()
+      .from(giftCategories)
+      .where(inArray(giftCategories.id, categoryIds));
+  }
+
+  async setSuggestionCategories(suggestionId: string, categoryIds: string[]): Promise<void> {
+    await db
+      .delete(giftSuggestionCategories)
+      .where(eq(giftSuggestionCategories.suggestionId, suggestionId));
+    
+    if (categoryIds.length > 0) {
+      const values = categoryIds.map(categoryId => ({
+        suggestionId,
+        categoryId,
+      }));
+      await db.insert(giftSuggestionCategories).values(values);
+    }
   }
 
   // ========== User Profile ==========
