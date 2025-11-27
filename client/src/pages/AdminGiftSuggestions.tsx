@@ -31,7 +31,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers, Ticket, Calendar, AlertTriangle } from "lucide-react";
+import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
@@ -199,6 +202,15 @@ export default function AdminGiftSuggestions() {
                     )}
                   </div>
                 </div>
+                
+                {/* Coupon Display */}
+                {suggestion.cupom && (
+                  <CouponBadge 
+                    cupom={suggestion.cupom} 
+                    validadeCupom={suggestion.validadeCupom} 
+                  />
+                )}
+                
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -316,6 +328,9 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     priority: suggestion?.priority?.toString() || "null",
     giftTypeId: normalizeGiftTypeId(suggestion?.giftTypeId),
     selectedCategoryIds: [] as string[],
+    cupom: suggestion?.cupom || "",
+    validadeCupom: suggestion?.validadeCupom || "",
+    showCoupon: !!(suggestion?.cupom),
   });
 
   const { data: giftCategories = [] } = useQuery<GiftCategory[]>({
@@ -341,6 +356,9 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priority: suggestion.priority?.toString() || "null",
         giftTypeId: normalizeGiftTypeId(suggestion.giftTypeId),
         selectedCategoryIds: [],
+        cupom: suggestion.cupom || "",
+        validadeCupom: suggestion.validadeCupom || "",
+        showCoupon: !!(suggestion.cupom),
       });
     } else {
       setFormData({
@@ -354,6 +372,9 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priority: "null",
         giftTypeId: "__none__",
         selectedCategoryIds: [],
+        cupom: "",
+        validadeCupom: "",
+        showCoupon: false,
       });
     }
   }, [suggestion, open]);
@@ -380,6 +401,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         priority: data.priority === "null" ? null : parseInt(data.priority),
         giftTypeId: data.giftTypeId === "__none__" ? null : data.giftTypeId,
+        cupom: data.showCoupon && data.cupom ? data.cupom.trim().toUpperCase() : null,
+        validadeCupom: data.showCoupon && data.validadeCupom ? data.validadeCupom : null,
       };
 
       if (mode === "create") {
@@ -407,6 +430,9 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priority: "null",
         giftTypeId: "__none__",
         selectedCategoryIds: [],
+        cupom: "",
+        validadeCupom: "",
+        showCoupon: false,
       });
     },
     onError: (error: any) => {
@@ -703,6 +729,56 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
             </Select>
           </div>
 
+          {/* Coupon Section */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="show-coupon" className="cursor-pointer">Adicionar cupom de desconto?</Label>
+              </div>
+              <Switch
+                id="show-coupon"
+                checked={formData.showCoupon}
+                onCheckedChange={(checked) => setFormData({ ...formData, showCoupon: checked })}
+                data-testid="switch-show-coupon"
+              />
+            </div>
+            
+            {formData.showCoupon && (
+              <div className="space-y-3 pt-2">
+                <div>
+                  <Label htmlFor="cupom">Código do Cupom</Label>
+                  <Input
+                    id="cupom"
+                    value={formData.cupom}
+                    onChange={(e) => setFormData({ ...formData, cupom: e.target.value.toUpperCase() })}
+                    placeholder="Ex: FRETEGRATIS10"
+                    maxLength={50}
+                    data-testid="input-suggestion-cupom"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O cupom será exibido em destaque para o usuário
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="validadeCupom">Validade do Cupom</Label>
+                  <Input
+                    id="validadeCupom"
+                    type="date"
+                    value={formData.validadeCupom}
+                    onChange={(e) => setFormData({ ...formData, validadeCupom: e.target.value })}
+                    min={format(new Date(), "yyyy-MM-dd")}
+                    data-testid="input-suggestion-validade-cupom"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Data limite para uso do cupom (opcional)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -732,3 +808,65 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     </Dialog>
   );
 }
+
+// Coupon Badge Component
+interface CouponBadgeProps {
+  cupom: string;
+  validadeCupom?: string | null;
+  compact?: boolean;
+}
+
+function CouponBadge({ cupom, validadeCupom, compact = false }: CouponBadgeProps) {
+  const today = startOfDay(new Date());
+  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  if (isExpired) {
+    return (
+      <div 
+        className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 border border-muted text-muted-foreground mb-3"
+        data-testid="coupon-badge-expired"
+      >
+        <AlertTriangle className="h-4 w-4" />
+        <div className="flex-1">
+          <div className="flex items-center gap-1 text-sm">
+            <span className="line-through">{cupom}</span>
+            <span className="text-xs">(expirado)</span>
+          </div>
+          {validadeCupom && (
+            <p className="text-xs">Válido até {formatDate(validadeCupom)}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 mb-3"
+      data-testid="coupon-badge-active"
+    >
+      <Ticket className="h-4 w-4" />
+      <div className="flex-1">
+        <div className="text-sm font-medium">
+          Use o cupom: <span className="font-bold">{cupom}</span>
+        </div>
+        {validadeCupom && (
+          <p className="text-xs flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Válido até {formatDate(validadeCupom)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export { CouponBadge };
