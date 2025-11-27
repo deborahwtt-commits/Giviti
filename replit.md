@@ -22,8 +22,17 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 - **Database**: PostgreSQL via Neon serverless.
-- **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`, `themed_night_categories`).
-  - **Gift Suggestions**: The `giftSuggestions` table includes a `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null. Enforced by database CHECK constraint created automatically via Drizzle schema. Admins can now manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
+- **Schema Design**: Includes tables for `users`, `userProfiles`, `recipients`, `recipientProfiles`, `events`, `eventRecipients`, `userGifts`, `giftSuggestions`, `giftCategories`, `giftTypes`, `giftSuggestionCategories`, `sessions`, and collaborative event tables (`collaborative_events`, `collaborative_event_participants`, `collaborative_event_links`, `secret_santa_pairs`, `collective_gift_contributions`, `collaborative_event_tasks`, `themed_night_categories`).
+  - **Gift Suggestions**: The `giftSuggestions` table includes:
+    - `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null.
+    - `giftTypeId` foreign key reference to `giftTypes` table for categorizing suggestions by type.
+    - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
+  - **Gift Categories & Types System**:
+    - `giftCategories`: Stores gift categories with name, description, color (hex), and active status. Examples: "Tecnologia", "Casa & Decoração".
+    - `giftTypes`: Stores gift types with name, description, and active status. Examples: "Presente Físico", "Experiência", "Presente Digital".
+    - `giftSuggestionCategories`: Junction table enabling many-to-many relationship between suggestions and categories.
+    - Each suggestion can have one type (via `giftTypeId`) and multiple categories (via junction table).
+    - Admin panel at `/admin/categorias-tipos` provides full CRUD for categories and types.
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
