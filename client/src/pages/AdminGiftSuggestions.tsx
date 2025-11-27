@@ -293,6 +293,10 @@ interface SuggestionFormDialogProps {
 
 function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: SuggestionFormDialogProps) {
   const { toast } = useToast();
+  const normalizeGiftTypeId = (id: string | null | undefined): string => {
+    return id && id !== "" ? id : "__none__";
+  };
+
   const [formData, setFormData] = useState({
     name: suggestion?.name || "",
     description: suggestion?.description || "",
@@ -302,7 +306,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     priceMax: suggestion?.priceMax?.toString() || "",
     tags: suggestion?.tags.join(", ") || "",
     priority: suggestion?.priority?.toString() || "null",
-    giftTypeId: suggestion?.giftTypeId || "",
+    giftTypeId: normalizeGiftTypeId(suggestion?.giftTypeId),
     selectedCategoryIds: [] as string[],
   });
 
@@ -327,7 +331,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priceMax: suggestion.priceMax?.toString() || "",
         tags: suggestion.tags.join(", ") || "",
         priority: suggestion.priority?.toString() || "null",
-        giftTypeId: suggestion.giftTypeId || "",
+        giftTypeId: normalizeGiftTypeId(suggestion.giftTypeId),
         selectedCategoryIds: [],
       });
     } else {
@@ -340,7 +344,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priceMax: "",
         tags: "",
         priority: "null",
-        giftTypeId: "",
+        giftTypeId: "__none__",
         selectedCategoryIds: [],
       });
     }
@@ -366,7 +370,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priceMax: parseInt(data.priceMax),
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         priority: data.priority === "null" ? null : parseInt(data.priority),
-        giftTypeId: data.giftTypeId || null,
+        giftTypeId: data.giftTypeId === "__none__" ? null : data.giftTypeId,
       };
 
       if (mode === "create") {
@@ -475,11 +479,11 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
             >
               <SelectTrigger data-testid="select-suggestion-gift-type">
                 <SelectValue placeholder="Selecione um tipo (opcional)">
-                  {formData.giftTypeId && giftTypes.find(t => t.id === formData.giftTypeId)?.name}
+                  {formData.giftTypeId !== "__none__" ? giftTypes.find(t => t.id === formData.giftTypeId)?.name : "Nenhum"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {giftTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div className="flex items-center gap-2">
