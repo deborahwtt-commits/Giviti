@@ -461,14 +461,33 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
 
           <div>
             <Label htmlFor="category">Categoria Principal *</Label>
-            <Input
-              id="category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              required
-              placeholder="Ex: Eletrônicos, Livros, Arte..."
-              data-testid="input-suggestion-category"
-            />
+            <Select
+              value={formData.category || "__none__"}
+              onValueChange={(value) => setFormData({ ...formData, category: value === "__none__" ? "" : value })}
+            >
+              <SelectTrigger data-testid="select-suggestion-category">
+                <SelectValue placeholder="Selecione uma categoria">
+                  {formData.category ? giftCategories.find(c => c.name === formData.category)?.name || formData.category : "Selecione uma categoria"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Selecione uma categoria</SelectItem>
+                {giftCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    <div className="flex items-center gap-2">
+                      {category.color && (
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                      )}
+                      <Tag className="h-4 w-4" />
+                      {category.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
