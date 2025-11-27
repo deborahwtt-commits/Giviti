@@ -162,6 +162,8 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   priority: integer("priority"),
   productUrl: text("product_url").notNull().default(""),
+  cupom: varchar("cupom"),
+  validadeCupom: date("validade_cupom"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   priorityCheck: check("priority_check", sql`${table.priority} IS NULL OR ${table.priority} IN (1, 2, 3)`)
@@ -182,6 +184,8 @@ const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
   productUrl: z.string().url("URL inválida").refine((val) => {
     return val.startsWith("http://") || val.startsWith("https://");
   }, "URL deve começar com http:// ou https://"),
+  cupom: z.string().max(50, "Cupom deve ter no máximo 50 caracteres").nullable().optional(),
+  validadeCupom: z.string().nullable().optional(),
 }).omit({
   id: true,
   createdAt: true,
