@@ -211,16 +211,26 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
           variant="outline"
           size="sm"
           className="w-full text-xs"
-          onClick={() => {
-            toast({
-              title: gift.name,
-              description: "Funcionalidade de detalhes em breve!",
-            });
+          onClick={async () => {
+            if (gift.productUrl) {
+              try {
+                await apiRequest("/api/clicks", "POST", { link: gift.productUrl });
+              } catch (error) {
+                console.error("Error recording click:", error);
+              }
+              window.open(gift.productUrl, "_blank", "noopener,noreferrer");
+            } else {
+              toast({
+                title: gift.name,
+                description: "Link do produto não disponível.",
+                variant: "destructive",
+              });
+            }
           }}
-          data-testid={`button-view-details-${gift.id}`}
+          data-testid={`button-view-product-${gift.id}`}
         >
           <ExternalLink className="w-3 h-3 mr-1" />
-          Ver Detalhes
+          Ver Produto
         </Button>
       </div>
     </Card>
