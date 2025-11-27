@@ -620,6 +620,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Click Tracking Routes ==========
+
+  // POST /api/clicks - Record a click on a product link
+  app.post("/api/clicks", isAuthenticated, async (req: any, res) => {
+    try {
+      const { link } = req.body;
+      
+      if (!link || typeof link !== 'string') {
+        return res.status(400).json({ message: "Link is required" });
+      }
+      
+      // Validate URL format
+      try {
+        const url = new URL(link);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          return res.status(400).json({ message: "Invalid URL protocol" });
+        }
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+      
+      const click = await storage.recordClick(link);
+      res.json(click);
+    } catch (error) {
+      console.error("Error recording click:", error);
+      res.status(500).json({ message: "Failed to record click" });
+    }
+  });
+
+  // GET /api/admin/clicks - Get all click stats (Admin only)
+  app.get("/api/admin/clicks", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const clicks = await storage.getAllClickStats();
+      res.json(clicks);
+    } catch (error) {
+      console.error("Error fetching click stats:", error);
+      res.status(500).json({ message: "Failed to fetch click stats" });
+    }
+  });
+
+  // GET /api/admin/clicks/:link - Get click stats for a specific link (Admin only)
+  app.get("/api/admin/clicks/stats", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { link } = req.query;
+      
+      if (!link || typeof link !== 'string') {
+        return res.status(400).json({ message: "Link query parameter is required" });
+      }
+      
+      const click = await storage.getClickStats(link);
+      res.json(click || { link, clickCount: 0 });
+    } catch (error) {
+      console.error("Error fetching click stats:", error);
+      res.status(500).json({ message: "Failed to fetch click stats" });
+    }
+  });
+
   // ========== Gift Categories Routes (Admin) ==========
 
   // GET /api/admin/gift-categories - Get all gift categories
