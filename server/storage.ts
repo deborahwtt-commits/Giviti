@@ -125,6 +125,7 @@ export interface IStorage {
   // Gift Suggestions
   getGiftSuggestions(filters?: { category?: string; minPrice?: number; maxPrice?: number; tags?: string[] }): Promise<GiftSuggestion[]>;
   getGiftSuggestion(id: string): Promise<GiftSuggestion | undefined>;
+  getAutoSuggestions(recipientId: string, userId: string, page?: number, limit?: number): Promise<{ suggestions: GiftSuggestion[]; total: number; page: number; totalPages: number }>;
   createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion>;
   updateGiftSuggestion(id: string, updates: Partial<InsertGiftSuggestion>): Promise<GiftSuggestion | undefined>;
   deleteGiftSuggestion(id: string): Promise<boolean>;
@@ -658,7 +659,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (filters?.minPrice !== undefined) {
-      conditions.push(gte(giftSuggestions.price, filters.minPrice));
+      conditions.push(sql`${giftSuggestions.price} >= ${filters.minPrice}`);
     }
     
     if (filters?.maxPrice !== undefined) {
@@ -682,6 +683,71 @@ export class DatabaseStorage implements IStorage {
       .from(giftSuggestions)
       .where(eq(giftSuggestions.id, id));
     return suggestion;
+  }
+
+  async getAutoSuggestions(recipientId: string, userId: string, page: number = 1, limit: number = 5): Promise<{ suggestions: GiftSuggestion[]; total: number; page: number; totalPages: number }> {
+    // Get recipient and profile to match suggestions
+    const recipient = await this.getRecipient(recipientId, userId);
+    if (!recipient) {
+      return { suggestions: [], total: 0, page: 1, totalPages: 0 };
+    }
+
+    const profile = await this.getRecipientProfile(recipientId, userId);
+    
+    // Build matching criteria based on profile
+    const conditions: any[] = [];
+    
+    // Match by interests/tags
+    const interests = recipient.interests || [];
+    if (interests.length > 0) {
+      conditions.push(sql`${giftSuggestions.tags} && ARRAY[${sql.join(interests.map(i => sql`${i}`), sql`, `)}]::text[]`);
+    }
+    
+    // Match by category from profile
+    if (profile?.interestCategory) {
+      conditions.push(sql`LOWER(${giftSuggestions.category}) LIKE LOWER(${'%' + profile.interestCategory + '%'})`);
+    }
+    
+    // Match by budget range from profile
+    if (profile?.budgetRange) {
+      const budgetMap: Record<string, { min: number; max: number }> = {
+        "ate-50": { min: 0, max: 50 },
+        "50-100": { min: 50, max: 100 },
+        "100-200": { min: 100, max: 200 },
+        "200-500": { min: 200, max: 500 },
+        "acima-500": { min: 500, max: 99999 }
+      };
+      const budget = budgetMap[profile.budgetRange];
+      if (budget) {
+        conditions.push(sql`${giftSuggestions.price} >= ${budget.min}`);
+        conditions.push(sql`${giftSuggestions.price} <= ${budget.max}`);
+      }
+    }
+
+    // Count total matching suggestions
+    let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(giftSuggestions);
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(sql`(${sql.join(conditions, sql` OR `)})`) as any;
+    }
+    const [countResult] = await countQuery;
+    const total = countResult?.count || 0;
+    
+    // Calculate pagination
+    const offset = (page - 1) * limit;
+    const totalPages = Math.ceil(total / limit);
+    
+    // Get matching suggestions with priority ordering
+    let query = db.select().from(giftSuggestions);
+    if (conditions.length > 0) {
+      query = query.where(sql`(${sql.join(conditions, sql` OR `)})`) as any;
+    }
+    
+    const suggestions = await (query as any)
+      .orderBy(sql`${giftSuggestions.priority} IS NULL, ${giftSuggestions.priority} ASC`)
+      .limit(limit)
+      .offset(offset);
+    
+    return { suggestions, total, page, totalPages };
   }
 
   async createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion> {

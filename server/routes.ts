@@ -533,6 +533,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/sugestoes-auto - Get automatic gift suggestions based on recipient profile
+  app.get("/api/sugestoes-auto", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const { recipientId, page = "1", limit = "5" } = req.query;
+      
+      if (!recipientId) {
+        return res.status(400).json({ message: "recipientId is required" });
+      }
+      
+      const pageNum = parseInt(page as string) || 1;
+      const limitNum = parseInt(limit as string) || 5;
+      
+      // Get internal suggestions first
+      const internalResult = await storage.getAutoSuggestions(recipientId as string, userId, pageNum, limitNum);
+      
+      // If we have enough internal suggestions, return them
+      if (internalResult.total >= limitNum) {
+        return res.json({
+          fonte: "interna",
+          resultados: internalResult.suggestions.map(s => ({
+            id: s.id,
+            nome: s.name,
+            descricao: s.description,
+            link: s.productUrl,
+            imagem: s.imageUrl,
+            preco: s.price,
+            prioridade: s.priority,
+            categoria: s.category,
+            tags: s.tags
+          })),
+          paginacao: {
+            pagina_atual: internalResult.page,
+            total_paginas: internalResult.totalPages,
+            total_resultados: internalResult.total
+          }
+        });
+      }
+      
+      // If we don't have enough internal suggestions, try external search
+      const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+      
+      if (!perplexityApiKey) {
+        // Return whatever internal results we have
+        return res.json({
+          fonte: "interna",
+          resultados: internalResult.suggestions.map(s => ({
+            id: s.id,
+            nome: s.name,
+            descricao: s.description,
+            link: s.productUrl,
+            imagem: s.imageUrl,
+            preco: s.price,
+            prioridade: s.priority,
+            categoria: s.category,
+            tags: s.tags
+          })),
+          paginacao: {
+            pagina_atual: internalResult.page,
+            total_paginas: internalResult.totalPages,
+            total_resultados: internalResult.total
+          },
+          aviso: "Sugestões limitadas - sem integração externa configurada"
+        });
+      }
+      
+      // Get recipient info to build search query
+      const recipient = await storage.getRecipient(recipientId as string, userId);
+      const profile = await storage.getRecipientProfile(recipientId as string, userId);
+      
+      if (!recipient) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      // Build search query based on profile
+      const queryParts: string[] = ["presente"];
+      
+      if (recipient.gender) {
+        queryParts.push(`para ${recipient.gender}`);
+      }
+      if (recipient.age) {
+        queryParts.push(`de ${recipient.age} anos`);
+      }
+      if (recipient.interests && recipient.interests.length > 0) {
+        queryParts.push(`que gosta de ${recipient.interests.slice(0, 3).join(", ")}`);
+      }
+      if (profile?.interestCategory) {
+        queryParts.push(`categoria ${profile.interestCategory}`);
+      }
+      if (profile?.budgetRange) {
+        const budgetLabels: Record<string, string> = {
+          "ate-50": "até R$50",
+          "50-100": "entre R$50 e R$100",
+          "100-200": "entre R$100 e R$200",
+          "200-500": "entre R$200 e R$500",
+          "acima-500": "acima de R$500"
+        };
+        const budgetLabel = budgetLabels[profile.budgetRange];
+        if (budgetLabel) {
+          queryParts.push(budgetLabel);
+        }
+      }
+      
+      const searchQuery = queryParts.join(" ");
+      
+      try {
+        const perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${perplexityApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-sonar-small-128k-online",
+            messages: [
+              {
+                role: "system",
+                content: "Você é um assistente especializado em sugestões de presentes. Responda APENAS com um JSON array contendo exatamente 5 sugestões de presentes. Cada item deve ter: nome (string), descricao (string breve), preco_estimado (string com valor em R$), link (URL de loja real para compra). Formato: [{\"nome\": \"\", \"descricao\": \"\", \"preco_estimado\": \"\", \"link\": \"\"}]. Não inclua texto adicional, apenas o JSON."
+              },
+              {
+                role: "user",
+                content: `Sugira 5 opções de ${searchQuery} no Brasil. Inclua links de lojas reais como Amazon.com.br, Americanas, Magazine Luiza, etc.`
+              }
+            ],
+            max_tokens: 1500,
+            temperature: 0.3
+          })
+        });
+        
+        if (!perplexityResponse.ok) {
+          throw new Error(`Perplexity API error: ${perplexityResponse.status}`);
+        }
+        
+        const perplexityData = await perplexityResponse.json();
+        const content = perplexityData.choices?.[0]?.message?.content || "[]";
+        
+        // Try to parse the JSON response
+        let externalResults: Array<{ nome: string; descricao: string; preco_estimado: string; link: string }> = [];
+        try {
+          // Try to extract JSON from the response
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            externalResults = JSON.parse(jsonMatch[0]);
+          }
+        } catch (parseError) {
+          console.error("Error parsing Perplexity response:", parseError);
+        }
+        
+        // Combine internal and external results
+        const combinedResults = [
+          ...internalResult.suggestions.map(s => ({
+            id: s.id,
+            nome: s.name,
+            descricao: s.description,
+            link: s.productUrl,
+            imagem: s.imageUrl,
+            preco: s.price,
+            prioridade: s.priority,
+            categoria: s.category,
+            tags: s.tags,
+            fonte: "interna" as const
+          })),
+          ...externalResults.map((r, i) => ({
+            id: `external-${i}`,
+            nome: r.nome,
+            descricao: r.descricao,
+            link: r.link,
+            imagem: null,
+            preco: r.preco_estimado,
+            prioridade: null,
+            categoria: null,
+            tags: [],
+            fonte: "externa" as const
+          }))
+        ];
+        
+        return res.json({
+          fonte: "mista",
+          resultados: combinedResults.slice(0, limitNum * pageNum),
+          paginacao: {
+            pagina_atual: pageNum,
+            total_paginas: Math.ceil(combinedResults.length / limitNum),
+            total_resultados: combinedResults.length
+          }
+        });
+        
+      } catch (externalError) {
+        console.error("Error fetching external suggestions:", externalError);
+        
+        // Return internal results only
+        return res.json({
+          fonte: "interna",
+          resultados: internalResult.suggestions.map(s => ({
+            id: s.id,
+            nome: s.name,
+            descricao: s.description,
+            link: s.productUrl,
+            imagem: s.imageUrl,
+            preco: s.price,
+            prioridade: s.priority,
+            categoria: s.category,
+            tags: s.tags
+          })),
+          paginacao: {
+            pagina_atual: internalResult.page,
+            total_paginas: internalResult.totalPages,
+            total_resultados: internalResult.total
+          },
+          aviso: "Busca externa temporariamente indisponível"
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error fetching auto suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch auto suggestions" });
+    }
+  });
+
   // GET /api/admin/gift-suggestions - Get all gift suggestions (Admin only)
   app.get("/api/admin/gift-suggestions", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
     try {

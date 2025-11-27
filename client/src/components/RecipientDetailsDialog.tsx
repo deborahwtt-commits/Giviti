@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Edit, User, Cake, Users, Star, Heart } from "lucide-react";
+import { Edit, User, Cake, Users, Star, Heart, MapPin } from "lucide-react";
 import type { Recipient, RecipientProfile } from "@shared/schema";
 
 interface RecipientDetailsDialogProps {
@@ -130,6 +130,21 @@ export default function RecipientDetailsDialog({
                     </Badge>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Location Information */}
+            {profile && (profile.cidade || profile.estado || profile.pais) && (
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Localização:</span>
+                </div>
+                <span className="text-sm font-medium" data-testid="text-profile-location">
+                  {[profile.cidade, profile.estado, profile.pais]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
               </div>
             )}
           </div>
