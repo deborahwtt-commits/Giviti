@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -29,12 +31,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, Package } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { GiftSuggestion, User } from "@shared/schema";
+import type { GiftSuggestion, GiftCategory, GiftType, User } from "@shared/schema";
 
 export default function AdminGiftSuggestions() {
   const { toast } = useToast();
@@ -300,7 +302,58 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     priceMax: suggestion?.priceMax?.toString() || "",
     tags: suggestion?.tags.join(", ") || "",
     priority: suggestion?.priority?.toString() || "null",
+    giftTypeId: suggestion?.giftTypeId || "",
+    selectedCategoryIds: [] as string[],
   });
+
+  const { data: giftCategories = [] } = useQuery<GiftCategory[]>({
+    queryKey: ["/api/gift-categories"],
+    enabled: open,
+  });
+
+  const { data: giftTypes = [] } = useQuery<GiftType[]>({
+    queryKey: ["/api/gift-types"],
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (suggestion) {
+      setFormData({
+        name: suggestion.name || "",
+        description: suggestion.description || "",
+        imageUrl: suggestion.imageUrl || "",
+        category: suggestion.category || "",
+        priceMin: suggestion.priceMin?.toString() || "",
+        priceMax: suggestion.priceMax?.toString() || "",
+        tags: suggestion.tags.join(", ") || "",
+        priority: suggestion.priority?.toString() || "null",
+        giftTypeId: suggestion.giftTypeId || "",
+        selectedCategoryIds: [],
+      });
+    } else {
+      setFormData({
+        name: "",
+        description: "",
+        imageUrl: "",
+        category: "",
+        priceMin: "",
+        priceMax: "",
+        tags: "",
+        priority: "null",
+        giftTypeId: "",
+        selectedCategoryIds: [],
+      });
+    }
+  }, [suggestion, open]);
+
+  const toggleCategory = (categoryId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedCategoryIds: prev.selectedCategoryIds.includes(categoryId)
+        ? prev.selectedCategoryIds.filter(id => id !== categoryId)
+        : [...prev.selectedCategoryIds, categoryId]
+    }));
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -313,6 +366,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priceMax: parseInt(data.priceMax),
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         priority: data.priority === "null" ? null : parseInt(data.priority),
+        giftTypeId: data.giftTypeId || null,
       };
 
       if (mode === "create") {
@@ -338,6 +392,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         priceMax: "",
         tags: "",
         priority: "null",
+        giftTypeId: "",
+        selectedCategoryIds: [],
       });
     },
     onError: (error: any) => {
@@ -400,7 +456,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
           </div>
 
           <div>
-            <Label htmlFor="category">Categoria *</Label>
+            <Label htmlFor="category">Categoria Principal *</Label>
             <Input
               id="category"
               value={formData.category}
@@ -410,6 +466,88 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
               data-testid="input-suggestion-category"
             />
           </div>
+
+          <div>
+            <Label htmlFor="giftType">Tipo de Presente</Label>
+            <Select
+              value={formData.giftTypeId}
+              onValueChange={(value) => setFormData({ ...formData, giftTypeId: value })}
+            >
+              <SelectTrigger data-testid="select-suggestion-gift-type">
+                <SelectValue placeholder="Selecione um tipo (opcional)">
+                  {formData.giftTypeId && giftTypes.find(t => t.id === formData.giftTypeId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {giftTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      {type.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cada sugestão pode ter apenas um tipo (físico, digital, experiência, etc.)
+            </p>
+          </div>
+
+          {giftCategories.length > 0 && (
+            <div>
+              <Label>Categorias Adicionais</Label>
+              <div className="mt-2 p-3 border rounded-md bg-muted/30 max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  {giftCategories.map((category) => (
+                    <div key={category.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`category-${category.id}`}
+                        checked={formData.selectedCategoryIds.includes(category.id)}
+                        onCheckedChange={() => toggleCategory(category.id)}
+                        data-testid={`checkbox-category-${category.id}`}
+                      />
+                      <label
+                        htmlFor={`category-${category.id}`}
+                        className="text-sm cursor-pointer flex items-center gap-1"
+                      >
+                        {category.color && (
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: category.color }}
+                          />
+                        )}
+                        {category.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {formData.selectedCategoryIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {formData.selectedCategoryIds.map((id) => {
+                    const cat = giftCategories.find(c => c.id === id);
+                    return cat ? (
+                      <Badge 
+                        key={id} 
+                        variant="secondary"
+                        style={{ 
+                          backgroundColor: cat.color ? `${cat.color}20` : undefined,
+                          borderColor: cat.color || undefined
+                        }}
+                      >
+                        {cat.name}
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Uma sugestão pode ter múltiplas categorias para melhor organização
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
