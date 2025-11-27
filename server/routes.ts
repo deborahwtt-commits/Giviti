@@ -620,6 +620,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Gift Categories Routes (Admin) ==========
+
+  // GET /api/admin/gift-categories - Get all gift categories
+  app.get("/api/admin/gift-categories", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const categories = await storage.getGiftCategories(includeInactive);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching gift categories:", error);
+      res.status(500).json({ message: "Failed to fetch gift categories" });
+    }
+  });
+
+  // GET /api/gift-categories - Get active gift categories (public for forms)
+  app.get("/api/gift-categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const categories = await storage.getGiftCategories(false);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching gift categories:", error);
+      res.status(500).json({ message: "Failed to fetch gift categories" });
+    }
+  });
+
+  // GET /api/admin/gift-categories/:id - Get a specific gift category
+  app.get("/api/admin/gift-categories/:id", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.getGiftCategory(id);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Gift category not found" });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching gift category:", error);
+      res.status(500).json({ message: "Failed to fetch gift category" });
+    }
+  });
+
+  // POST /api/admin/gift-categories - Create a new gift category
+  app.post("/api/admin/gift-categories", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { insertGiftCategorySchema } = await import("@shared/schema");
+      const validatedData = insertGiftCategorySchema.parse(req.body);
+      const newCategory = await storage.createGiftCategory(validatedData);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid gift category data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating gift category:", error);
+      res.status(500).json({ message: "Failed to create gift category" });
+    }
+  });
+
+  // PATCH /api/admin/gift-categories/:id - Update a gift category
+  app.patch("/api/admin/gift-categories/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateGiftCategory(id, req.body);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Gift category not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating gift category:", error);
+      res.status(500).json({ message: "Failed to update gift category" });
+    }
+  });
+
+  // DELETE /api/admin/gift-categories/:id - Delete a gift category
+  app.delete("/api/admin/gift-categories/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteGiftCategory(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Gift category not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting gift category:", error);
+      res.status(500).json({ message: "Failed to delete gift category" });
+    }
+  });
+
+  // ========== Gift Types Routes (Admin) ==========
+
+  // GET /api/admin/gift-types - Get all gift types
+  app.get("/api/admin/gift-types", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const types = await storage.getGiftTypes(includeInactive);
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching gift types:", error);
+      res.status(500).json({ message: "Failed to fetch gift types" });
+    }
+  });
+
+  // GET /api/gift-types - Get active gift types (public for forms)
+  app.get("/api/gift-types", isAuthenticated, async (req: any, res) => {
+    try {
+      const types = await storage.getGiftTypes(false);
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching gift types:", error);
+      res.status(500).json({ message: "Failed to fetch gift types" });
+    }
+  });
+
+  // GET /api/admin/gift-types/:id - Get a specific gift type
+  app.get("/api/admin/gift-types/:id", isAuthenticated, hasRole('admin', 'manager', 'support'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const giftType = await storage.getGiftType(id);
+      
+      if (!giftType) {
+        return res.status(404).json({ message: "Gift type not found" });
+      }
+      
+      res.json(giftType);
+    } catch (error) {
+      console.error("Error fetching gift type:", error);
+      res.status(500).json({ message: "Failed to fetch gift type" });
+    }
+  });
+
+  // POST /api/admin/gift-types - Create a new gift type
+  app.post("/api/admin/gift-types", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { insertGiftTypeSchema } = await import("@shared/schema");
+      const validatedData = insertGiftTypeSchema.parse(req.body);
+      const newGiftType = await storage.createGiftType(validatedData);
+      res.status(201).json(newGiftType);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid gift type data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating gift type:", error);
+      res.status(500).json({ message: "Failed to create gift type" });
+    }
+  });
+
+  // PATCH /api/admin/gift-types/:id - Update a gift type
+  app.patch("/api/admin/gift-types/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateGiftType(id, req.body);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Gift type not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating gift type:", error);
+      res.status(500).json({ message: "Failed to update gift type" });
+    }
+  });
+
+  // DELETE /api/admin/gift-types/:id - Delete a gift type
+  app.delete("/api/admin/gift-types/:id", isAuthenticated, hasRole('admin', 'manager'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteGiftType(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Gift type not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting gift type:", error);
+      res.status(500).json({ message: "Failed to delete gift type" });
+    }
+  });
+
   // ========== User Profile Routes ==========
 
   // GET /api/profile - Get user profile
