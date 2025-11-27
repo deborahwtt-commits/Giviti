@@ -309,6 +309,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     name: suggestion?.name || "",
     description: suggestion?.description || "",
     imageUrl: suggestion?.imageUrl || "",
+    productUrl: suggestion?.productUrl || "",
     category: suggestion?.category || "",
     price: formatPriceForDisplay(suggestion?.price),
     tags: suggestion?.tags.join(", ") || "",
@@ -333,6 +334,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         name: suggestion.name || "",
         description: suggestion.description || "",
         imageUrl: suggestion.imageUrl || "",
+        productUrl: suggestion.productUrl || "",
         category: suggestion.category || "",
         price: formatPriceForDisplay(suggestion.price),
         tags: suggestion.tags.join(", ") || "",
@@ -345,6 +347,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         name: "",
         description: "",
         imageUrl: "",
+        productUrl: "",
         category: "",
         price: "",
         tags: "",
@@ -371,6 +374,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         name: data.name,
         description: data.description,
         imageUrl: data.imageUrl,
+        productUrl: data.productUrl,
         category: data.category,
         price: priceValue.toFixed(2),
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
@@ -396,6 +400,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         name: "",
         description: "",
         imageUrl: "",
+        productUrl: "",
         category: "",
         price: "",
         tags: "",
@@ -420,6 +425,34 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
       toast({
         title: "Campo obrigatório",
         description: "Selecione um tipo de presente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!formData.productUrl) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Informe o link do produto.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const url = new URL(formData.productUrl);
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        toast({
+          title: "Link inválido",
+          description: "O link deve começar com http:// ou https://",
+          variant: "destructive",
+        });
+        return;
+      }
+    } catch {
+      toast({
+        title: "Link inválido",
+        description: "Informe uma URL válida para o produto.",
         variant: "destructive",
       });
       return;
@@ -471,6 +504,22 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
               placeholder="https://images.unsplash.com/..."
               data-testid="input-suggestion-imageurl"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="productUrl">Link do Produto *</Label>
+            <Input
+              id="productUrl"
+              type="url"
+              value={formData.productUrl}
+              onChange={(e) => setFormData({ ...formData, productUrl: e.target.value })}
+              required
+              placeholder="https://www.loja.com.br/produto..."
+              data-testid="input-suggestion-producturl"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              URL da loja onde o produto pode ser comprado
+            </p>
           </div>
 
           <div>
