@@ -66,8 +66,13 @@ export default function Dashboard() {
     return format(date, "d 'de' MMM, yyyy");
   };
 
-  const formatPrice = (price: number) => {
-    return `R$ ${price}`;
+  const formatPrice = (price: number | string) => {
+    const numValue = typeof price === "string" ? parseFloat(price) : price;
+    if (isNaN(numValue)) return "R$ 0,00";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(numValue);
   };
 
   if (statsLoading || recipientsLoading) {

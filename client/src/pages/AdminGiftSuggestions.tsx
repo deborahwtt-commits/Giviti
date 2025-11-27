@@ -180,7 +180,7 @@ export default function AdminGiftSuggestions() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Preço:</span>
                     <span className="font-medium">
-                      R$ {suggestion.price}
+                      {formatCurrency(suggestion.price)}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">

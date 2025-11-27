@@ -20,6 +20,7 @@ import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/utils";
 
 interface CompactGiftCardProps {
   gift: GiftSuggestion;
@@ -198,7 +199,7 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
       
       <div className="p-3">
         <Badge variant="secondary" className="text-xs mb-2">
-          R$ {gift.price}
+          {formatCurrency(gift.price)}
         </Badge>
         <h3 className="font-semibold text-sm text-foreground mb-1 line-clamp-2">
           {gift.name}
@@ -273,7 +274,8 @@ export default function Suggestions() {
 
   const filteredSuggestions = allSuggestions?.filter((suggestion) => {
     const matchesCategory = !category || category === "all" || suggestion.category === category;
-    const matchesBudget = suggestion.price <= budget[0];
+    const priceValue = typeof suggestion.price === "string" ? parseFloat(suggestion.price) : suggestion.price;
+    const matchesBudget = priceValue <= budget[0];
     
     let matchesRecipient = true;
     if (selectedRecipientData) {
@@ -299,7 +301,8 @@ export default function Suggestions() {
         const recipientInterests = recipient.interests || [];
         const matchingSuggestions = (allSuggestions || []).filter((suggestion) => {
           const matchesCategory = !category || category === "all" || suggestion.category === category;
-          const matchesBudget = suggestion.price <= budget[0];
+          const priceValue = typeof suggestion.price === "string" ? parseFloat(suggestion.price) : suggestion.price;
+          const matchesBudget = priceValue <= budget[0];
           
           let matchesRecipient = true;
           const suggestionTags = suggestion.tags || [];
