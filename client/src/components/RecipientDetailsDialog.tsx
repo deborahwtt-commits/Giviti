@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Edit, User, Cake, Users, Star, Heart, MapPin } from "lucide-react";
 import type { Recipient, RecipientProfile } from "@shared/schema";
+import AutoSuggestions from "./AutoSuggestions";
 
 interface RecipientDetailsDialogProps {
   recipient: Recipient | null;
@@ -179,6 +180,17 @@ export default function RecipientDetailsDialog({
                 Nenhum perfil detalhado cadastrado para este presenteado.
               </p>
             )}
+          </div>
+
+          <Separator />
+
+          {/* Auto Suggestions */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Sugestões de Presentes</h3>
+            <AutoSuggestions 
+              recipientId={recipient.id} 
+              recipientName={recipient.name} 
+            />
           </div>
         </div>
 
