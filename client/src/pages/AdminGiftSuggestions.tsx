@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { formatCurrency, formatCurrencyInput, parseCurrencyToNumber } from "@/lib/utils";
 import type { GiftSuggestion, GiftCategory, GiftType, User } from "@shared/schema";
 
 export default function AdminGiftSuggestions() {
@@ -297,12 +298,19 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     return id && id !== "" ? id : "__none__";
   };
 
+  const formatPriceForDisplay = (price: string | number | null | undefined): string => {
+    if (!price) return "";
+    const numValue = typeof price === "string" ? parseFloat(price) : price;
+    if (isNaN(numValue)) return "";
+    return formatCurrencyInput((numValue * 100).toFixed(0));
+  };
+
   const [formData, setFormData] = useState({
     name: suggestion?.name || "",
     description: suggestion?.description || "",
     imageUrl: suggestion?.imageUrl || "",
     category: suggestion?.category || "",
-    price: suggestion?.price?.toString() || "",
+    price: formatPriceForDisplay(suggestion?.price),
     tags: suggestion?.tags.join(", ") || "",
     priority: suggestion?.priority?.toString() || "null",
     giftTypeId: normalizeGiftTypeId(suggestion?.giftTypeId),
@@ -326,7 +334,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         description: suggestion.description || "",
         imageUrl: suggestion.imageUrl || "",
         category: suggestion.category || "",
-        price: suggestion.price?.toString() || "",
+        price: formatPriceForDisplay(suggestion.price),
         tags: suggestion.tags.join(", ") || "",
         priority: suggestion.priority?.toString() || "null",
         giftTypeId: normalizeGiftTypeId(suggestion.giftTypeId),
@@ -358,12 +366,13 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const priceValue = parseCurrencyToNumber(data.price);
       const payload = {
         name: data.name,
         description: data.description,
         imageUrl: data.imageUrl,
         category: data.category,
-        price: parseInt(data.price),
+        price: priceValue.toFixed(2),
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         priority: data.priority === "null" ? null : parseInt(data.priority),
         giftTypeId: data.giftTypeId === "__none__" ? null : data.giftTypeId,
@@ -583,17 +592,24 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
           )}
 
           <div>
-            <Label htmlFor="price">Preço (R$) *</Label>
-            <Input
-              id="price"
-              type="number"
-              min="1"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              required
-              placeholder="Ex: 150"
-              data-testid="input-suggestion-price"
-            />
+            <Label htmlFor="price">Preço *</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+              <Input
+                id="price"
+                type="text"
+                inputMode="decimal"
+                value={formData.price}
+                onChange={(e) => {
+                  const formatted = formatCurrencyInput(e.target.value);
+                  setFormData({ ...formData, price: formatted });
+                }}
+                required
+                placeholder="0,00"
+                className="pl-10"
+                data-testid="input-suggestion-price"
+              />
+            </div>
           </div>
 
           <div>
