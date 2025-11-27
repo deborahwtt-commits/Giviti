@@ -13,7 +13,9 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, Calendar, AlertTriangle } from "lucide-react";
+import { format, parseISO, isBefore, startOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
@@ -204,13 +206,18 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
         <h3 className="font-semibold text-sm text-foreground mb-1 line-clamp-2">
           {gift.name}
         </h3>
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
           {gift.description}
         </p>
+        
+        {gift.cupom && (
+          <CouponBadgeCompact cupom={gift.cupom} validadeCupom={gift.validadeCupom} />
+        )}
+        
         <Button
           variant="outline"
           size="sm"
-          className="w-full text-xs"
+          className="w-full text-xs mt-2"
           onClick={async () => {
             if (gift.productUrl) {
               try {
@@ -234,6 +241,54 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
         </Button>
       </div>
     </Card>
+  );
+}
+
+// Compact Coupon Badge for Suggestions page
+interface CouponBadgeCompactProps {
+  cupom: string;
+  validadeCupom?: string | null;
+}
+
+function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
+  const today = startOfDay(new Date());
+  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  if (isExpired) {
+    return (
+      <div 
+        className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs mb-2"
+        data-testid="coupon-badge-expired"
+      >
+        <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+        <span className="line-through truncate">{cupom}</span>
+        <span className="flex-shrink-0">(expirado)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="flex items-center gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs mb-2"
+      data-testid="coupon-badge-active"
+    >
+      <Ticket className="h-3 w-3 flex-shrink-0" />
+      <span className="font-medium truncate">{cupom}</span>
+      {validadeCupom && (
+        <span className="flex items-center gap-0.5 flex-shrink-0">
+          <Calendar className="h-2.5 w-2.5" />
+          {formatDate(validadeCupom)}
+        </span>
+      )}
+    </div>
   );
 }
 
