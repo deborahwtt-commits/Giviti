@@ -164,10 +164,24 @@ export default function RecipientForm({
               id="age"
               type="number"
               value={age}
-              onChange={(e) => setAge(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "" || /^[1-9]\d*$/.test(value)) {
+                  const num = parseInt(value, 10);
+                  if (value === "" || (num >= 1 && num <= 120)) {
+                    setAge(value);
+                  }
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "." || e.key === "," || e.key === "-" || e.key === "e" || e.key === "E") {
+                  e.preventDefault();
+                }
+              }}
               placeholder="Ex: 25"
               min="1"
               max="120"
+              step="1"
               required
               data-testid="input-age"
             />
