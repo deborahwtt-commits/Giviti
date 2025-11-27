@@ -161,6 +161,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   priority: integer("priority"),
+  productUrl: text("product_url").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   priorityCheck: check("priority_check", sql`${table.priority} IS NULL OR ${table.priority} IN (1, 2, 3)`)
@@ -178,6 +179,9 @@ const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
     const num = parseFloat(val);
     return !isNaN(num) && num > 0;
   }, "Preço deve ser maior que zero"),
+  productUrl: z.string().url("URL inválida").refine((val) => {
+    return val.startsWith("http://") || val.startsWith("https://");
+  }, "URL deve começar com http:// ou https://"),
 }).omit({
   id: true,
   createdAt: true,
@@ -190,6 +194,24 @@ export const updateGiftSuggestionSchema = baseGiftSuggestionSchema.partial();
 export type InsertGiftSuggestion = z.infer<typeof insertGiftSuggestionSchema>;
 export type UpdateGiftSuggestion = z.infer<typeof updateGiftSuggestionSchema>;
 export type GiftSuggestion = typeof giftSuggestions.$inferSelect;
+
+// Click tracking table for product links
+export const clicks = pgTable("clicks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  link: text("link").notNull().unique(),
+  clickCount: integer("click_count").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClickSchema = createInsertSchema(clicks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClick = z.infer<typeof insertClickSchema>;
+export type Click = typeof clicks.$inferSelect;
 
 // Gift Categories table (admin-managed)
 export const giftCategories = pgTable("gift_categories", {
