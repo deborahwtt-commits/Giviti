@@ -415,6 +415,16 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.giftTypeId || formData.giftTypeId === "__none__") {
+      toast({
+        title: "Campo obrigatório",
+        description: "Selecione um tipo de presente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     mutation.mutate(formData);
   };
 
@@ -505,18 +515,20 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
           </div>
 
           <div>
-            <Label htmlFor="giftType">Tipo de Presente</Label>
+            <Label htmlFor="giftType">Tipo de Presente *</Label>
             <Select
               value={formData.giftTypeId}
               onValueChange={(value) => setFormData({ ...formData, giftTypeId: value })}
+              required
             >
               <SelectTrigger data-testid="select-suggestion-gift-type">
-                <SelectValue placeholder="Selecione um tipo (opcional)">
-                  {formData.giftTypeId !== "__none__" ? giftTypes.find(t => t.id === formData.giftTypeId)?.name : "Nenhum"}
+                <SelectValue placeholder="Selecione um tipo">
+                  {formData.giftTypeId && formData.giftTypeId !== "__none__" 
+                    ? giftTypes.find(t => t.id === formData.giftTypeId)?.name 
+                    : "Selecione um tipo"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
                 {giftTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div className="flex items-center gap-2">
