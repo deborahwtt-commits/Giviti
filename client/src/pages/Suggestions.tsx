@@ -13,9 +13,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, Calendar, AlertTriangle } from "lucide-react";
-import { format, parseISO, isBefore, startOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle } from "lucide-react";
+import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
@@ -253,41 +252,26 @@ interface CouponBadgeCompactProps {
 function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
   const today = startOfDay(new Date());
   const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
-  
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
-    } catch {
-      return dateStr;
-    }
-  };
 
   if (isExpired) {
     return (
       <div 
-        className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs mb-2"
+        className="flex items-start gap-1 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs mb-2"
         data-testid="coupon-badge-expired"
       >
-        <AlertTriangle className="h-3 w-3 flex-shrink-0" />
-        <span className="line-through truncate">{cupom}</span>
-        <span className="flex-shrink-0">(expirado)</span>
+        <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+        <span className="line-through break-words">{cupom} (expirado)</span>
       </div>
     );
   }
 
   return (
     <div 
-      className="flex items-center gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs mb-2"
+      className="flex items-start gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs mb-2"
       data-testid="coupon-badge-active"
     >
-      <Ticket className="h-3 w-3 flex-shrink-0" />
-      <span className="font-medium truncate">{cupom}</span>
-      {validadeCupom && (
-        <span className="flex items-center gap-0.5 flex-shrink-0">
-          <Calendar className="h-2.5 w-2.5" />
-          {formatDate(validadeCupom)}
-        </span>
-      )}
+      <Ticket className="h-3 w-3 flex-shrink-0 mt-0.5" />
+      <span className="font-medium break-words">{cupom}</span>
     </div>
   );
 }
