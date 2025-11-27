@@ -24,6 +24,7 @@ import {
   secretSantaPairs,
   collectiveGiftContributions,
   collaborativeEventTasks,
+  clicks,
   type User,
   type UpsertUser,
   type Recipient,
@@ -73,6 +74,7 @@ import {
   type InsertCollectiveGiftContribution,
   type CollaborativeEventTask,
   type InsertCollaborativeEventTask,
+  type Click,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -144,6 +146,11 @@ export interface IStorage {
   // Gift Suggestion Categories (many-to-many)
   getSuggestionCategories(suggestionId: string): Promise<GiftCategory[]>;
   setSuggestionCategories(suggestionId: string, categoryIds: string[]): Promise<void>;
+  
+  // Click Tracking
+  recordClick(link: string): Promise<Click>;
+  getClickStats(link: string): Promise<Click | undefined>;
+  getAllClickStats(): Promise<Click[]>;
   
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
@@ -812,6 +819,45 @@ export class DatabaseStorage implements IStorage {
       }));
       await db.insert(giftSuggestionCategories).values(values);
     }
+  }
+
+  // ========== Click Tracking ==========
+
+  async recordClick(link: string): Promise<Click> {
+    const existing = await db
+      .select()
+      .from(clicks)
+      .where(eq(clicks.link, link));
+    
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(clicks)
+        .set({ 
+          clickCount: sql`${clicks.clickCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(clicks.link, link))
+        .returning();
+      return updated;
+    } else {
+      const [newClick] = await db
+        .insert(clicks)
+        .values({ link, clickCount: 1 })
+        .returning();
+      return newClick;
+    }
+  }
+
+  async getClickStats(link: string): Promise<Click | undefined> {
+    const [click] = await db
+      .select()
+      .from(clicks)
+      .where(eq(clicks.link, link));
+    return click;
+  }
+
+  async getAllClickStats(): Promise<Click[]> {
+    return db.select().from(clicks).orderBy(sql`${clicks.clickCount} DESC`);
   }
 
   // ========== User Profile ==========
