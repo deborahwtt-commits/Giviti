@@ -337,51 +337,53 @@ export default function Suggestions() {
     ? recipients?.find(r => r.id === selectedRecipient)
     : null;
 
-  const filteredSuggestions = allSuggestions?.filter((suggestion) => {
+  // Filter suggestions by category and budget (always applied)
+  const baseSuggestions = allSuggestions?.filter((suggestion) => {
     const matchesCategory = !category || category === "all" || suggestion.category === category;
     const priceValue = typeof suggestion.price === "string" ? parseFloat(suggestion.price) : suggestion.price;
     const matchesBudget = priceValue <= budget[0];
-    
-    let matchesRecipient = true;
-    if (selectedRecipientData) {
-      const recipientInterests = selectedRecipientData.interests || [];
-      const suggestionTags = suggestion.tags || [];
-      
-      if (recipientInterests.length > 0) {
-        matchesRecipient = recipientInterests.some(interest => 
+    return matchesCategory && matchesBudget;
+  }) || [];
+
+  // When a specific recipient is selected, additionally filter by interests
+  const filteredSuggestions = selectedRecipientData
+    ? baseSuggestions.filter((suggestion) => {
+        const recipientInterests = selectedRecipientData.interests || [];
+        const suggestionTags = suggestion.tags || [];
+        
+        // If recipient has no interests, show all base suggestions
+        if (recipientInterests.length === 0) {
+          return true;
+        }
+        
+        // Match by interests
+        return recipientInterests.some(interest => 
           suggestionTags.some(tag => 
             tag.toLowerCase().includes(interest.toLowerCase()) ||
             interest.toLowerCase().includes(tag.toLowerCase())
           ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
         );
-      }
-    }
-    
-    return matchesCategory && matchesBudget && matchesRecipient;
-  }) || [];
+      })
+    : baseSuggestions; // When "Todos" is selected, show all base suggestions
 
-  // Group suggestions by recipient when "Todos" is selected
-  const groupedByRecipient = !selectedRecipient || selectedRecipient === "all"
+  // Group suggestions by recipient when "Todos" is selected (for display purposes)
+  const groupedByRecipient = (!selectedRecipient || selectedRecipient === "all") && recipients && recipients.length > 0
     ? (recipients || []).map(recipient => {
         const recipientInterests = recipient.interests || [];
-        const matchingSuggestions = (allSuggestions || []).filter((suggestion) => {
-          const matchesCategory = !category || category === "all" || suggestion.category === category;
-          const priceValue = typeof suggestion.price === "string" ? parseFloat(suggestion.price) : suggestion.price;
-          const matchesBudget = priceValue <= budget[0];
-          
-          let matchesRecipient = true;
+        const matchingSuggestions = baseSuggestions.filter((suggestion) => {
           const suggestionTags = suggestion.tags || [];
           
-          if (recipientInterests.length > 0) {
-            matchesRecipient = recipientInterests.some(interest => 
-              suggestionTags.some(tag => 
-                tag.toLowerCase().includes(interest.toLowerCase()) ||
-                interest.toLowerCase().includes(tag.toLowerCase())
-              ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
-            );
+          // If recipient has no interests, match all base suggestions
+          if (recipientInterests.length === 0) {
+            return true;
           }
           
-          return matchesCategory && matchesBudget && matchesRecipient;
+          return recipientInterests.some(interest => 
+            suggestionTags.some(tag => 
+              tag.toLowerCase().includes(interest.toLowerCase()) ||
+              interest.toLowerCase().includes(tag.toLowerCase())
+            ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
+          );
         });
         
         return {
@@ -391,8 +393,10 @@ export default function Suggestions() {
       }).filter(group => group.suggestions.length > 0)
     : [];
 
-  const visibleSuggestions = filteredSuggestions.slice(0, visibleCount);
-  const hasMoreSuggestions = filteredSuggestions.length > visibleCount;
+  // Use the appropriate suggestion list based on selection
+  const displaySuggestions = selectedRecipientData ? filteredSuggestions : baseSuggestions;
+  const visibleSuggestions = displaySuggestions.slice(0, visibleCount);
+  const hasMoreSuggestions = displaySuggestions.length > visibleCount;
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
@@ -550,11 +554,11 @@ export default function Suggestions() {
 
           <div className="flex-1">
             {selectedRecipientData ? (
-              // Single recipient selected
+              // Single recipient selected - show filtered suggestions
               filteredSuggestions.length > 0 ? (
                 <>
                   <div className="mb-4 text-sm text-muted-foreground">
-                    Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
+                    Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'} para {selectedRecipientData.name}
                   </div>
                   <div className="space-y-6">
                     <div>
@@ -568,7 +572,6 @@ export default function Suggestions() {
                             key={gift.id}
                             gift={gift}
                             recipientId={selectedRecipientData.id}
-                            
                             toast={toast}
                             userGifts={userGifts}
                           />
@@ -592,7 +595,7 @@ export default function Suggestions() {
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground mb-4">
-                    Nenhuma sugestão encontrada com os filtros selecionados.
+                    Nenhuma sugestão encontrada para {selectedRecipientData.name} com os filtros selecionados.
                   </p>
                   <Button
                     variant="outline"
@@ -603,44 +606,17 @@ export default function Suggestions() {
                   </Button>
                 </div>
               )
-            ) : groupedByRecipient.length > 0 ? (
-              // "Todos" selected - show grouped by recipient
-              <div className="space-y-8">
-                {groupedByRecipient.map((group) => (
-                  <div key={group.recipient.id}>
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b">
-                      <Gift className="w-5 h-5 text-primary" />
-                      <h2 className="font-semibold text-lg" data-testid={`heading-recipient-${group.recipient.id}`}>
-                        Para: {group.recipient.name}
-                      </h2>
-                    </div>
-                    <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                      {group.suggestions.map((gift) => (
-                        <CompactGiftCard
-                          key={gift.id}
-                          gift={gift}
-                          recipientId={group.recipient.id}
-                          
-                          toast={toast}
-                          userGifts={userGifts}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredSuggestions.length > 0 ? (
-              // Fallback: Show all suggestions when no recipients or no matches
+            ) : baseSuggestions.length > 0 ? (
+              // "Todos" selected - show all suggestions with category/budget filters
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
+                  Mostrando {visibleSuggestions.length} de {baseSuggestions.length} {baseSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
                 </div>
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {visibleSuggestions.map((gift) => (
                     <CompactGiftCard
                       key={gift.id}
                       gift={gift}
-                      
                       toast={toast}
                       userGifts={userGifts}
                     />
