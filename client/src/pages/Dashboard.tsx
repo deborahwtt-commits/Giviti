@@ -66,8 +66,8 @@ export default function Dashboard() {
     return format(date, "d 'de' MMM, yyyy");
   };
 
-  const formatPriceRange = (min: number, max: number) => {
-    return `R$ ${min} - R$ ${max}`;
+  const formatPrice = (price: number) => {
+    return `R$ ${price}`;
   };
 
   if (statsLoading || recipientsLoading) {
@@ -185,7 +185,7 @@ export default function Dashboard() {
                   name={gift.name}
                   description={gift.description}
                   imageUrl={gift.imageUrl}
-                  priceRange={formatPriceRange(gift.priceMin, gift.priceMax)}
+                  priceRange={formatPrice(gift.price)}
                   onViewDetails={() => setLocation("/sugestoes")}
                 />
               ))}

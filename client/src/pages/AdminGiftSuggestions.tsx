@@ -177,9 +177,9 @@ export default function AdminGiftSuggestions() {
                     <span className="font-medium">{suggestion.category}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Faixa de Preço:</span>
+                    <span className="text-muted-foreground">Preço:</span>
                     <span className="font-medium">
-                      R$ {suggestion.priceMin} - R$ {suggestion.priceMax}
+                      R$ {suggestion.price}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -302,8 +302,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     description: suggestion?.description || "",
     imageUrl: suggestion?.imageUrl || "",
     category: suggestion?.category || "",
-    priceMin: suggestion?.priceMin?.toString() || "",
-    priceMax: suggestion?.priceMax?.toString() || "",
+    price: suggestion?.price?.toString() || "",
     tags: suggestion?.tags.join(", ") || "",
     priority: suggestion?.priority?.toString() || "null",
     giftTypeId: normalizeGiftTypeId(suggestion?.giftTypeId),
@@ -327,8 +326,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         description: suggestion.description || "",
         imageUrl: suggestion.imageUrl || "",
         category: suggestion.category || "",
-        priceMin: suggestion.priceMin?.toString() || "",
-        priceMax: suggestion.priceMax?.toString() || "",
+        price: suggestion.price?.toString() || "",
         tags: suggestion.tags.join(", ") || "",
         priority: suggestion.priority?.toString() || "null",
         giftTypeId: normalizeGiftTypeId(suggestion.giftTypeId),
@@ -340,8 +338,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         description: "",
         imageUrl: "",
         category: "",
-        priceMin: "",
-        priceMax: "",
+        price: "",
         tags: "",
         priority: "null",
         giftTypeId: "__none__",
@@ -366,8 +363,7 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         description: data.description,
         imageUrl: data.imageUrl,
         category: data.category,
-        priceMin: parseInt(data.priceMin),
-        priceMax: parseInt(data.priceMax),
+        price: parseInt(data.price),
         tags: data.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         priority: data.priority === "null" ? null : parseInt(data.priority),
         giftTypeId: data.giftTypeId === "__none__" ? null : data.giftTypeId,
@@ -392,11 +388,10 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         description: "",
         imageUrl: "",
         category: "",
-        priceMin: "",
-        priceMax: "",
+        price: "",
         tags: "",
         priority: "null",
-        giftTypeId: "",
+        giftTypeId: "__none__",
         selectedCategoryIds: [],
       });
     },
@@ -587,31 +582,18 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="priceMin">Preço Mínimo (R$) *</Label>
-              <Input
-                id="priceMin"
-                type="number"
-                min="0"
-                value={formData.priceMin}
-                onChange={(e) => setFormData({ ...formData, priceMin: e.target.value })}
-                required
-                data-testid="input-suggestion-pricemin"
-              />
-            </div>
-            <div>
-              <Label htmlFor="priceMax">Preço Máximo (R$) *</Label>
-              <Input
-                id="priceMax"
-                type="number"
-                min="0"
-                value={formData.priceMax}
-                onChange={(e) => setFormData({ ...formData, priceMax: e.target.value })}
-                required
-                data-testid="input-suggestion-pricemax"
-              />
-            </div>
+          <div>
+            <Label htmlFor="price">Preço (R$) *</Label>
+            <Input
+              id="price"
+              type="number"
+              min="1"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              required
+              placeholder="Ex: 150"
+              data-testid="input-suggestion-price"
+            />
           </div>
 
           <div>

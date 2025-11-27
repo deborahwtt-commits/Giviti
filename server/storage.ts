@@ -651,11 +651,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (filters?.minPrice !== undefined) {
-      conditions.push(gte(giftSuggestions.priceMax, filters.minPrice));
+      conditions.push(gte(giftSuggestions.price, filters.minPrice));
     }
     
     if (filters?.maxPrice !== undefined) {
-      conditions.push(sql`${giftSuggestions.priceMin} <= ${filters.maxPrice}`);
+      conditions.push(sql`${giftSuggestions.price} <= ${filters.maxPrice}`);
     }
     
     if (filters?.tags && filters.tags.length > 0) {

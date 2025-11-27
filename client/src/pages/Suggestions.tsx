@@ -24,12 +24,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 interface CompactGiftCardProps {
   gift: GiftSuggestion;
   recipientId?: string;
-  formatPriceRange: (min: number, max: number) => string;
   toast: any;
   userGifts?: UserGift[];
 }
 
-function CompactGiftCard({ gift, recipientId, formatPriceRange, toast, userGifts }: CompactGiftCardProps) {
+function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCardProps) {
   // Find existing userGift for this suggestion and recipient
   // Only match if both suggestionId AND recipientId match
   const existingGift = recipientId 
@@ -55,7 +54,7 @@ function CompactGiftCard({ gift, recipientId, formatPriceRange, toast, userGifts
         name: gift.name,
         description: gift.description,
         imageUrl: gift.imageUrl,
-        price: Math.round((gift.priceMin + gift.priceMax) / 2),
+        price: gift.price,
         isFavorite: data.isFavorite,
         isPurchased: data.isPurchased,
       });
@@ -199,7 +198,7 @@ function CompactGiftCard({ gift, recipientId, formatPriceRange, toast, userGifts
       
       <div className="p-3">
         <Badge variant="secondary" className="text-xs mb-2">
-          {formatPriceRange(gift.priceMin, gift.priceMax)}
+          R$ {gift.price}
         </Badge>
         <h3 className="font-semibold text-sm text-foreground mb-1 line-clamp-2">
           {gift.name}
@@ -274,7 +273,7 @@ export default function Suggestions() {
 
   const filteredSuggestions = allSuggestions?.filter((suggestion) => {
     const matchesCategory = !category || category === "all" || suggestion.category === category;
-    const matchesBudget = suggestion.priceMin <= budget[0];
+    const matchesBudget = suggestion.price <= budget[0];
     
     let matchesRecipient = true;
     if (selectedRecipientData) {
@@ -300,7 +299,7 @@ export default function Suggestions() {
         const recipientInterests = recipient.interests || [];
         const matchingSuggestions = (allSuggestions || []).filter((suggestion) => {
           const matchesCategory = !category || category === "all" || suggestion.category === category;
-          const matchesBudget = suggestion.priceMin <= budget[0];
+          const matchesBudget = suggestion.price <= budget[0];
           
           let matchesRecipient = true;
           const suggestionTags = suggestion.tags || [];
@@ -329,9 +328,6 @@ export default function Suggestions() {
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
-  const formatPriceRange = (min: number, max: number) => {
-    return `R$ ${min} - R$ ${max}`;
-  };
 
   const handleClearFilters = () => {
     setCategory("all");
@@ -504,7 +500,7 @@ export default function Suggestions() {
                             key={gift.id}
                             gift={gift}
                             recipientId={selectedRecipientData.id}
-                            formatPriceRange={formatPriceRange}
+                            
                             toast={toast}
                             userGifts={userGifts}
                           />
@@ -556,7 +552,7 @@ export default function Suggestions() {
                           key={gift.id}
                           gift={gift}
                           recipientId={group.recipient.id}
-                          formatPriceRange={formatPriceRange}
+                          
                           toast={toast}
                           userGifts={userGifts}
                         />
@@ -576,7 +572,7 @@ export default function Suggestions() {
                     <CompactGiftCard
                       key={gift.id}
                       gift={gift}
-                      formatPriceRange={formatPriceRange}
+                      
                       toast={toast}
                       userGifts={userGifts}
                     />
