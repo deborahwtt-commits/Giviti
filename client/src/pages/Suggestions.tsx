@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2 } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -308,6 +309,16 @@ export default function Suggestions() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
+  const [searchKeywords, setSearchKeywords] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [algorithmResult, setAlgorithmResult] = useState<{
+    internalCount: number;
+    googleCount: number;
+    appliedFilters?: {
+      googleFiltersApplied: string[];
+      googleFiltersNotAvailable: string[];
+    };
+  } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -349,31 +360,114 @@ export default function Suggestions() {
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
-  // Run unified suggestion algorithm when data or filters change
-  useEffect(() => {
-    const runAlgorithm = async () => {
-      if (!allSuggestions) return;
-      
-      setAlgorithmLoading(true);
-      try {
-        const result = await runSuggestionAlgorithmV1(allSuggestions, {
-          keywords: "perfume",
-          category: category || undefined,
-          maxBudget: budget[0],
-          recipientInterests: selectedRecipientData?.interests || undefined,
-          googleLimit: 5,
-        });
-        setUnifiedProducts(result.products);
-      } catch (error) {
-        console.error("Algorithm error:", error);
-        setUnifiedProducts([]);
-      } finally {
-        setAlgorithmLoading(false);
-      }
-    };
-
-    runAlgorithm();
+  const executeSearch = useCallback(async (keywords: string) => {
+    if (!allSuggestions) return;
+    
+    setAlgorithmLoading(true);
+    setHasSearched(true);
+    try {
+      const result = await runSuggestionAlgorithmV1(allSuggestions, {
+        keywords: keywords.trim(),
+        category: category || undefined,
+        maxBudget: budget[0],
+        recipientInterests: selectedRecipientData?.interests || undefined,
+        googleLimit: 10,
+        enableGoogleSearch: keywords.trim().length > 0,
+      });
+      setUnifiedProducts(result.products);
+      setAlgorithmResult({
+        internalCount: result.internalCount,
+        googleCount: result.googleCount,
+        appliedFilters: result.appliedFilters,
+      });
+    } catch (error) {
+      console.error("Algorithm error:", error);
+      setUnifiedProducts([]);
+      setAlgorithmResult(null);
+    } finally {
+      setAlgorithmLoading(false);
+    }
   }, [allSuggestions, category, budget, selectedRecipientData]);
+
+  useEffect(() => {
+    if (allSuggestions && allSuggestions.length > 0 && !hasSearched) {
+      const runInitialLoad = async () => {
+        setAlgorithmLoading(true);
+        try {
+          const result = await runSuggestionAlgorithmV1(allSuggestions, {
+            keywords: "",
+            category: category || undefined,
+            maxBudget: budget[0],
+            recipientInterests: selectedRecipientData?.interests || undefined,
+            googleLimit: 0,
+            enableGoogleSearch: false,
+          });
+          setUnifiedProducts(result.products);
+          setAlgorithmResult({
+            internalCount: result.internalCount,
+            googleCount: 0,
+            appliedFilters: result.appliedFilters,
+          });
+        } catch (error) {
+          console.error("Initial load error:", error);
+          setUnifiedProducts([]);
+        } finally {
+          setAlgorithmLoading(false);
+        }
+      };
+      runInitialLoad();
+    }
+  }, [allSuggestions]);
+
+  useEffect(() => {
+    if (hasSearched && searchKeywords.trim()) {
+      executeSearch(searchKeywords);
+    } else if (allSuggestions && !searchKeywords.trim()) {
+      const runFilterOnly = async () => {
+        setAlgorithmLoading(true);
+        try {
+          const result = await runSuggestionAlgorithmV1(allSuggestions, {
+            keywords: "",
+            category: category || undefined,
+            maxBudget: budget[0],
+            recipientInterests: selectedRecipientData?.interests || undefined,
+            googleLimit: 0,
+            enableGoogleSearch: false,
+          });
+          setUnifiedProducts(result.products);
+          setAlgorithmResult({
+            internalCount: result.internalCount,
+            googleCount: 0,
+            appliedFilters: result.appliedFilters,
+          });
+        } catch (error) {
+          console.error("Filter error:", error);
+        } finally {
+          setAlgorithmLoading(false);
+        }
+      };
+      runFilterOnly();
+    }
+  }, [category, budget, selectedRecipientData]);
+
+  const handleSearch = () => {
+    if (!searchKeywords.trim()) {
+      toast({
+        title: "Digite palavras-chave",
+        description: "Insira termos de busca para encontrar presentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    executeSearch(searchKeywords);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
 
   const visibleProducts = unifiedProducts.slice(0, visibleCount);
   const hasMoreProducts = unifiedProducts.length > visibleCount;
@@ -383,6 +477,9 @@ export default function Suggestions() {
     setBudget([1000]);
     setSelectedRecipient("all");
     setVisibleCount(10);
+    setSearchKeywords("");
+    setHasSearched(false);
+    setAlgorithmResult(null);
   };
 
   const handleLoadMore = () => {
@@ -430,6 +527,72 @@ export default function Suggestions() {
             Filtros
           </Button>
         </div>
+
+        {/* Search Section */}
+        <Card className="p-4 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              <Label className="text-base font-medium">O que você está procurando?</Label>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Textarea
+                placeholder="Digite palavras-chave para buscar presentes... Ex: perfume, relógio, livro de ficção, fones de ouvido, kit churrasco"
+                value={searchKeywords}
+                onChange={(e) => setSearchKeywords(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="min-h-[80px] resize-none flex-1"
+                data-testid="input-search-keywords"
+              />
+              <Button 
+                onClick={handleSearch}
+                disabled={algorithmLoading}
+                className="sm:self-end"
+                data-testid="button-search"
+              >
+                {algorithmLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4 mr-2" />
+                )}
+                Buscar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A busca encontra produtos em nossa base de dados e também no Google Shopping. Use os filtros ao lado para refinar os resultados.
+            </p>
+          </div>
+        </Card>
+
+        {/* Filter Info Badges */}
+        {algorithmResult && hasSearched && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {searchKeywords && (
+              <Badge variant="secondary" className="text-xs">
+                Busca: "{searchKeywords}"
+              </Badge>
+            )}
+            {algorithmResult.internalCount > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {algorithmResult.internalCount} da nossa base
+              </Badge>
+            )}
+            {algorithmResult.googleCount > 0 && (
+              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                {algorithmResult.googleCount} do Google Shopping
+              </Badge>
+            )}
+            {algorithmResult.appliedFilters?.googleFiltersNotAvailable && 
+             algorithmResult.appliedFilters.googleFiltersNotAvailable.length > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Info className="w-3 h-3" />
+                <span>
+                  {algorithmResult.appliedFilters.googleFiltersNotAvailable.join(", ")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-6">
           <aside
