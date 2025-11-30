@@ -48,7 +48,6 @@ export interface SuggestionAlgorithmOptions {
   maxBudget?: number;
   minBudget?: number;
   recipientData?: RecipientData;
-  recipientInterests?: string[];
   googleLimit?: number;
   enableGoogleSearch?: boolean;
 }
@@ -231,11 +230,6 @@ function buildGoogleSearchQuery(options: SuggestionAlgorithmOptions): string {
     parts.push(categoryHint);
   }
   
-  if (options.recipientInterests && options.recipientInterests.length > 0) {
-    const relevantInterests = options.recipientInterests.slice(0, 2);
-    parts.push(...relevantInterests);
-  }
-  
   if (parts.length === 0) {
     return "presentes";
   }
@@ -294,6 +288,29 @@ function matchesKeyword(text: string, keywords: string): boolean {
   return searchTerms.some(term => lowerText.includes(term));
 }
 
+function getGiftsToAvoidTerms(recipientData?: RecipientData): string[] {
+  if (!recipientData?.profile?.giftsToAvoid) return [];
+  return recipientData.profile.giftsToAvoid
+    .toLowerCase()
+    .split(/[,;]+/)
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
+}
+
+function shouldExcludeProduct(
+  productName: string,
+  productDescription: string,
+  productCategory: string | undefined,
+  productTags: string[] | undefined,
+  avoidTerms: string[]
+): boolean {
+  if (avoidTerms.length === 0) return false;
+  
+  const searchableText = `${productName} ${productDescription} ${productCategory || ""} ${(productTags || []).join(" ")}`.toLowerCase();
+  
+  return avoidTerms.some(term => searchableText.includes(term));
+}
+
 function calculateRelevanceScore(
   suggestion: GiftSuggestion, 
   recipientData?: RecipientData
@@ -347,8 +364,19 @@ function filterInternalSuggestions(
   options: SuggestionAlgorithmOptions
 ): { suggestion: GiftSuggestion; score: number }[] {
   const results: { suggestion: GiftSuggestion; score: number }[] = [];
+  const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
   for (const suggestion of suggestions) {
+    if (shouldExcludeProduct(
+      suggestion.name,
+      suggestion.description || "",
+      suggestion.category,
+      suggestion.tags,
+      avoidTerms
+    )) {
+      continue;
+    }
+    
     const searchableText = `${suggestion.name} ${suggestion.description || ""} ${suggestion.category} ${(suggestion.tags || []).join(" ")}`;
     const matchesKeywords = matchesKeyword(searchableText, options.keywords || "");
     
@@ -361,7 +389,7 @@ function filterInternalSuggestions(
     const matchesMinBudget = !options.minBudget || priceValue >= options.minBudget;
     
     let matchesInterests = true;
-    const recipientInterests = options.recipientData?.recipient.interests || options.recipientInterests || [];
+    const recipientInterests = options.recipientData?.recipient.interests || [];
     
     if (recipientInterests.length > 0 && options.recipientData) {
       const suggestionTags = suggestion.tags || [];
@@ -375,11 +403,6 @@ function filterInternalSuggestions(
     
     if (matchesKeywords && matchesCategory && matchesMaxBudget && matchesMinBudget) {
       const relevanceScore = calculateRelevanceScore(suggestion, options.recipientData);
-      
-      if (options.recipientData && relevanceScore < -20) {
-        continue;
-      }
-      
       const finalScore = matchesInterests ? relevanceScore + 10 : relevanceScore;
       results.push({ suggestion, score: finalScore });
     }
@@ -394,7 +417,19 @@ function filterGoogleProducts(
   products: UnifiedProduct[],
   options: SuggestionAlgorithmOptions
 ): UnifiedProduct[] {
+  const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
+  
   return products.filter((product) => {
+    if (shouldExcludeProduct(
+      product.name,
+      product.description,
+      product.category,
+      product.tags,
+      avoidTerms
+    )) {
+      return false;
+    }
+    
     const matchesMaxBudget = !options.maxBudget || product.price <= options.maxBudget;
     const matchesMinBudget = !options.minBudget || product.price >= options.minBudget;
     

@@ -18,11 +18,11 @@ import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle,
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, UserGift } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { runSuggestionAlgorithmV1, type UnifiedProduct } from "@/lib/suggestionAlgorithm";
+import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData } from "@/lib/suggestionAlgorithm";
 
 // Compact Coupon Badge for Suggestions page
 interface CouponBadgeCompactProps {
@@ -317,7 +317,9 @@ export default function Suggestions() {
     appliedFilters?: {
       googleFiltersApplied: string[];
       googleFiltersNotAvailable: string[];
+      recipientName?: string | null;
     };
+    generatedQuery?: string;
   } | null>(null);
   const { toast } = useToast();
 
@@ -335,6 +337,12 @@ export default function Suggestions() {
 
   const { data: userGifts } = useQuery<UserGift[]>({
     queryKey: ["/api/gifts"],
+  });
+
+  // Fetch recipient profile when a recipient is selected
+  const { data: recipientProfileData } = useQuery<RecipientProfile>({
+    queryKey: ["/api/recipients", selectedRecipient, "profile"],
+    enabled: !!selectedRecipient && selectedRecipient !== "all",
   });
 
   useEffect(() => {
@@ -360,25 +368,37 @@ export default function Suggestions() {
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
+  // Combine recipient and profile data for the algorithm
+  const recipientDataForAlgorithm: RecipientData | undefined = selectedRecipientData
+    ? {
+        recipient: selectedRecipientData,
+        profile: recipientProfileData || null,
+      }
+    : undefined;
+
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;
     
     setAlgorithmLoading(true);
     setHasSearched(true);
     try {
+      // Enable Google Search when we have keywords OR when we have recipient data
+      const shouldEnableGoogleSearch = keywords.trim().length > 0 || !!recipientDataForAlgorithm;
+      
       const result = await runSuggestionAlgorithmV1(allSuggestions, {
         keywords: keywords.trim(),
         category: category || undefined,
         maxBudget: budget[0],
-        recipientInterests: selectedRecipientData?.interests || undefined,
+        recipientData: recipientDataForAlgorithm,
         googleLimit: 10,
-        enableGoogleSearch: keywords.trim().length > 0,
+        enableGoogleSearch: shouldEnableGoogleSearch,
       });
       setUnifiedProducts(result.products);
       setAlgorithmResult({
         internalCount: result.internalCount,
         googleCount: result.googleCount,
         appliedFilters: result.appliedFilters,
+        generatedQuery: result.generatedQuery,
       });
     } catch (error) {
       console.error("Algorithm error:", error);
@@ -387,7 +407,7 @@ export default function Suggestions() {
     } finally {
       setAlgorithmLoading(false);
     }
-  }, [allSuggestions, category, budget, selectedRecipientData]);
+  }, [allSuggestions, category, budget, recipientDataForAlgorithm]);
 
   useEffect(() => {
     if (allSuggestions && allSuggestions.length > 0 && !hasSearched) {
@@ -398,7 +418,7 @@ export default function Suggestions() {
             keywords: "",
             category: category || undefined,
             maxBudget: budget[0],
-            recipientInterests: selectedRecipientData?.interests || undefined,
+            recipientData: recipientDataForAlgorithm,
             googleLimit: 0,
             enableGoogleSearch: false,
           });
@@ -407,6 +427,7 @@ export default function Suggestions() {
             internalCount: result.internalCount,
             googleCount: 0,
             appliedFilters: result.appliedFilters,
+            generatedQuery: result.generatedQuery,
           });
         } catch (error) {
           console.error("Initial load error:", error);
@@ -430,7 +451,7 @@ export default function Suggestions() {
             keywords: "",
             category: category || undefined,
             maxBudget: budget[0],
-            recipientInterests: selectedRecipientData?.interests || undefined,
+            recipientData: recipientDataForAlgorithm,
             googleLimit: 0,
             enableGoogleSearch: false,
           });
@@ -439,6 +460,7 @@ export default function Suggestions() {
             internalCount: result.internalCount,
             googleCount: 0,
             appliedFilters: result.appliedFilters,
+            generatedQuery: result.generatedQuery,
           });
         } catch (error) {
           console.error("Filter error:", error);
@@ -448,7 +470,7 @@ export default function Suggestions() {
       };
       runFilterOnly();
     }
-  }, [category, budget, selectedRecipientData]);
+  }, [category, budget, recipientDataForAlgorithm]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
@@ -572,6 +594,11 @@ export default function Suggestions() {
                 Busca: "{searchKeywords}"
               </Badge>
             )}
+            {algorithmResult.appliedFilters?.recipientName && (
+              <Badge variant="secondary" className="text-xs bg-primary/10">
+                Personalizado para: {algorithmResult.appliedFilters.recipientName}
+              </Badge>
+            )}
             {algorithmResult.internalCount > 0 && (
               <Badge variant="outline" className="text-xs">
                 {algorithmResult.internalCount} da nossa base
@@ -581,6 +608,12 @@ export default function Suggestions() {
               <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                 {algorithmResult.googleCount} do Google Shopping
               </Badge>
+            )}
+            {algorithmResult.generatedQuery && algorithmResult.googleCount > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="text-generated-query">
+                <Search className="w-3 h-3" />
+                <span>Query: {algorithmResult.generatedQuery}</span>
+              </div>
             )}
             {algorithmResult.appliedFilters?.googleFiltersNotAvailable && 
              algorithmResult.appliedFilters.googleFiltersNotAvailable.length > 0 && (
