@@ -21,6 +21,7 @@ import AdminGiftCategoriesTypes from "@/pages/AdminGiftCategoriesTypes";
 import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
+import SerpApiTest from "@/pages/SerpApiTest";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -67,6 +68,7 @@ function AuthenticatedApp() {
         <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />
         <Route path="/admin/sugestoes" component={AdminGiftSuggestions} />
         <Route path="/admin/categorias-tipos" component={AdminGiftCategoriesTypes} />
+        <Route path="/admin/serpapi-test" component={SerpApiTest} />
         <Route component={NotFound} />
       </Switch>
     </div>

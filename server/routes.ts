@@ -1184,6 +1184,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== SerpApi Routes (Google Search Integration) ==========
+
+  // POST /api/serpapi/search - Search for gift suggestions via Google Shopping (admin only)
+  app.post("/api/serpapi/search", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { keywords, limit = 5 } = req.body;
+      
+      if (!keywords || typeof keywords !== "string") {
+        return res.status(400).json({ message: "Keywords are required" });
+      }
+      
+      const maxLimit = Math.min(Math.max(1, Number(limit) || 5), 20);
+
+      const apiKey = process.env.SERPAPI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "SerpApi not configured" });
+      }
+
+      const { getJson } = await import("serpapi");
+      
+      const response = await getJson({
+        engine: "google_shopping",
+        q: keywords,
+        api_key: apiKey,
+        hl: "pt",
+        gl: "br",
+        location: "Brazil",
+      });
+
+      const shoppingResults = response.shopping_results || [];
+      
+      const products = shoppingResults.slice(0, maxLimit).map((item: any) => ({
+        nome: item.title || "Produto sem nome",
+        descricao: item.snippet || item.source || "",
+        imagem: item.thumbnail || "",
+        preco: item.extracted_price ? `R$ ${item.extracted_price.toFixed(2)}` : (item.price || "Preço não disponível"),
+        precoNumerico: item.extracted_price || null,
+        link: item.link || item.product_link || "",
+        fonte: "google",
+        loja: item.source || "",
+      }));
+
+      res.json({
+        sucesso: true,
+        fonte: "google",
+        keywords,
+        total: products.length,
+        resultados: products,
+      });
+    } catch (error: any) {
+      console.error("Error searching SerpApi:", error);
+      res.status(500).json({ 
+        message: "Failed to search products",
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
