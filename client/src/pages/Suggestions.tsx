@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -21,20 +22,54 @@ import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatCurrency } from "@/lib/utils";
+import { runSuggestionAlgorithmV1, type UnifiedProduct } from "@/lib/suggestionAlgorithm";
 
-interface CompactGiftCardProps {
-  gift: GiftSuggestion;
+// Compact Coupon Badge for Suggestions page
+interface CouponBadgeCompactProps {
+  cupom: string;
+  validadeCupom?: string | null;
+}
+
+function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
+  const today = startOfDay(new Date());
+  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+
+  if (isExpired) {
+    return (
+      <div 
+        className="flex items-start gap-1 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs mb-2"
+        data-testid="coupon-badge-expired"
+      >
+        <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+        <span className="line-through break-words">{cupom} (expirado)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="flex items-start gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs mb-2"
+      data-testid="coupon-badge-active"
+    >
+      <Ticket className="h-3 w-3 flex-shrink-0 mt-0.5" />
+      <span className="font-medium break-words">{cupom}</span>
+    </div>
+  );
+}
+
+// Unified Product Card Component
+interface UnifiedProductCardProps {
+  product: UnifiedProduct;
   recipientId?: string;
   toast: any;
   userGifts?: UserGift[];
 }
 
-function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCardProps) {
-  // Find existing userGift for this suggestion and recipient
-  // Only match if both suggestionId AND recipientId match
-  const existingGift = recipientId 
-    ? userGifts?.find(ug => ug.suggestionId === gift.id && ug.recipientId === recipientId)
+function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedProductCardProps) {
+  const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
+  
+  const existingGift = recipientId && internalId
+    ? userGifts?.find(ug => ug.suggestionId === internalId && ug.recipientId === recipientId)
     : undefined;
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
@@ -52,11 +87,11 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
       }
       return await apiRequest("/api/gifts", "POST", {
         recipientId,
-        suggestionId: gift.id,
-        name: gift.name,
-        description: gift.description,
-        imageUrl: gift.imageUrl,
-        price: gift.price,
+        suggestionId: internalId,
+        name: product.name,
+        description: product.description,
+        imageUrl: product.imageUrl,
+        price: product.price,
         isFavorite: data.isFavorite,
         isPurchased: data.isPurchased,
       });
@@ -82,6 +117,14 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
         title: "Selecione um presenteado",
         description: "Para salvar favoritos, escolha um presenteado específico no filtro.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (product.source === "google") {
+      toast({
+        title: "Funcionalidade não disponível",
+        description: "Favoritos só podem ser salvos para produtos internos.",
       });
       return;
     }
@@ -121,6 +164,14 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
       return;
     }
 
+    if (product.source === "google") {
+      toast({
+        title: "Funcionalidade não disponível",
+        description: "Status de compra só pode ser salvo para produtos internos.",
+      });
+      return;
+    }
+
     setPurchased(checked);
 
     try {
@@ -132,7 +183,7 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
         if (checked) {
           toast({
             title: "Presente Comprado!",
-            description: `${gift.name} foi marcado como comprado.`,
+            description: `${product.name} foi marcado como comprado.`,
           });
         }
       } else {
@@ -143,7 +194,7 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
         if (checked) {
           toast({
             title: "Presente Comprado!",
-            description: `${gift.name} foi marcado como comprado.`,
+            description: `${product.name} foi marcado como comprado.`,
           });
         }
       }
@@ -158,59 +209,66 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
   };
 
   return (
-    <Card className="overflow-hidden group hover-elevate" data-testid={`card-suggestion-${gift.id}`}>
+    <Card className="overflow-hidden group hover-elevate" data-testid={`card-product-${product.id}`}>
       <div className="relative aspect-square bg-muted">
         <img
-          src={gift.imageUrl}
-          alt={gift.name}
+          src={product.imageUrl}
+          alt={product.name}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "https://via.placeholder.com/200?text=Sem+Imagem";
+          }}
         />
         
-        <button
-          onClick={handleFavoriteToggle}
-          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
-            favorite
-              ? "bg-primary text-primary-foreground"
-              : "bg-background/80 text-foreground hover-elevate"
-          }`}
-          data-testid={`button-favorite-${gift.id}`}
-          aria-label="Favoritar"
-        >
-          <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
-        </button>
-
-        <div className="absolute bottom-2 left-2">
-          <div className="flex items-center gap-1.5">
-            <Checkbox
-              checked={purchased}
-              onCheckedChange={handlePurchasedToggle}
-              id={`purchased-${gift.id}`}
-              data-testid={`checkbox-purchased-${gift.id}`}
-              className="bg-background h-4 w-4"
-            />
-            <label
-              htmlFor={`purchased-${gift.id}`}
-              className="text-xs font-medium text-background bg-foreground/90 px-1.5 py-0.5 rounded cursor-pointer"
+        {product.source === "internal" && (
+          <>
+            <button
+              onClick={handleFavoriteToggle}
+              className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
+                favorite
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background/80 text-foreground hover-elevate"
+              }`}
+              data-testid={`button-favorite-${product.id}`}
+              aria-label="Favoritar"
             >
-              Comprado
-            </label>
-          </div>
-        </div>
+              <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
+            </button>
+
+            <div className="absolute bottom-2 left-2">
+              <div className="flex items-center gap-1.5">
+                <Checkbox
+                  checked={purchased}
+                  onCheckedChange={handlePurchasedToggle}
+                  id={`purchased-${product.id}`}
+                  data-testid={`checkbox-purchased-${product.id}`}
+                  className="bg-background h-4 w-4"
+                />
+                <label
+                  htmlFor={`purchased-${product.id}`}
+                  className="text-xs font-medium text-background bg-foreground/90 px-1.5 py-0.5 rounded cursor-pointer"
+                >
+                  Comprado
+                </label>
+              </div>
+            </div>
+          </>
+        )}
       </div>
       
       <div className="p-3">
         <Badge variant="secondary" className="text-xs mb-2">
-          {formatCurrency(gift.price)}
+          {product.priceFormatted}
         </Badge>
         <h3 className="font-semibold text-sm text-foreground mb-1 line-clamp-2">
-          {gift.name}
+          {product.name}
         </h3>
         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-          {gift.description}
+          {product.description || product.store || ""}
         </p>
         
-        {gift.cupom && (
-          <CouponBadgeCompact cupom={gift.cupom} validadeCupom={gift.validadeCupom} />
+        {product.cupom && (
+          <CouponBadgeCompact cupom={product.cupom} validadeCupom={product.validadeCupom} />
         )}
         
         <Button
@@ -218,22 +276,22 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
           size="sm"
           className="w-full text-xs mt-2"
           onClick={async () => {
-            if (gift.productUrl) {
+            if (product.productUrl) {
               try {
-                await apiRequest("/api/clicks", "POST", { link: gift.productUrl });
+                await apiRequest("/api/clicks", "POST", { link: product.productUrl });
               } catch (error) {
                 console.error("Error recording click:", error);
               }
-              window.open(gift.productUrl, "_blank", "noopener,noreferrer");
+              window.open(product.productUrl, "_blank", "noopener,noreferrer");
             } else {
               toast({
-                title: gift.name,
+                title: product.name,
                 description: "Link do produto não disponível.",
                 variant: "destructive",
               });
             }
           }}
-          data-testid={`button-view-product-${gift.id}`}
+          data-testid={`button-view-product-${product.id}`}
         >
           <ExternalLink className="w-3 h-3 mr-1" />
           Ver Produto
@@ -243,49 +301,28 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
   );
 }
 
-// Compact Coupon Badge for Suggestions page
-interface CouponBadgeCompactProps {
-  cupom: string;
-  validadeCupom?: string | null;
-}
-
-function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
-  const today = startOfDay(new Date());
-  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
-
-  if (isExpired) {
-    return (
-      <div 
-        className="flex items-start gap-1 px-2 py-1 rounded bg-muted/50 border border-muted text-muted-foreground text-xs mb-2"
-        data-testid="coupon-badge-expired"
-      >
-        <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
-        <span className="line-through break-words">{cupom} (expirado)</span>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      className="flex items-start gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs mb-2"
-      data-testid="coupon-badge-active"
-    >
-      <Ticket className="h-3 w-3 flex-shrink-0 mt-0.5" />
-      <span className="font-medium break-words">{cupom}</span>
-    </div>
-  );
-}
-
 export default function Suggestions() {
   const [showFilters, setShowFilters] = useState(false);
   const [budget, setBudget] = useState([1000]);
   const [category, setCategory] = useState<string>("");
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
-  const [visibleCount, setVisibleCount] = useState(5);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
+  const [algorithmLoading, setAlgorithmLoading] = useState(false);
+  const [searchKeywords, setSearchKeywords] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [algorithmResult, setAlgorithmResult] = useState<{
+    internalCount: number;
+    googleCount: number;
+    appliedFilters?: {
+      googleFiltersApplied: string[];
+      googleFiltersNotAvailable: string[];
+    };
+  } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setVisibleCount(5);
+    setVisibleCount(10);
   }, [category, selectedRecipient, budget]);
 
   const { data: allSuggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
@@ -321,79 +358,132 @@ export default function Suggestions() {
     ? recipients?.find(r => r.id === selectedRecipient)
     : null;
 
-  // Filter suggestions by category and budget (always applied)
-  const baseSuggestions = allSuggestions?.filter((suggestion) => {
-    const matchesCategory = !category || category === "all" || suggestion.category === category;
-    const priceValue = typeof suggestion.price === "string" ? parseFloat(suggestion.price) : suggestion.price;
-    const matchesBudget = priceValue <= budget[0];
-    return matchesCategory && matchesBudget;
-  }) || [];
-
-  // When a specific recipient is selected, additionally filter by interests
-  const filteredSuggestions = selectedRecipientData
-    ? baseSuggestions.filter((suggestion) => {
-        const recipientInterests = selectedRecipientData.interests || [];
-        const suggestionTags = suggestion.tags || [];
-        
-        // If recipient has no interests, show all base suggestions
-        if (recipientInterests.length === 0) {
-          return true;
-        }
-        
-        // Match by interests
-        return recipientInterests.some(interest => 
-          suggestionTags.some(tag => 
-            tag.toLowerCase().includes(interest.toLowerCase()) ||
-            interest.toLowerCase().includes(tag.toLowerCase())
-          ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
-        );
-      })
-    : baseSuggestions; // When "Todos" is selected, show all base suggestions
-
-  // Group suggestions by recipient when "Todos" is selected (for display purposes)
-  const groupedByRecipient = (!selectedRecipient || selectedRecipient === "all") && recipients && recipients.length > 0
-    ? (recipients || []).map(recipient => {
-        const recipientInterests = recipient.interests || [];
-        const matchingSuggestions = baseSuggestions.filter((suggestion) => {
-          const suggestionTags = suggestion.tags || [];
-          
-          // If recipient has no interests, match all base suggestions
-          if (recipientInterests.length === 0) {
-            return true;
-          }
-          
-          return recipientInterests.some(interest => 
-            suggestionTags.some(tag => 
-              tag.toLowerCase().includes(interest.toLowerCase()) ||
-              interest.toLowerCase().includes(tag.toLowerCase())
-            ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
-          );
-        });
-        
-        return {
-          recipient,
-          suggestions: matchingSuggestions.slice(0, 5) // Show up to 5 per recipient
-        };
-      }).filter(group => group.suggestions.length > 0)
-    : [];
-
-  // Use the appropriate suggestion list based on selection
-  const displaySuggestions = selectedRecipientData ? filteredSuggestions : baseSuggestions;
-  const visibleSuggestions = displaySuggestions.slice(0, visibleCount);
-  const hasMoreSuggestions = displaySuggestions.length > visibleCount;
-
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
+  const executeSearch = useCallback(async (keywords: string) => {
+    if (!allSuggestions) return;
+    
+    setAlgorithmLoading(true);
+    setHasSearched(true);
+    try {
+      const result = await runSuggestionAlgorithmV1(allSuggestions, {
+        keywords: keywords.trim(),
+        category: category || undefined,
+        maxBudget: budget[0],
+        recipientInterests: selectedRecipientData?.interests || undefined,
+        googleLimit: 10,
+        enableGoogleSearch: keywords.trim().length > 0,
+      });
+      setUnifiedProducts(result.products);
+      setAlgorithmResult({
+        internalCount: result.internalCount,
+        googleCount: result.googleCount,
+        appliedFilters: result.appliedFilters,
+      });
+    } catch (error) {
+      console.error("Algorithm error:", error);
+      setUnifiedProducts([]);
+      setAlgorithmResult(null);
+    } finally {
+      setAlgorithmLoading(false);
+    }
+  }, [allSuggestions, category, budget, selectedRecipientData]);
+
+  useEffect(() => {
+    if (allSuggestions && allSuggestions.length > 0 && !hasSearched) {
+      const runInitialLoad = async () => {
+        setAlgorithmLoading(true);
+        try {
+          const result = await runSuggestionAlgorithmV1(allSuggestions, {
+            keywords: "",
+            category: category || undefined,
+            maxBudget: budget[0],
+            recipientInterests: selectedRecipientData?.interests || undefined,
+            googleLimit: 0,
+            enableGoogleSearch: false,
+          });
+          setUnifiedProducts(result.products);
+          setAlgorithmResult({
+            internalCount: result.internalCount,
+            googleCount: 0,
+            appliedFilters: result.appliedFilters,
+          });
+        } catch (error) {
+          console.error("Initial load error:", error);
+          setUnifiedProducts([]);
+        } finally {
+          setAlgorithmLoading(false);
+        }
+      };
+      runInitialLoad();
+    }
+  }, [allSuggestions]);
+
+  useEffect(() => {
+    if (hasSearched && searchKeywords.trim()) {
+      executeSearch(searchKeywords);
+    } else if (allSuggestions && !searchKeywords.trim()) {
+      const runFilterOnly = async () => {
+        setAlgorithmLoading(true);
+        try {
+          const result = await runSuggestionAlgorithmV1(allSuggestions, {
+            keywords: "",
+            category: category || undefined,
+            maxBudget: budget[0],
+            recipientInterests: selectedRecipientData?.interests || undefined,
+            googleLimit: 0,
+            enableGoogleSearch: false,
+          });
+          setUnifiedProducts(result.products);
+          setAlgorithmResult({
+            internalCount: result.internalCount,
+            googleCount: 0,
+            appliedFilters: result.appliedFilters,
+          });
+        } catch (error) {
+          console.error("Filter error:", error);
+        } finally {
+          setAlgorithmLoading(false);
+        }
+      };
+      runFilterOnly();
+    }
+  }, [category, budget, selectedRecipientData]);
+
+  const handleSearch = () => {
+    if (!searchKeywords.trim()) {
+      toast({
+        title: "Digite palavras-chave",
+        description: "Insira termos de busca para encontrar presentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    executeSearch(searchKeywords);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
+  const visibleProducts = unifiedProducts.slice(0, visibleCount);
+  const hasMoreProducts = unifiedProducts.length > visibleCount;
 
   const handleClearFilters = () => {
     setCategory("all");
     setBudget([1000]);
     setSelectedRecipient("all");
-    setVisibleCount(5);
+    setVisibleCount(10);
+    setSearchKeywords("");
+    setHasSearched(false);
+    setAlgorithmResult(null);
   };
 
   const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 5);
+    setVisibleCount(prev => prev + 10);
   };
 
   if (suggestionsLoading || recipientsLoading) {
@@ -437,6 +527,72 @@ export default function Suggestions() {
             Filtros
           </Button>
         </div>
+
+        {/* Search Section */}
+        <Card className="p-4 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              <Label className="text-base font-medium">O que você está procurando?</Label>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Textarea
+                placeholder="Digite palavras-chave para buscar presentes... Ex: perfume, relógio, livro de ficção, fones de ouvido, kit churrasco"
+                value={searchKeywords}
+                onChange={(e) => setSearchKeywords(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="min-h-[80px] resize-none flex-1"
+                data-testid="input-search-keywords"
+              />
+              <Button 
+                onClick={handleSearch}
+                disabled={algorithmLoading}
+                className="sm:self-end"
+                data-testid="button-search"
+              >
+                {algorithmLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4 mr-2" />
+                )}
+                Buscar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A busca encontra produtos em nossa base de dados e também no Google Shopping. Use os filtros ao lado para refinar os resultados.
+            </p>
+          </div>
+        </Card>
+
+        {/* Filter Info Badges */}
+        {algorithmResult && hasSearched && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {searchKeywords && (
+              <Badge variant="secondary" className="text-xs">
+                Busca: "{searchKeywords}"
+              </Badge>
+            )}
+            {algorithmResult.internalCount > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {algorithmResult.internalCount} da nossa base
+              </Badge>
+            )}
+            {algorithmResult.googleCount > 0 && (
+              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                {algorithmResult.googleCount} do Google Shopping
+              </Badge>
+            )}
+            {algorithmResult.appliedFilters?.googleFiltersNotAvailable && 
+             algorithmResult.appliedFilters.googleFiltersNotAvailable.length > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Info className="w-3 h-3" />
+                <span>
+                  {algorithmResult.appliedFilters.googleFiltersNotAvailable.join(", ")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-6">
           <aside
@@ -537,76 +693,38 @@ export default function Suggestions() {
           </aside>
 
           <div className="flex-1">
-            {selectedRecipientData ? (
-              // Single recipient selected - show filtered suggestions
-              filteredSuggestions.length > 0 ? (
-                <>
-                  <div className="mb-4 text-sm text-muted-foreground">
-                    Mostrando {visibleSuggestions.length} de {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'sugestão' : 'sugestões'} para {selectedRecipientData.name}
-                  </div>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-4 pb-2 border-b">
-                        <Gift className="w-5 h-5 text-primary" />
-                        <h2 className="font-semibold text-lg">Para: {selectedRecipientData.name}</h2>
-                      </div>
-                      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                        {visibleSuggestions.map((gift) => (
-                          <CompactGiftCard
-                            key={gift.id}
-                            gift={gift}
-                            recipientId={selectedRecipientData.id}
-                            toast={toast}
-                            userGifts={userGifts}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {hasMoreSuggestions && (
-                    <div className="flex justify-center mt-8">
-                      <Button 
-                        onClick={handleLoadMore}
-                        variant="outline"
-                        size="lg"
-                        data-testid="button-load-more"
-                      >
-                        Ver mais sugestões
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    Nenhuma sugestão encontrada para {selectedRecipientData.name} com os filtros selecionados.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={handleClearFilters}
-                    data-testid="button-clear-filters-empty"
-                  >
-                    Limpar Filtros
-                  </Button>
-                </div>
-              )
-            ) : baseSuggestions.length > 0 ? (
-              // "Todos" selected - show all suggestions with category/budget filters
+            {algorithmLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground">Carregando sugestões...</span>
+              </div>
+            ) : unifiedProducts.length > 0 ? (
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  Mostrando {visibleSuggestions.length} de {baseSuggestions.length} {baseSuggestions.length === 1 ? 'sugestão' : 'sugestões'}
+                  Mostrando {visibleProducts.length} de {unifiedProducts.length} {unifiedProducts.length === 1 ? 'sugestão' : 'sugestões'}
+                  {selectedRecipientData && ` para ${selectedRecipientData.name}`}
                 </div>
+                
+                {selectedRecipientData && (
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                    <Gift className="w-5 h-5 text-primary" />
+                    <h2 className="font-semibold text-lg">Para: {selectedRecipientData.name}</h2>
+                  </div>
+                )}
+                
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {visibleSuggestions.map((gift) => (
-                    <CompactGiftCard
-                      key={gift.id}
-                      gift={gift}
+                  {visibleProducts.map((product) => (
+                    <UnifiedProductCard
+                      key={product.id}
+                      product={product}
+                      recipientId={selectedRecipientData?.id}
                       toast={toast}
                       userGifts={userGifts}
                     />
                   ))}
                 </div>
-                {hasMoreSuggestions && (
+                
+                {hasMoreProducts && (
                   <div className="flex justify-center mt-8">
                     <Button 
                       onClick={handleLoadMore}
