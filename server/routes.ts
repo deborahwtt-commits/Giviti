@@ -1186,8 +1186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== SerpApi Routes (Google Search Integration) ==========
 
-  // POST /api/serpapi/search - Search for gift suggestions via Google Shopping (admin only)
-  app.post("/api/serpapi/search", isAuthenticated, isAdmin, async (req: any, res) => {
+  // POST /api/serpapi/search - Search for gift suggestions via Google Shopping
+  app.post("/api/serpapi/search", isAuthenticated, async (req: any, res) => {
     try {
       const { keywords, limit = 5 } = req.body;
       

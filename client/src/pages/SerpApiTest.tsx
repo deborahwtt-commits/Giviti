@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,18 +29,11 @@ interface SerpApiResponse {
 }
 
 export default function SerpApiTest() {
-  const { hasAdminAccess, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [keywords, setKeywords] = useState("");
   const [results, setResults] = useState<SerpApiProduct[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !hasAdminAccess) {
-      setLocation("/dashboard");
-    }
-  }, [authLoading, hasAdminAccess, setLocation]);
 
   const searchMutation = useMutation({
     mutationFn: async (searchKeywords: string) => {
@@ -91,18 +83,6 @@ export default function SerpApiTest() {
       handleSearch();
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!hasAdminAccess) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background">
