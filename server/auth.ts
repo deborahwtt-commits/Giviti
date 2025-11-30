@@ -13,6 +13,11 @@ const PgSession = connectPgSimple(session);
 const SALT_ROUNDS = 10;
 
 export async function setupAuth(app: Express): Promise<void> {
+  // Trust proxy for production (Replit uses reverse proxy)
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   // Session configuration
   const sessionMiddleware = session({
     store: new PgSession({
@@ -27,6 +32,7 @@ export async function setupAuth(app: Express): Promise<void> {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours default
     },
     name: "giviti.sid",
   });
@@ -69,13 +75,19 @@ export async function setupAuth(app: Express): Promise<void> {
         const remember = req.query.remember === "true";
         if (remember) {
           req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-        } else {
-          req.session.cookie.maxAge = undefined; // Session cookie (expires on browser close)
         }
 
-        // Return user without password hash
-        const { passwordHash: _, ...userWithoutPassword } = newUser;
-        res.status(201).json(userWithoutPassword);
+        // Save session explicitly before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Error saving session:", saveErr);
+            return res.status(500).json({ message: "Erro ao criar conta" });
+          }
+
+          // Return user without password hash
+          const { passwordHash: _, ...userWithoutPassword } = newUser;
+          res.status(201).json(userWithoutPassword);
+        });
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -120,13 +132,19 @@ export async function setupAuth(app: Express): Promise<void> {
         const remember = req.query.remember === "true";
         if (remember) {
           req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-        } else {
-          req.session.cookie.maxAge = undefined; // Session cookie (expires on browser close)
         }
 
-        // Return user without password hash
-        const { passwordHash: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
+        // Save session explicitly before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Error saving session:", saveErr);
+            return res.status(500).json({ message: "Erro ao fazer login" });
+          }
+
+          // Return user without password hash
+          const { passwordHash: _, ...userWithoutPassword } = user;
+          res.json(userWithoutPassword);
+        });
       });
     } catch (error) {
       if (error instanceof ZodError) {
