@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -375,19 +375,21 @@ export default function Suggestions() {
     new Set(allSuggestions?.map((s) => s.category) || [])
   ).sort();
 
-  const selectedRecipientData = selectedRecipient && selectedRecipient !== "all"
-    ? recipients?.find(r => r.id === selectedRecipient)
-    : null;
+  const selectedRecipientData = useMemo(() => {
+    if (!selectedRecipient || selectedRecipient === "all") return null;
+    return recipients?.find(r => r.id === selectedRecipient) || null;
+  }, [selectedRecipient, recipients]);
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
-  // Combine recipient and profile data for the algorithm
-  const recipientDataForAlgorithm: RecipientData | undefined = selectedRecipientData
-    ? {
-        recipient: selectedRecipientData,
-        profile: recipientProfileData || null,
-      }
-    : undefined;
+  // Combine recipient and profile data for the algorithm - memoized to prevent infinite loops
+  const recipientDataForAlgorithm: RecipientData | undefined = useMemo(() => {
+    if (!selectedRecipientData) return undefined;
+    return {
+      recipient: selectedRecipientData,
+      profile: recipientProfileData || null,
+    };
+  }, [selectedRecipientData, recipientProfileData]);
 
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;

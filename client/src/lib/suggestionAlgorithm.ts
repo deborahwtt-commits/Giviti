@@ -264,16 +264,44 @@ async function fetchGoogleProducts(
       filtersApplied.push("Perfil do presenteado");
     }
     
-    const response = await apiRequest("/api/serpapi/search", "POST", requestBody);
-    const data: SerpApiResponse = await response.json();
+    // Add timeout to prevent freezing
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    return {
-      products: data.sucesso ? data.resultados : [],
-      filtersApplied,
-      filtersNotAvailable,
-    };
+    try {
+      const response = await fetch("/api/serpapi/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+        credentials: "include",
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.warn("SerpAPI response not ok:", response.status);
+        return { products: [], filtersApplied, filtersNotAvailable };
+      }
+      
+      const data: SerpApiResponse = await response.json();
+      
+      return {
+        products: data.sucesso ? data.resultados : [],
+        filtersApplied,
+        filtersNotAvailable,
+      };
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === "AbortError") {
+        console.warn("Google products fetch timed out after 15 seconds");
+      } else {
+        console.error("Error fetching Google products:", fetchError);
+      }
+      return { products: [], filtersApplied, filtersNotAvailable };
+    }
   } catch (error) {
-    console.error("Error fetching Google products:", error);
+    console.error("Error preparing Google products request:", error);
     return { products: [], filtersApplied, filtersNotAvailable };
   }
 }
