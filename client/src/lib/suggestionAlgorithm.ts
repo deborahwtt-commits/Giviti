@@ -1,5 +1,5 @@
 import { apiRequest } from "./queryClient";
-import type { GiftSuggestion } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile } from "@shared/schema";
 
 export interface UnifiedProduct {
   id: string;
@@ -15,6 +15,7 @@ export interface UnifiedProduct {
   tags?: string[];
   cupom?: string | null;
   validadeCupom?: string | null;
+  relevanceScore?: number;
 }
 
 interface SerpApiProduct {
@@ -36,11 +37,17 @@ interface SerpApiResponse {
   resultados: SerpApiProduct[];
 }
 
+export interface RecipientData {
+  recipient: Recipient;
+  profile?: RecipientProfile | null;
+}
+
 export interface SuggestionAlgorithmOptions {
   keywords?: string;
   category?: string;
   maxBudget?: number;
   minBudget?: number;
+  recipientData?: RecipientData;
   recipientInterests?: string[];
   googleLimit?: number;
   enableGoogleSearch?: boolean;
@@ -55,12 +62,105 @@ interface SuggestionAlgorithmResult {
     keywords: string;
     category: string | null;
     budgetRange: { min: number; max: number } | null;
+    recipientName: string | null;
     googleFiltersApplied: string[];
     googleFiltersNotAvailable: string[];
   };
+  generatedQuery?: string;
 }
 
-function convertInternalToUnified(suggestion: GiftSuggestion): UnifiedProduct {
+function getAgeRange(age: number): string {
+  if (age < 13) return "criança";
+  if (age < 18) return "adolescente";
+  if (age < 25) return "jovem adulto";
+  if (age < 35) return "adulto 25-35 anos";
+  if (age < 45) return "adulto 35-45 anos";
+  if (age < 55) return "adulto 45-55 anos";
+  if (age < 65) return "adulto 55-65 anos";
+  return "idoso 65+ anos";
+}
+
+function getGenderTerm(gender: string | null | undefined): string {
+  if (!gender) return "";
+  const genderLower = gender.toLowerCase();
+  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino homem";
+  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino mulher";
+  return "";
+}
+
+function getRelationshipTerm(relationship: string | null | undefined): string {
+  if (!relationship) return "";
+  const relationshipMap: Record<string, string> = {
+    "Pai": "pai presente para pai",
+    "Mãe": "mãe presente para mãe",
+    "Irmão": "irmão presente para irmão",
+    "Irmã": "irmã presente para irmã",
+    "Filho": "filho presente para filho",
+    "Filha": "filha presente para filha",
+    "Avô": "avô presente para avô",
+    "Avó": "avó presente para avó",
+    "Tio": "tio",
+    "Tia": "tia",
+    "Primo": "primo",
+    "Prima": "prima",
+    "Namorado": "namorado presente romântico",
+    "Namorada": "namorada presente romântico",
+    "Esposo": "marido presente para marido",
+    "Esposa": "esposa presente para esposa",
+    "Amigo": "amigo",
+    "Amiga": "amiga",
+    "Colega": "colega de trabalho",
+    "Chefe": "chefe profissional",
+  };
+  return relationshipMap[relationship] || relationship.toLowerCase();
+}
+
+function buildRecipientBasedQuery(recipientData: RecipientData, userKeywords?: string): string {
+  const { recipient, profile } = recipientData;
+  const parts: string[] = [];
+  
+  if (userKeywords && userKeywords.trim()) {
+    parts.push(userKeywords.trim());
+  }
+  
+  const relationship = profile?.relationship || recipient.relationship;
+  if (relationship) {
+    parts.push(getRelationshipTerm(relationship));
+  }
+  
+  const gender = profile?.gender || recipient.gender;
+  if (gender) {
+    const genderTerm = getGenderTerm(gender);
+    if (genderTerm) parts.push(genderTerm);
+  }
+  
+  if (recipient.age) {
+    parts.push(getAgeRange(recipient.age));
+  }
+  
+  const interests = recipient.interests || [];
+  if (interests.length > 0) {
+    const topInterests = interests.slice(0, 3);
+    parts.push(...topInterests);
+  }
+  
+  if (profile?.cidade) {
+    parts.push(profile.cidade);
+  }
+  
+  if (profile?.interestCategory) {
+    parts.push(profile.interestCategory);
+  }
+  
+  if (parts.length === 0) {
+    return "presentes";
+  }
+  
+  const uniqueParts = Array.from(new Set(parts.filter(p => p && p.trim())));
+  return uniqueParts.join(" ");
+}
+
+function convertInternalToUnified(suggestion: GiftSuggestion, relevanceScore?: number): UnifiedProduct {
   const priceValue = typeof suggestion.price === "string" 
     ? parseFloat(suggestion.price) 
     : suggestion.price;
@@ -78,6 +178,7 @@ function convertInternalToUnified(suggestion: GiftSuggestion): UnifiedProduct {
     tags: suggestion.tags || [],
     cupom: suggestion.cupom,
     validadeCupom: suggestion.validadeCupom,
+    relevanceScore,
   };
 }
 
@@ -98,6 +199,10 @@ function convertGoogleToUnified(product: SerpApiProduct, index: number): Unified
 }
 
 function buildGoogleSearchQuery(options: SuggestionAlgorithmOptions): string {
+  if (options.recipientData) {
+    return buildRecipientBasedQuery(options.recipientData, options.keywords);
+  }
+  
   const parts: string[] = [];
   
   if (options.keywords && options.keywords.trim()) {
@@ -161,6 +266,10 @@ async function fetchGoogleProducts(
       filtersNotAvailable.push("Categoria (incluída na busca)");
     }
     
+    if (options.recipientData) {
+      filtersApplied.push("Perfil do presenteado");
+    }
+    
     const response = await apiRequest("/api/serpapi/search", "POST", requestBody);
     const data: SerpApiResponse = await response.json();
     
@@ -185,11 +294,61 @@ function matchesKeyword(text: string, keywords: string): boolean {
   return searchTerms.some(term => lowerText.includes(term));
 }
 
+function calculateRelevanceScore(
+  suggestion: GiftSuggestion, 
+  recipientData?: RecipientData
+): number {
+  if (!recipientData) return 0;
+  
+  let score = 0;
+  const { recipient, profile } = recipientData;
+  const suggestionTags = (suggestion.tags || []).map(t => t.toLowerCase());
+  const suggestionCategory = suggestion.category.toLowerCase();
+  
+  const interests = recipient.interests || [];
+  for (const interest of interests) {
+    const interestLower = interest.toLowerCase();
+    if (suggestionTags.some(tag => tag.includes(interestLower) || interestLower.includes(tag))) {
+      score += 10;
+    }
+    if (suggestionCategory.includes(interestLower)) {
+      score += 15;
+    }
+  }
+  
+  if (profile?.interestCategory) {
+    const interestCat = profile.interestCategory.toLowerCase();
+    if (suggestionCategory.includes(interestCat) || interestCat.includes(suggestionCategory)) {
+      score += 20;
+    }
+  }
+  
+  if (profile?.giftPreference) {
+    const prefLower = profile.giftPreference.toLowerCase();
+    if (suggestionTags.some(tag => prefLower.includes(tag))) {
+      score += 5;
+    }
+  }
+  
+  if (profile?.giftsToAvoid) {
+    const avoidTerms = profile.giftsToAvoid.toLowerCase().split(/[,;]+/).map(t => t.trim());
+    for (const term of avoidTerms) {
+      if (term && (suggestionTags.some(tag => tag.includes(term)) || suggestionCategory.includes(term))) {
+        score -= 50;
+      }
+    }
+  }
+  
+  return score;
+}
+
 function filterInternalSuggestions(
   suggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions
-): GiftSuggestion[] {
-  return suggestions.filter((suggestion) => {
+): { suggestion: GiftSuggestion; score: number }[] {
+  const results: { suggestion: GiftSuggestion; score: number }[] = [];
+  
+  for (const suggestion of suggestions) {
     const searchableText = `${suggestion.name} ${suggestion.description || ""} ${suggestion.category} ${(suggestion.tags || []).join(" ")}`;
     const matchesKeywords = matchesKeyword(searchableText, options.keywords || "");
     
@@ -202,9 +361,11 @@ function filterInternalSuggestions(
     const matchesMinBudget = !options.minBudget || priceValue >= options.minBudget;
     
     let matchesInterests = true;
-    if (options.recipientInterests && options.recipientInterests.length > 0) {
+    const recipientInterests = options.recipientData?.recipient.interests || options.recipientInterests || [];
+    
+    if (recipientInterests.length > 0 && options.recipientData) {
       const suggestionTags = suggestion.tags || [];
-      matchesInterests = options.recipientInterests.some(interest =>
+      matchesInterests = recipientInterests.some(interest =>
         suggestionTags.some(tag =>
           tag.toLowerCase().includes(interest.toLowerCase()) ||
           interest.toLowerCase().includes(tag.toLowerCase())
@@ -212,8 +373,21 @@ function filterInternalSuggestions(
       );
     }
     
-    return matchesKeywords && matchesCategory && matchesMaxBudget && matchesMinBudget && matchesInterests;
-  });
+    if (matchesKeywords && matchesCategory && matchesMaxBudget && matchesMinBudget) {
+      const relevanceScore = calculateRelevanceScore(suggestion, options.recipientData);
+      
+      if (options.recipientData && relevanceScore < -20) {
+        continue;
+      }
+      
+      const finalScore = matchesInterests ? relevanceScore + 10 : relevanceScore;
+      results.push({ suggestion, score: finalScore });
+    }
+  }
+  
+  results.sort((a, b) => b.score - a.score);
+  
+  return results;
 }
 
 function filterGoogleProducts(
@@ -238,16 +412,24 @@ export async function runSuggestionAlgorithmV1(
     enableGoogleSearch = true,
   } = options;
 
-  const filteredInternal = filterInternalSuggestions(internalSuggestions, options);
-  const internalUnified = filteredInternal.map(convertInternalToUnified);
+  const filteredResults = filterInternalSuggestions(internalSuggestions, options);
+  const internalUnified = filteredResults.map(({ suggestion, score }) => 
+    convertInternalToUnified(suggestion, score)
+  );
   
   let googleUnified: UnifiedProduct[] = [];
   let googleFiltersApplied: string[] = [];
   let googleFiltersNotAvailable: string[] = [];
+  let generatedQuery = "";
   
-  if (enableGoogleSearch && keywords.trim()) {
-    const searchQuery = buildGoogleSearchQuery(options);
-    const googleResult = await fetchGoogleProducts(searchQuery, { ...options, googleLimit });
+  const shouldSearchGoogle = enableGoogleSearch && (
+    keywords.trim() || 
+    options.recipientData
+  );
+  
+  if (shouldSearchGoogle) {
+    generatedQuery = buildGoogleSearchQuery(options);
+    const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
     
     const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
     googleUnified = filterGoogleProducts(rawGoogleUnified, options);
@@ -261,14 +443,16 @@ export async function runSuggestionAlgorithmV1(
     products: allProducts,
     internalCount: internalUnified.length,
     googleCount: googleUnified.length,
-    version: "1.1",
+    version: "2.0",
     appliedFilters: {
       keywords: keywords || "",
       category: options.category || null,
       budgetRange: options.maxBudget ? { min: options.minBudget || 0, max: options.maxBudget } : null,
+      recipientName: options.recipientData?.recipient.name || null,
       googleFiltersApplied,
       googleFiltersNotAvailable,
     },
+    generatedQuery: generatedQuery || undefined,
   };
 }
 
