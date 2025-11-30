@@ -13,7 +13,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Store, Loader2 } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -243,6 +243,82 @@ function CompactGiftCard({ gift, recipientId, toast, userGifts }: CompactGiftCar
   );
 }
 
+// SerpApi Product Interface
+interface SerpApiProduct {
+  nome: string;
+  descricao: string;
+  imagem: string;
+  preco: string;
+  precoNumerico: number | null;
+  link: string;
+  fonte: string;
+  loja: string;
+}
+
+interface SerpApiResponse {
+  sucesso: boolean;
+  fonte: string;
+  keywords: string;
+  total: number;
+  resultados: SerpApiProduct[];
+}
+
+// Google Shopping Card Component
+interface GoogleShoppingCardProps {
+  product: SerpApiProduct;
+}
+
+function GoogleShoppingCard({ product }: GoogleShoppingCardProps) {
+  return (
+    <Card className="overflow-hidden group hover-elevate" data-testid={`card-google-product-${product.nome.slice(0, 20)}`}>
+      <div className="relative aspect-square bg-muted">
+        <img
+          src={product.imagem}
+          alt={product.nome}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "https://via.placeholder.com/200?text=Sem+Imagem";
+          }}
+        />
+        <Badge 
+          variant="secondary" 
+          className="absolute top-2 left-2 text-xs bg-blue-500 text-white border-0"
+        >
+          <Store className="w-3 h-3 mr-1" />
+          Google
+        </Badge>
+      </div>
+      
+      <div className="p-3">
+        <h3 className="font-medium text-sm text-foreground line-clamp-2 mb-1 min-h-[2.5rem]">
+          {product.nome}
+        </h3>
+        
+        <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+          {product.loja}
+        </p>
+        
+        <div className="text-lg font-bold text-primary mb-3">
+          {product.preco}
+        </div>
+        
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full text-xs"
+          onClick={() => {
+            window.open(product.link, "_blank", "noopener,noreferrer");
+          }}
+          data-testid={`button-view-google-product`}
+        >
+          <ExternalLink className="w-3 h-3 mr-1" />
+          Ver na Loja
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 // Compact Coupon Badge for Suggestions page
 interface CouponBadgeCompactProps {
   cupom: string;
@@ -282,7 +358,35 @@ export default function Suggestions() {
   const [category, setCategory] = useState<string>("");
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
   const [visibleCount, setVisibleCount] = useState(5);
+  const [googleProducts, setGoogleProducts] = useState<SerpApiProduct[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { toast } = useToast();
+
+  // Mutation to search Google Shopping via SerpApi
+  const searchGoogleMutation = useMutation({
+    mutationFn: async (keywords: string) => {
+      const response = await apiRequest("/api/serpapi/search", "POST", {
+        keywords,
+        limit: 5,
+      });
+      return response.json() as Promise<SerpApiResponse>;
+    },
+    onSuccess: (data) => {
+      setGoogleProducts(data.resultados);
+      setGoogleLoading(false);
+    },
+    onError: (error: any) => {
+      console.error("Google Shopping search error:", error);
+      setGoogleProducts([]);
+      setGoogleLoading(false);
+    },
+  });
+
+  // Load Google Shopping results for "perfume" on initial page load
+  useEffect(() => {
+    setGoogleLoading(true);
+    searchGoogleMutation.mutate("perfume");
+  }, []);
 
   useEffect(() => {
     setVisibleCount(5);
@@ -637,6 +741,32 @@ export default function Suggestions() {
                 >
                   Limpar Filtros
                 </Button>
+              </div>
+            )}
+
+            {/* Google Shopping Section */}
+            {(googleProducts.length > 0 || googleLoading) && (
+              <div className="mt-12 pt-8 border-t">
+                <div className="flex items-center gap-2 mb-6">
+                  <Store className="w-5 h-5 text-blue-500" />
+                  <h2 className="font-semibold text-lg">Produtos do Google Shopping</h2>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    Perfumes
+                  </Badge>
+                </div>
+                
+                {googleLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <span className="ml-3 text-muted-foreground">Buscando produtos...</span>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {googleProducts.map((product, index) => (
+                      <GoogleShoppingCard key={`google-${index}`} product={product} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
