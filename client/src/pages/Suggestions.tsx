@@ -14,7 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -340,10 +340,23 @@ export default function Suggestions() {
   });
 
   // Fetch recipient profile when a recipient is selected
-  const { data: recipientProfileData } = useQuery<RecipientProfile>({
+  const { 
+    data: recipientProfileData, 
+    isLoading: profileLoading, 
+    error: profileError,
+    isError: hasProfileError 
+  } = useQuery<RecipientProfile>({
     queryKey: ["/api/recipients", selectedRecipient, "profile"],
     enabled: !!selectedRecipient && selectedRecipient !== "all",
+    retry: false,
   });
+
+  // Handle profile loading errors
+  useEffect(() => {
+    if (hasProfileError && selectedRecipient && selectedRecipient !== "all") {
+      console.warn("Could not load recipient profile:", profileError);
+    }
+  }, [hasProfileError, profileError, selectedRecipient]);
 
   useEffect(() => {
     if (suggestionsError && isUnauthorizedError(suggestionsError as Error)) {
@@ -440,7 +453,13 @@ export default function Suggestions() {
     }
   }, [allSuggestions]);
 
+  // Don't run filter changes while profile is still loading
   useEffect(() => {
+    // Skip if profile is loading for a selected recipient
+    if (selectedRecipient && selectedRecipient !== "all" && profileLoading) {
+      return;
+    }
+    
     if (hasSearched && searchKeywords.trim()) {
       executeSearch(searchKeywords);
     } else if (allSuggestions && !searchKeywords.trim()) {
@@ -470,7 +489,7 @@ export default function Suggestions() {
       };
       runFilterOnly();
     }
-  }, [category, budget, recipientDataForAlgorithm]);
+  }, [category, budget, recipientDataForAlgorithm, profileLoading, selectedRecipient]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
@@ -528,10 +547,30 @@ export default function Suggestions() {
               Sugestões de Presentes
             </h1>
             {selectedRecipientNames.length > 0 ? (
-              <p className="text-muted-foreground mt-2 flex items-center gap-2">
-                <Gift className="w-4 h-4" />
-                Para: <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
-              </p>
+              <div className="mt-2">
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Gift className="w-4 h-4" />
+                  Para: <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
+                  {profileLoading && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      Carregando perfil...
+                    </span>
+                  )}
+                </p>
+                {hasProfileError && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Não foi possível carregar o perfil completo. A busca usará dados básicos.
+                  </p>
+                )}
+                {!profileLoading && !hasProfileError && recipientProfileData && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Perfil carregado - busca personalizada ativada
+                  </p>
+                )}
+              </div>
             ) : (
               <p className="text-muted-foreground mt-2">
                 Encontre o presente perfeito
