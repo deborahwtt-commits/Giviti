@@ -347,27 +347,32 @@ function findMatchingCategories(
   const matchedCategories: Set<string> = new Set();
   const matchedKeywords: Set<string> = new Set();
   
-  if (!interests.length || !giftCategories.length) {
+  if (!interests.length) {
     return { matchedCategories: [], matchedKeywords: [] };
   }
   
   for (const interest of interests) {
     const interestLower = interest.toLowerCase().trim();
     
-    for (const category of giftCategories) {
-      if (!category.isActive) continue;
-      
-      const categoryName = category.name.toLowerCase();
-      if (categoryName.includes(interestLower) || interestLower.includes(categoryName)) {
-        matchedCategories.add(category.name);
-      }
-      
-      const keywords = category.keywords || [];
-      for (const keyword of keywords) {
-        const keywordLower = keyword.toLowerCase();
-        if (keywordLower.includes(interestLower) || interestLower.includes(keywordLower)) {
+    // Direct match: interests are now category names
+    // So we just add the interest directly as a matched category
+    matchedCategories.add(interest);
+    
+    // Also check against giftCategories for additional keyword matching (optional expansion)
+    if (giftCategories && giftCategories.length > 0) {
+      for (const category of giftCategories) {
+        if (!category.isActive) continue;
+        
+        const categoryName = category.name.toLowerCase();
+        // Exact or partial match with category name
+        if (categoryName === interestLower || categoryName.includes(interestLower) || interestLower.includes(categoryName)) {
           matchedCategories.add(category.name);
-          matchedKeywords.add(keyword);
+          
+          // Add category keywords for expanded matching
+          const keywords = category.keywords || [];
+          for (const keyword of keywords) {
+            matchedKeywords.add(keyword);
+          }
         }
       }
     }
@@ -393,35 +398,47 @@ function calculateRelevanceScore(
   
   const interests = recipient.interests || [];
   
-  if (giftCategories && giftCategories.length > 0) {
-    const { matchedCategories, matchedKeywords } = findMatchingCategories(interests, giftCategories);
-    
-    if (matchedCategories.some(cat => cat.toLowerCase() === suggestionCategory)) {
-      score += 25;
-    }
-    
-    for (const keyword of matchedKeywords) {
-      const keywordLower = keyword.toLowerCase();
-      if (suggestionTags.some(tag => tag.includes(keywordLower) || keywordLower.includes(tag))) {
-        score += 15;
-      }
-      if (suggestion.name.toLowerCase().includes(keywordLower) || 
-          (suggestion.description || "").toLowerCase().includes(keywordLower)) {
-        score += 10;
-      }
-    }
-  }
-  
+  // Direct category match: interests are now category names
+  // This is the primary matching mechanism
   for (const interest of interests) {
-    const interestLower = interest.toLowerCase();
-    if (suggestionTags.some(tag => tag.includes(interestLower) || interestLower.includes(tag))) {
-      score += 10;
+    const interestLower = interest.toLowerCase().trim();
+    
+    // Exact match with product category (highest priority)
+    if (suggestionCategory === interestLower) {
+      score += 50; // High score for exact category match
+    } else if (suggestionCategory.includes(interestLower) || interestLower.includes(suggestionCategory)) {
+      score += 30; // Partial category match
     }
-    if (suggestionCategory.includes(interestLower)) {
+    
+    // Tag match with interest
+    if (suggestionTags.some(tag => tag.includes(interestLower) || interestLower.includes(tag))) {
       score += 15;
     }
   }
   
+  // Optional: Use giftCategories keywords for expanded matching
+  if (giftCategories && giftCategories.length > 0) {
+    const { matchedCategories, matchedKeywords } = findMatchingCategories(interests, giftCategories);
+    
+    // Boost for matching category via keywords
+    if (matchedCategories.some(cat => cat.toLowerCase() === suggestionCategory)) {
+      score += 10; // Additional boost if category matched via keywords
+    }
+    
+    // Keyword matching in product name/description
+    for (const keyword of matchedKeywords) {
+      const keywordLower = keyword.toLowerCase();
+      if (suggestionTags.some(tag => tag.includes(keywordLower) || keywordLower.includes(tag))) {
+        score += 5;
+      }
+      if (suggestion.name.toLowerCase().includes(keywordLower) || 
+          (suggestion.description || "").toLowerCase().includes(keywordLower)) {
+        score += 3;
+      }
+    }
+  }
+  
+  // Profile questionnaire bonuses
   if (profile?.interestCategory) {
     const interestCat = profile.interestCategory.toLowerCase();
     if (suggestionCategory.includes(interestCat) || interestCat.includes(suggestionCategory)) {
@@ -436,6 +453,7 @@ function calculateRelevanceScore(
     }
   }
   
+  // Penalty for gifts to avoid
   if (profile?.giftsToAvoid) {
     const avoidTerms = profile.giftsToAvoid.toLowerCase().split(/[,;]+/).map(t => t.trim());
     for (const term of avoidTerms) {
