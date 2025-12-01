@@ -53,10 +53,11 @@ Preferred communication style: Simple, everyday language.
   - Archived tab includes both archived events and completed/cancelled rolês
 
 ### Feature Specifications
-- **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests with category keyword matching.
-  - **Algorithm V2.0**: Enhanced suggestion algorithm with category keyword matching for better interest-based suggestions.
-  - **Relevance Scoring**: Category keyword match (+25pts), interest tag match (+10pts), direct category match (+15pts), interestCategory match (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
-  - **Interest-Category Matching**: `matchInterestToCategories` function performs fuzzy matching between recipient interests and category keywords using substring/prefix matching.
+- **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
+  - **Algorithm V2.1**: Unified interests-categories system - recipient interests ARE product categories.
+  - **Dynamic Interests**: Interest options in recipient form are fetched from gift categories API, ensuring consistency.
+  - **Relevance Scoring**: Exact category match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
+  - **Direct Matching**: When user selects "Tecnologia" as interest, products in "Tecnologia" category get highest priority.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.
