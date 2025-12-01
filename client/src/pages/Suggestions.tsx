@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -302,10 +303,14 @@ function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedP
 }
 
 export default function Suggestions() {
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const recipientIdFromUrl = urlParams.get("recipientId") || "";
+  
   const [showFilters, setShowFilters] = useState(false);
   const [budget, setBudget] = useState([1000]);
   const [category, setCategory] = useState<string>("");
-  const [selectedRecipient, setSelectedRecipient] = useState<string>("");
+  const [selectedRecipient, setSelectedRecipient] = useState<string>(recipientIdFromUrl);
   const [visibleCount, setVisibleCount] = useState(10);
   const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
