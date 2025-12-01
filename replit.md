@@ -28,11 +28,11 @@ Preferred communication style: Simple, everyday language.
     - `giftTypeId` foreign key reference to `giftTypes` table for categorizing suggestions by type.
     - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
   - **Gift Categories & Types System**:
-    - `giftCategories`: Stores gift categories with name, description, color (hex), and active status. Examples: "Tecnologia", "Casa & Decoração".
+    - `giftCategories`: Stores gift categories with name, description, color (hex), active status, and **keywords array** for flexible interest matching. Examples: "Tecnologia" with keywords ["tecnologia", "tech", "eletrônicos", "gadget"].
     - `giftTypes`: Stores gift types with name, description, and active status. Examples: "Presente Físico", "Experiência", "Presente Digital".
     - `giftSuggestionCategories`: Junction table enabling many-to-many relationship between suggestions and categories.
     - Each suggestion can have one type (via `giftTypeId`) and multiple categories (via junction table).
-    - Admin panel at `/admin/categorias-tipos` provides full CRUD for categories and types.
+    - Admin panel at `/admin/categorias-tipos` provides full CRUD for categories and types, including keyword management via textarea input (comma/semicolon separated).
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
@@ -53,7 +53,10 @@ Preferred communication style: Simple, everyday language.
   - Archived tab includes both archived events and completed/cancelled rolês
 
 ### Feature Specifications
-- **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
+- **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests with category keyword matching.
+  - **Algorithm V2.0**: Enhanced suggestion algorithm with category keyword matching for better interest-based suggestions.
+  - **Relevance Scoring**: Category keyword match (+25pts), interest tag match (+10pts), direct category match (+15pts), interestCategory match (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
+  - **Interest-Category Matching**: `matchInterestToCategories` function performs fuzzy matching between recipient interests and category keywords using substring/prefix matching.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.
