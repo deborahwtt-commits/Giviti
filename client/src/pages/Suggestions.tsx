@@ -424,74 +424,60 @@ export default function Suggestions() {
     }
   }, [allSuggestions, category, budget, recipientDataForAlgorithm]);
 
+  // Run algorithm when recipient changes or profile finishes loading
+  // This is the main effect that applies personalization
   useEffect(() => {
-    if (allSuggestions && allSuggestions.length > 0 && !hasSearched) {
-      const runInitialLoad = async () => {
-        setAlgorithmLoading(true);
-        try {
-          const result = await runSuggestionAlgorithmV1(allSuggestions, {
-            keywords: "",
-            category: category || undefined,
-            maxBudget: budget[0],
-            recipientData: recipientDataForAlgorithm,
-            googleLimit: 0,
-            enableGoogleSearch: false,
-          });
-          setUnifiedProducts(result.products);
-          setAlgorithmResult({
-            internalCount: result.internalCount,
-            googleCount: 0,
-            appliedFilters: result.appliedFilters,
-            generatedQuery: result.generatedQuery,
-          });
-        } catch (error) {
-          console.error("Initial load error:", error);
-          setUnifiedProducts([]);
-        } finally {
-          setAlgorithmLoading(false);
-        }
-      };
-      runInitialLoad();
-    }
-  }, [allSuggestions]);
-
-  // Don't run filter changes while profile is still loading
-  useEffect(() => {
-    // Skip if profile is loading for a selected recipient
+    // Don't run if no suggestions loaded yet
+    if (!allSuggestions || allSuggestions.length === 0) return;
+    
+    // If a recipient is selected but profile is still loading, wait
     if (selectedRecipient && selectedRecipient !== "all" && profileLoading) {
       return;
     }
     
-    if (hasSearched && searchKeywords.trim()) {
-      executeSearch(searchKeywords);
-    } else if (allSuggestions && !searchKeywords.trim()) {
-      const runFilterOnly = async () => {
-        setAlgorithmLoading(true);
-        try {
-          const result = await runSuggestionAlgorithmV1(allSuggestions, {
-            keywords: "",
-            category: category || undefined,
-            maxBudget: budget[0],
-            recipientData: recipientDataForAlgorithm,
-            googleLimit: 0,
-            enableGoogleSearch: false,
-          });
-          setUnifiedProducts(result.products);
-          setAlgorithmResult({
-            internalCount: result.internalCount,
-            googleCount: 0,
-            appliedFilters: result.appliedFilters,
-            generatedQuery: result.generatedQuery,
-          });
-        } catch (error) {
-          console.error("Filter error:", error);
-        } finally {
-          setAlgorithmLoading(false);
-        }
-      };
-      runFilterOnly();
-    }
-  }, [category, budget, recipientDataForAlgorithm, profileLoading, selectedRecipient]);
+    const runAlgorithmWithFilters = async () => {
+      setAlgorithmLoading(true);
+      try {
+        // Determine if we should use Google search
+        // Only use Google when there are explicit search keywords
+        const shouldEnableGoogleSearch = hasSearched && searchKeywords.trim().length > 0;
+        
+        const result = await runSuggestionAlgorithmV1(allSuggestions, {
+          keywords: searchKeywords.trim(),
+          category: category || undefined,
+          maxBudget: budget[0],
+          recipientData: recipientDataForAlgorithm,
+          googleLimit: shouldEnableGoogleSearch ? 10 : 0,
+          enableGoogleSearch: shouldEnableGoogleSearch,
+        });
+        
+        setUnifiedProducts(result.products);
+        setAlgorithmResult({
+          internalCount: result.internalCount,
+          googleCount: result.googleCount,
+          appliedFilters: result.appliedFilters,
+          generatedQuery: result.generatedQuery,
+        });
+      } catch (error) {
+        console.error("Algorithm error:", error);
+        setUnifiedProducts([]);
+        setAlgorithmResult(null);
+      } finally {
+        setAlgorithmLoading(false);
+      }
+    };
+    
+    runAlgorithmWithFilters();
+  }, [
+    allSuggestions, 
+    category, 
+    budget, 
+    recipientDataForAlgorithm, 
+    profileLoading, 
+    selectedRecipient,
+    hasSearched,
+    searchKeywords
+  ]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
@@ -550,27 +536,27 @@ export default function Suggestions() {
             </h1>
             {selectedRecipientNames.length > 0 ? (
               <div className="mt-2">
-                <p className="text-muted-foreground flex items-center gap-2">
+                <div className="text-muted-foreground flex items-center gap-2">
                   <Gift className="w-4 h-4" />
-                  Para: <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
+                  <span>Para:</span> <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
                   {profileLoading && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block" />
                       Carregando perfil...
                     </span>
                   )}
-                </p>
+                </div>
                 {hasProfileError && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                  <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Não foi possível carregar o perfil completo. A busca usará dados básicos.
-                  </p>
+                  </div>
                 )}
                 {!profileLoading && !hasProfileError && recipientProfileData && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     Perfil carregado - busca personalizada ativada
-                  </p>
+                  </div>
                 )}
               </div>
             ) : (
