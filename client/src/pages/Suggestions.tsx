@@ -18,7 +18,7 @@ import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle,
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion, Recipient, RecipientProfile, UserGift } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategory } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -339,6 +339,10 @@ export default function Suggestions() {
     queryKey: ["/api/gifts"],
   });
 
+  const { data: giftCategories } = useQuery<GiftCategory[]>({
+    queryKey: ["/api/gift-categories"],
+  });
+
   // Fetch recipient profile when a recipient is selected
   const { 
     data: recipientProfileData, 
@@ -407,6 +411,7 @@ export default function Suggestions() {
         recipientData: recipientDataForAlgorithm,
         googleLimit: 10,
         enableGoogleSearch: shouldEnableGoogleSearch,
+        giftCategories: giftCategories,
       });
       setUnifiedProducts(result.products);
       setAlgorithmResult({
@@ -422,7 +427,7 @@ export default function Suggestions() {
     } finally {
       setAlgorithmLoading(false);
     }
-  }, [allSuggestions, category, budget, recipientDataForAlgorithm]);
+  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories]);
 
   // Run algorithm when recipient changes or profile finishes loading
   // This is the main effect that applies personalization
@@ -449,6 +454,7 @@ export default function Suggestions() {
           recipientData: recipientDataForAlgorithm,
           googleLimit: shouldEnableGoogleSearch ? 10 : 0,
           enableGoogleSearch: shouldEnableGoogleSearch,
+          giftCategories: giftCategories,
         });
         
         setUnifiedProducts(result.products);
@@ -476,7 +482,8 @@ export default function Suggestions() {
     profileLoading, 
     selectedRecipient,
     hasSearched,
-    searchKeywords
+    searchKeywords,
+    giftCategories
   ]);
 
   const handleSearch = () => {

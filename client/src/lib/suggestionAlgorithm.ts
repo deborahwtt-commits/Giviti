@@ -1,5 +1,5 @@
 import { apiRequest } from "./queryClient";
-import type { GiftSuggestion, Recipient, RecipientProfile } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, GiftCategory } from "@shared/schema";
 
 export interface UnifiedProduct {
   id: string;
@@ -50,6 +50,7 @@ export interface SuggestionAlgorithmOptions {
   recipientData?: RecipientData;
   googleLimit?: number;
   enableGoogleSearch?: boolean;
+  giftCategories?: GiftCategory[];
 }
 
 interface SuggestionAlgorithmResult {
@@ -339,9 +340,49 @@ function shouldExcludeProduct(
   return avoidTerms.some(term => searchableText.includes(term));
 }
 
+function findMatchingCategories(
+  interests: string[],
+  giftCategories: GiftCategory[]
+): { matchedCategories: string[]; matchedKeywords: string[] } {
+  const matchedCategories: Set<string> = new Set();
+  const matchedKeywords: Set<string> = new Set();
+  
+  if (!interests.length || !giftCategories.length) {
+    return { matchedCategories: [], matchedKeywords: [] };
+  }
+  
+  for (const interest of interests) {
+    const interestLower = interest.toLowerCase().trim();
+    
+    for (const category of giftCategories) {
+      if (!category.isActive) continue;
+      
+      const categoryName = category.name.toLowerCase();
+      if (categoryName.includes(interestLower) || interestLower.includes(categoryName)) {
+        matchedCategories.add(category.name);
+      }
+      
+      const keywords = category.keywords || [];
+      for (const keyword of keywords) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes(interestLower) || interestLower.includes(keywordLower)) {
+          matchedCategories.add(category.name);
+          matchedKeywords.add(keyword);
+        }
+      }
+    }
+  }
+  
+  return {
+    matchedCategories: Array.from(matchedCategories),
+    matchedKeywords: Array.from(matchedKeywords),
+  };
+}
+
 function calculateRelevanceScore(
   suggestion: GiftSuggestion, 
-  recipientData?: RecipientData
+  recipientData?: RecipientData,
+  giftCategories?: GiftCategory[]
 ): number {
   if (!recipientData) return 0;
   
@@ -351,6 +392,26 @@ function calculateRelevanceScore(
   const suggestionCategory = suggestion.category.toLowerCase();
   
   const interests = recipient.interests || [];
+  
+  if (giftCategories && giftCategories.length > 0) {
+    const { matchedCategories, matchedKeywords } = findMatchingCategories(interests, giftCategories);
+    
+    if (matchedCategories.some(cat => cat.toLowerCase() === suggestionCategory)) {
+      score += 25;
+    }
+    
+    for (const keyword of matchedKeywords) {
+      const keywordLower = keyword.toLowerCase();
+      if (suggestionTags.some(tag => tag.includes(keywordLower) || keywordLower.includes(tag))) {
+        score += 15;
+      }
+      if (suggestion.name.toLowerCase().includes(keywordLower) || 
+          (suggestion.description || "").toLowerCase().includes(keywordLower)) {
+        score += 10;
+      }
+    }
+  }
+  
   for (const interest of interests) {
     const interestLower = interest.toLowerCase();
     if (suggestionTags.some(tag => tag.includes(interestLower) || interestLower.includes(tag))) {
@@ -430,7 +491,7 @@ function filterInternalSuggestions(
     }
     
     if (matchesKeywords && matchesCategory && matchesMaxBudget && matchesMinBudget) {
-      const relevanceScore = calculateRelevanceScore(suggestion, options.recipientData);
+      const relevanceScore = calculateRelevanceScore(suggestion, options.recipientData, options.giftCategories);
       const finalScore = matchesInterests ? relevanceScore + 10 : relevanceScore;
       results.push({ suggestion, score: finalScore });
     }

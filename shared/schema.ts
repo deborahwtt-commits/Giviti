@@ -224,6 +224,7 @@ export const giftCategories = pgTable("gift_categories", {
   description: text("description"),
   icon: varchar("icon"),
   color: varchar("color"),
+  keywords: text("keywords").array().default(sql`ARRAY[]::text[]`),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
