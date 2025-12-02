@@ -457,8 +457,12 @@ export default function Suggestions() {
     if (!allSuggestions) return;
     
     setHasSearched(true);
-    // This will trigger the useEffect above with hasSearched=true
-  }, [allSuggestions]);
+    // Run immediately with Google enabled
+    runAlgorithm({ 
+      enableGoogle: true, 
+      keywords 
+    });
+  }, [allSuggestions, runAlgorithm]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
