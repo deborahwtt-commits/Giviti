@@ -537,6 +537,11 @@ function filterGoogleProducts(
       return false;
     }
     
+    // If price is 0 or not available, include the product anyway (price info missing from Google)
+    if (product.price === 0 || product.price === null || product.price === undefined) {
+      return true;
+    }
+    
     const matchesMaxBudget = !options.maxBudget || product.price <= options.maxBudget;
     const matchesMinBudget = !options.minBudget || product.price >= options.minBudget;
     
