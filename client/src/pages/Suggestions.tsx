@@ -316,6 +316,7 @@ export default function Suggestions() {
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastGoogleQuery, setLastGoogleQuery] = useState<string | null>(null);
   const [algorithmResult, setAlgorithmResult] = useState<{
     internalCount: number;
     googleCount: number;
@@ -400,24 +401,41 @@ export default function Suggestions() {
     };
   }, [selectedRecipientData, recipientProfileData]);
 
-  const executeSearch = useCallback(async (keywords: string) => {
+  // Unified algorithm runner - handles both internal filtering and Google search
+  const runAlgorithm = useCallback(async (options: {
+    enableGoogle: boolean;
+    keywords?: string;
+    forceGoogleRefresh?: boolean;
+  }) => {
     if (!allSuggestions) return;
     
+    const { enableGoogle, keywords = "", forceGoogleRefresh = false } = options;
+    
+    // Build a query key to track Google searches and prevent duplicates
+    const googleQueryKey = enableGoogle 
+      ? `${keywords.trim()}-${recipientDataForAlgorithm?.recipient?.id || "none"}`
+      : null;
+    
+    // Skip Google if we already have results for this exact query
+    const shouldFetchGoogle = enableGoogle && (forceGoogleRefresh || googleQueryKey !== lastGoogleQuery);
+    
     setAlgorithmLoading(true);
-    setHasSearched(true);
     try {
-      // Enable Google Search when we have keywords OR when we have recipient data
-      const shouldEnableGoogleSearch = keywords.trim().length > 0 || !!recipientDataForAlgorithm;
-      
       const result = await runSuggestionAlgorithmV1(allSuggestions, {
         keywords: keywords.trim(),
         category: category || undefined,
         maxBudget: budget[0],
         recipientData: recipientDataForAlgorithm,
-        googleLimit: 10,
-        enableGoogleSearch: shouldEnableGoogleSearch,
+        googleLimit: shouldFetchGoogle ? 10 : 0,
+        enableGoogleSearch: shouldFetchGoogle,
         giftCategories: giftCategories,
       });
+      
+      // Update last Google query if we fetched from Google
+      if (shouldFetchGoogle && googleQueryKey) {
+        setLastGoogleQuery(googleQueryKey);
+      }
+      
       setUnifiedProducts(result.products);
       setAlgorithmResult({
         internalCount: result.internalCount,
@@ -432,78 +450,43 @@ export default function Suggestions() {
     } finally {
       setAlgorithmLoading(false);
     }
-  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories]);
+  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories, lastGoogleQuery]);
 
-  // Run algorithm when recipient changes or profile finishes loading
-  // This is the main effect that applies personalization
+  // Effect 1: Initial load and filter changes (internal only, no Google)
   useEffect(() => {
-    // Don't run if no suggestions loaded yet
     if (!allSuggestions || allSuggestions.length === 0) return;
+    if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
     
-    // If a recipient is selected but profile is still loading, wait
-    if (selectedRecipient && selectedRecipient !== "all" && profileLoading) {
-      return;
-    }
+    // Run with internal filtering only (no Google search)
+    runAlgorithm({ enableGoogle: false, keywords: searchKeywords });
+  }, [allSuggestions, category, budget, giftCategories]);
+
+  // Effect 2: When recipient changes, trigger Google search with recipient data
+  useEffect(() => {
+    if (!allSuggestions || allSuggestions.length === 0) return;
+    if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
+    if (!recipientDataForAlgorithm) return;
     
-    const runAlgorithmWithFilters = async () => {
-      setAlgorithmLoading(true);
-      try {
-        // Enable Google search when we have keywords OR when we have recipient data
-        // This ensures personalized searches work when selecting a recipient
-        const shouldEnableGoogleSearch = searchKeywords.trim().length > 0 || !!recipientDataForAlgorithm;
-        
-        console.log("[Suggestions] Running algorithm:", {
-          hasKeywords: searchKeywords.trim().length > 0,
-          hasRecipientData: !!recipientDataForAlgorithm,
-          shouldEnableGoogleSearch,
-          recipientName: recipientDataForAlgorithm?.recipient?.name,
-        });
-        
-        const result = await runSuggestionAlgorithmV1(allSuggestions, {
-          keywords: searchKeywords.trim(),
-          category: category || undefined,
-          maxBudget: budget[0],
-          recipientData: recipientDataForAlgorithm,
-          googleLimit: 10,
-          enableGoogleSearch: shouldEnableGoogleSearch,
-          giftCategories: giftCategories,
-        });
-        
-        console.log("[Suggestions] Algorithm result:", {
-          internalCount: result.internalCount,
-          googleCount: result.googleCount,
-          totalProducts: result.products.length,
-          generatedQuery: result.generatedQuery,
-        });
-        
-        setUnifiedProducts(result.products);
-        setAlgorithmResult({
-          internalCount: result.internalCount,
-          googleCount: result.googleCount,
-          appliedFilters: result.appliedFilters,
-          generatedQuery: result.generatedQuery,
-        });
-      } catch (error) {
-        console.error("Algorithm error:", error);
-        setUnifiedProducts([]);
-        setAlgorithmResult(null);
-      } finally {
-        setAlgorithmLoading(false);
-      }
-    };
+    // Recipient selected - enable Google search with recipient profile
+    runAlgorithm({ 
+      enableGoogle: true, 
+      keywords: searchKeywords,
+      forceGoogleRefresh: true 
+    });
+  }, [recipientDataForAlgorithm, profileLoading]);
+
+  // Execute explicit search (when user clicks "Buscar")
+  const executeSearch = useCallback(async (keywords: string) => {
+    if (!allSuggestions) return;
     
-    runAlgorithmWithFilters();
-  }, [
-    allSuggestions, 
-    category, 
-    budget, 
-    recipientDataForAlgorithm, 
-    profileLoading, 
-    selectedRecipient,
-    hasSearched,
-    searchKeywords,
-    giftCategories
-  ]);
+    setHasSearched(true);
+    // Force Google search with keywords
+    runAlgorithm({ 
+      enableGoogle: true, 
+      keywords,
+      forceGoogleRefresh: true 
+    });
+  }, [allSuggestions, runAlgorithm]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {

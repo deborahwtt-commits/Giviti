@@ -574,37 +574,11 @@ export async function runSuggestionAlgorithmV1(
     options.recipientData
   );
   
-  console.log("[Algorithm] Google search decision:", {
-    enableGoogleSearch,
-    hasKeywords: !!keywords.trim(),
-    hasRecipientData: !!options.recipientData,
-    shouldSearchGoogle,
-    googleLimit,
-  });
-  
   if (shouldSearchGoogle) {
     generatedQuery = buildGoogleSearchQuery(options);
-    console.log("[Algorithm] Generated query:", generatedQuery);
-    
     const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
-    console.log("[Algorithm] Google API returned:", {
-      productsCount: googleResult.products.length,
-      firstProduct: googleResult.products[0],
-    });
-    
     const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
-    console.log("[Algorithm] Raw unified products:", {
-      count: rawGoogleUnified.length,
-      firstProduct: rawGoogleUnified[0],
-    });
-    
     googleUnified = filterGoogleProducts(rawGoogleUnified, options);
-    console.log("[Algorithm] After filtering:", {
-      beforeFilter: rawGoogleUnified.length,
-      afterFilter: googleUnified.length,
-      maxBudget: options.maxBudget,
-    });
-    
     googleFiltersApplied = googleResult.filtersApplied;
     googleFiltersNotAvailable = googleResult.filtersNotAvailable;
   }
