@@ -394,26 +394,6 @@ export type RecipientProfile = typeof recipientProfiles.$inferSelect;
 
 // ==================== ADMIN MODULE TABLES ====================
 
-// Categories table - gift categories for parametrization
-export const categories = pgTable("categories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull().unique(),
-  description: text("description"),
-  icon: varchar("icon"),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertCategory = z.infer<typeof insertCategorySchema>;
-export type Category = typeof categories.$inferSelect;
-
 // Occasions table - special dates and occasions
 export const occasions = pgTable("occasions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

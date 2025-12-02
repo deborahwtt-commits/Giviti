@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { isAuthenticated } from "./auth";
 import { isAdmin, hasRole } from "./middleware/authMiddleware";
 import {
-  insertCategorySchema,
   insertOccasionSchema,
   insertPriceRangeSchema,
   insertRelationshipTypeSchema,
@@ -157,80 +156,6 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ message: "Failed to update user" });
-    }
-  });
-
-  // ========== Categories Management Routes ==========
-
-  // GET /api/admin/categories - Get all categories
-  app.get("/api/admin/categories", isAuthenticated, hasRole("admin", "manager", "support", "readonly"), async (req: any, res) => {
-    try {
-      const includeInactive = req.query.includeInactive === "true";
-      const categories = await storage.getCategories(includeInactive);
-      res.json(categories);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      res.status(500).json({ message: "Failed to fetch categories" });
-    }
-  });
-
-  // POST /api/admin/categories - Create category
-  app.post("/api/admin/categories", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
-    try {
-      const validatedData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(validatedData);
-      
-      await createAudit(req, "CREATE", "category", category.id, validatedData);
-      
-      res.status(201).json(category);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
-      }
-      console.error("Error creating category:", error);
-      res.status(500).json({ message: "Failed to create category" });
-    }
-  });
-
-  // PUT /api/admin/categories/:id - Update category
-  app.put("/api/admin/categories/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const validatedData = insertCategorySchema.partial().parse(req.body);
-      const category = await storage.updateCategory(id, validatedData);
-      
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      
-      await createAudit(req, "UPDATE", "category", id, validatedData);
-      
-      res.json(category);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
-      }
-      console.error("Error updating category:", error);
-      res.status(500).json({ message: "Failed to update category" });
-    }
-  });
-
-  // DELETE /api/admin/categories/:id - Delete category
-  app.delete("/api/admin/categories/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const deleted = await storage.deleteCategory(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-      
-      await createAudit(req, "DELETE", "category", id);
-      
-      res.json({ message: "Category deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting category:", error);
-      res.status(500).json({ message: "Failed to delete category" });
     }
   });
 

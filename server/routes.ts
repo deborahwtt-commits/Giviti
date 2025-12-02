@@ -10,7 +10,6 @@ import {
   insertUserGiftSchema,
   insertUserProfileSchema,
   insertRecipientProfileSchema,
-  insertCategorySchema,
   insertOccasionSchema,
   insertPriceRangeSchema,
   insertRelationshipTypeSchema,

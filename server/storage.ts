@@ -11,7 +11,6 @@ import {
   giftSuggestionCategories,
   userProfiles,
   recipientProfiles,
-  categories,
   occasions,
   priceRanges,
   relationshipTypes,
@@ -48,8 +47,6 @@ import {
   type InsertUserProfile,
   type RecipientProfile,
   type InsertRecipientProfile,
-  type Category,
-  type InsertCategory,
   type Occasion,
   type InsertOccasion,
   type PriceRange,
@@ -167,13 +164,6 @@ export interface IStorage {
   getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
   updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>): Promise<User | undefined>;
   updateUserLastLogin(userId: string): Promise<void>;
-  
-  // Categories Management
-  getCategories(includeInactive?: boolean): Promise<Category[]>;
-  getCategory(id: string): Promise<Category | undefined>;
-  createCategory(category: InsertCategory): Promise<Category>;
-  updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category | undefined>;
-  deleteCategory(id: string): Promise<boolean>;
   
   // Occasions Management
   getOccasions(includeInactive?: boolean): Promise<Occasion[]>;
@@ -1054,41 +1044,6 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ lastLoginAt: new Date() })
       .where(eq(users.id, userId));
-  }
-  
-  // Categories Management
-  async getCategories(includeInactive = false): Promise<Category[]> {
-    let query = db.select().from(categories);
-    
-    if (!includeInactive) {
-      query = query.where(eq(categories.isActive, true)) as any;
-    }
-    
-    return await query.orderBy(categories.name);
-  }
-  
-  async getCategory(id: string): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
-    return category;
-  }
-  
-  async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
-    return newCategory;
-  }
-  
-  async updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category | undefined> {
-    const [updated] = await db
-      .update(categories)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(categories.id, id))
-      .returning();
-    return updated;
-  }
-  
-  async deleteCategory(id: string): Promise<boolean> {
-    const result = await db.delete(categories).where(eq(categories.id, id)).returning();
-    return result.length > 0;
   }
   
   // Occasions Management
