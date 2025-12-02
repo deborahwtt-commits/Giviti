@@ -448,18 +448,32 @@ export default function Suggestions() {
     const runAlgorithmWithFilters = async () => {
       setAlgorithmLoading(true);
       try {
-        // Determine if we should use Google search
-        // Only use Google when there are explicit search keywords
-        const shouldEnableGoogleSearch = hasSearched && searchKeywords.trim().length > 0;
+        // Enable Google search when we have keywords OR when we have recipient data
+        // This ensures personalized searches work when selecting a recipient
+        const shouldEnableGoogleSearch = searchKeywords.trim().length > 0 || !!recipientDataForAlgorithm;
+        
+        console.log("[Suggestions] Running algorithm:", {
+          hasKeywords: searchKeywords.trim().length > 0,
+          hasRecipientData: !!recipientDataForAlgorithm,
+          shouldEnableGoogleSearch,
+          recipientName: recipientDataForAlgorithm?.recipient?.name,
+        });
         
         const result = await runSuggestionAlgorithmV1(allSuggestions, {
           keywords: searchKeywords.trim(),
           category: category || undefined,
           maxBudget: budget[0],
           recipientData: recipientDataForAlgorithm,
-          googleLimit: shouldEnableGoogleSearch ? 10 : 0,
+          googleLimit: 10,
           enableGoogleSearch: shouldEnableGoogleSearch,
           giftCategories: giftCategories,
+        });
+        
+        console.log("[Suggestions] Algorithm result:", {
+          internalCount: result.internalCount,
+          googleCount: result.googleCount,
+          totalProducts: result.products.length,
+          generatedQuery: result.generatedQuery,
         });
         
         setUnifiedProducts(result.products);
