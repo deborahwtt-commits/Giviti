@@ -316,7 +316,6 @@ export default function Suggestions() {
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
-  const [lastGoogleQuery, setLastGoogleQuery] = useState<string | null>(null);
   const [algorithmResult, setAlgorithmResult] = useState<{
     internalCount: number;
     googleCount: number;
@@ -405,19 +404,10 @@ export default function Suggestions() {
   const runAlgorithm = useCallback(async (options: {
     enableGoogle: boolean;
     keywords?: string;
-    forceGoogleRefresh?: boolean;
   }) => {
     if (!allSuggestions) return;
     
-    const { enableGoogle, keywords = "", forceGoogleRefresh = false } = options;
-    
-    // Build a query key to track Google searches and prevent duplicates
-    const googleQueryKey = enableGoogle 
-      ? `${keywords.trim()}-${recipientDataForAlgorithm?.recipient?.id || "none"}`
-      : null;
-    
-    // Skip Google if we already have results for this exact query
-    const shouldFetchGoogle = enableGoogle && (forceGoogleRefresh || googleQueryKey !== lastGoogleQuery);
+    const { enableGoogle, keywords = "" } = options;
     
     setAlgorithmLoading(true);
     try {
@@ -426,15 +416,10 @@ export default function Suggestions() {
         category: category || undefined,
         maxBudget: budget[0],
         recipientData: recipientDataForAlgorithm,
-        googleLimit: shouldFetchGoogle ? 10 : 0,
-        enableGoogleSearch: shouldFetchGoogle,
+        googleLimit: enableGoogle ? 10 : 0,
+        enableGoogleSearch: enableGoogle,
         giftCategories: giftCategories,
       });
-      
-      // Update last Google query if we fetched from Google
-      if (shouldFetchGoogle && googleQueryKey) {
-        setLastGoogleQuery(googleQueryKey);
-      }
       
       setUnifiedProducts(result.products);
       setAlgorithmResult({
@@ -450,43 +435,30 @@ export default function Suggestions() {
     } finally {
       setAlgorithmLoading(false);
     }
-  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories, lastGoogleQuery]);
+  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories]);
 
-  // Effect 1: Initial load and filter changes (internal only, no Google)
+  // Single effect: runs when filters change
+  // Enables Google search if user has searched OR has a recipient selected
   useEffect(() => {
     if (!allSuggestions || allSuggestions.length === 0) return;
     if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
     
-    // Run with internal filtering only (no Google search)
-    runAlgorithm({ enableGoogle: false, keywords: searchKeywords });
-  }, [allSuggestions, category, budget, giftCategories]);
-
-  // Effect 2: When recipient changes, trigger Google search with recipient data
-  useEffect(() => {
-    if (!allSuggestions || allSuggestions.length === 0) return;
-    if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
-    if (!recipientDataForAlgorithm) return;
+    // Enable Google when there's an active search context
+    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm;
     
-    // Recipient selected - enable Google search with recipient profile
     runAlgorithm({ 
-      enableGoogle: true, 
-      keywords: searchKeywords,
-      forceGoogleRefresh: true 
+      enableGoogle: shouldEnableGoogle, 
+      keywords: searchKeywords 
     });
-  }, [recipientDataForAlgorithm, profileLoading]);
+  }, [allSuggestions, category, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
 
   // Execute explicit search (when user clicks "Buscar")
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;
     
     setHasSearched(true);
-    // Force Google search with keywords
-    runAlgorithm({ 
-      enableGoogle: true, 
-      keywords,
-      forceGoogleRefresh: true 
-    });
-  }, [allSuggestions, runAlgorithm]);
+    // This will trigger the useEffect above with hasSearched=true
+  }, [allSuggestions]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
