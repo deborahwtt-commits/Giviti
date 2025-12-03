@@ -487,6 +487,9 @@ function filterInternalSuggestions(
   const results: { suggestion: GiftSuggestion; score: number }[] = [];
   const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
+  const recipientInterests = options.recipientData?.recipient.interests || [];
+  const hasRecipientWithInterests = recipientInterests.length > 0 && options.recipientData;
+  
   for (const suggestion of suggestions) {
     if (shouldExcludeProduct(
       suggestion.name,
@@ -510,22 +513,36 @@ function filterInternalSuggestions(
     const matchesMinBudget = !options.minBudget || priceValue >= options.minBudget;
     
     let matchesInterests = true;
-    const recipientInterests = options.recipientData?.recipient.interests || [];
     
-    if (recipientInterests.length > 0 && options.recipientData) {
+    if (hasRecipientWithInterests) {
       const suggestionTags = suggestion.tags || [];
-      matchesInterests = recipientInterests.some(interest =>
-        suggestionTags.some(tag =>
-          tag.toLowerCase().includes(interest.toLowerCase()) ||
-          interest.toLowerCase().includes(tag.toLowerCase())
-        ) || suggestion.category.toLowerCase().includes(interest.toLowerCase())
-      );
+      const suggestionCategoryLower = suggestion.category.toLowerCase();
+      
+      matchesInterests = recipientInterests.some(interest => {
+        const interestLower = interest.toLowerCase();
+        
+        const categoryMatch = suggestionCategoryLower === interestLower ||
+          suggestionCategoryLower.includes(interestLower) ||
+          interestLower.includes(suggestionCategoryLower);
+        
+        const tagMatch = suggestionTags.some(tag => {
+          const tagLower = tag.toLowerCase();
+          return tagLower === interestLower ||
+            tagLower.includes(interestLower) ||
+            interestLower.includes(tagLower);
+        });
+        
+        return categoryMatch || tagMatch;
+      });
+      
+      if (!matchesInterests) {
+        continue;
+      }
     }
     
     if (matchesKeywords && matchesCategory && matchesMaxBudget && matchesMinBudget) {
       const relevanceScore = calculateRelevanceScore(suggestion, options.recipientData, options.giftCategories);
-      const finalScore = matchesInterests ? relevanceScore + 10 : relevanceScore;
-      results.push({ suggestion, score: finalScore });
+      results.push({ suggestion, score: relevanceScore });
     }
   }
   
