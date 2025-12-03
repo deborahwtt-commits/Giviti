@@ -309,7 +309,7 @@ export default function Suggestions() {
   
   const [showFilters, setShowFilters] = useState(false);
   const [budget, setBudget] = useState([1000]);
-  const [category, setCategory] = useState<string>("");
+  const [selectedGoogleCategoryId, setSelectedGoogleCategoryId] = useState<number | null>(null);
   const [selectedRecipient, setSelectedRecipient] = useState<string>(recipientIdFromUrl);
   const [currentPage, setCurrentPage] = useState(1);
   const [allLoadedProducts, setAllLoadedProducts] = useState<UnifiedProduct[]>([]);
@@ -334,7 +334,7 @@ export default function Suggestions() {
   useEffect(() => {
     setCurrentPage(1);
     setAllLoadedProducts([]);
-  }, [category, selectedRecipient, budget]);
+  }, [selectedGoogleCategoryId, selectedRecipient, budget]);
 
   const { data: allSuggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
     queryKey: ["/api/suggestions"],
@@ -388,9 +388,10 @@ export default function Suggestions() {
     }
   }, [suggestionsError, toast]);
 
-  const categories = Array.from(
-    new Set(allSuggestions?.map((s) => s.category) || [])
-  ).sort();
+  // Get the display name for the selected category
+  const selectedCategoryName = selectedGoogleCategoryId 
+    ? googleCategories?.find(c => c.id === selectedGoogleCategoryId)?.namePtBr 
+    : null;
 
   const selectedRecipientData = useMemo(() => {
     if (!selectedRecipient || selectedRecipient === "all") return null;
@@ -428,7 +429,7 @@ export default function Suggestions() {
     try {
       const result = await runSuggestionAlgorithmV1(allSuggestions, {
         keywords: keywords.trim(),
-        category: category || undefined,
+        googleCategoryId: selectedGoogleCategoryId || undefined,
         maxBudget: budget[0],
         recipientData: recipientDataForAlgorithm,
         enableGoogleSearch: enableGoogle,
@@ -462,16 +463,16 @@ export default function Suggestions() {
       setAlgorithmLoading(false);
       setLoadingMore(false);
     }
-  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories, googleCategories]);
+  }, [allSuggestions, selectedGoogleCategoryId, budget, recipientDataForAlgorithm, giftCategories, googleCategories]);
 
   // Single effect: runs when filters change
-  // Enables Google search if user has searched OR has a recipient selected
+  // Enables Google search if user has searched OR has a recipient selected OR has a category selected
   useEffect(() => {
     if (!allSuggestions || allSuggestions.length === 0) return;
     if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
     
-    // Enable Google when there's an active search context
-    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm;
+    // Enable Google when there's an active search context (search, recipient, or category selected)
+    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm || !!selectedGoogleCategoryId;
     
     setCurrentPage(1);
     runAlgorithm({ 
@@ -480,7 +481,7 @@ export default function Suggestions() {
       page: 1,
       isLoadMore: false,
     });
-  }, [allSuggestions, category, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
+  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
 
   // Execute explicit search (when user clicks "Buscar")
   const executeSearch = useCallback(async (keywords: string) => {
@@ -520,7 +521,7 @@ export default function Suggestions() {
   const maxResultsReached = allLoadedProducts.length >= (algorithmResult?.pagination?.maxResults ?? 15);
 
   const handleClearFilters = () => {
-    setCategory("all");
+    setSelectedGoogleCategoryId(null);
     setBudget([1000]);
     setSelectedRecipient("all");
     setCurrentPage(1);
@@ -736,17 +737,23 @@ export default function Suggestions() {
                     Categoria
                   </Label>
                   <Select
-                    value={category}
-                    onValueChange={setCategory}
+                    value={selectedGoogleCategoryId?.toString() || "all"}
+                    onValueChange={(value) => {
+                      if (value === "all") {
+                        setSelectedGoogleCategoryId(null);
+                      } else {
+                        setSelectedGoogleCategoryId(parseInt(value, 10));
+                      }
+                    }}
                   >
                     <SelectTrigger data-testid="select-category">
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
+                      {googleCategories?.filter(c => c.isActive).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          {cat.namePtBr}
                         </SelectItem>
                       ))}
                     </SelectContent>

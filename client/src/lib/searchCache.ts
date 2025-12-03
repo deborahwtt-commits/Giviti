@@ -11,14 +11,14 @@ class SearchCache {
 
   generateKey(params: {
     recipientId?: string;
-    category?: string;
+    googleCategoryId?: number;
     minBudget?: number;
     maxBudget?: number;
     keywords?: string;
   }): string {
     const parts = [
       params.recipientId || "no-recipient",
-      params.category || "no-category",
+      params.googleCategoryId?.toString() || "no-category",
       params.minBudget?.toString() || "0",
       params.maxBudget?.toString() || "max",
       params.keywords || "no-keywords",

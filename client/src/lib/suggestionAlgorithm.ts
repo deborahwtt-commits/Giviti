@@ -45,7 +45,7 @@ export interface RecipientData {
 
 export interface SuggestionAlgorithmOptions {
   keywords?: string;
-  category?: string;
+  googleCategoryId?: number;
   maxBudget?: number;
   minBudget?: number;
   recipientData?: RecipientData;
@@ -224,26 +224,13 @@ function buildGoogleSearchQuery(options: SuggestionAlgorithmOptions): string {
     parts.push(options.keywords.trim());
   }
   
-  if (options.category && options.category !== "all") {
-    const categoryMap: Record<string, string> = {
-      "Tecnologia": "tecnologia gadget",
-      "Moda": "moda roupa acessório",
-      "Casa & Decoração": "decoração casa",
-      "Beleza": "beleza cosmético perfume",
-      "Esportes": "esporte fitness",
-      "Livros": "livro literatura",
-      "Jogos": "jogo videogame",
-      "Música": "música instrumento",
-      "Arte": "arte quadro",
-      "Viagem": "viagem turismo",
-      "Gastronomia": "gastronomia gourmet",
-      "Pet": "pet animal",
-      "Bebê": "bebê infantil",
-      "Bem-estar": "bem-estar spa relaxamento",
-    };
-    
-    const categoryHint = categoryMap[options.category] || options.category;
-    parts.push(categoryHint);
+  // Use googleCategoryId to find the category name for search
+  if (options.googleCategoryId && options.googleCategories) {
+    const googleCategory = options.googleCategories.find(c => c.id === options.googleCategoryId);
+    if (googleCategory) {
+      // Use Portuguese name for better search results in Brazil
+      parts.push(googleCategory.namePtBr);
+    }
   }
   
   if (parts.length === 0) {
@@ -272,8 +259,8 @@ async function fetchGoogleProducts(
       filtersApplied.push("Orçamento (aproximado)");
     }
     
-    if (options.category && options.category !== "all") {
-      filtersNotAvailable.push("Categoria (incluída na busca)");
+    if (options.googleCategoryId) {
+      filtersApplied.push("Categoria");
     }
     
     if (options.recipientData) {
@@ -541,7 +528,37 @@ function filterInternalSuggestions(
     const searchableText = `${suggestion.name} ${suggestion.description || ""} ${suggestion.category} ${(suggestion.tags || []).join(" ")}`;
     const matchesKeywords = matchesKeyword(searchableText, options.keywords || "");
     
-    const matchesCategory = !options.category || options.category === "all" || suggestion.category === options.category;
+    // Filter by googleCategoryId if specified
+    // Fallback to text matching if product doesn't have googleCategoryId
+    let matchesCategory = true;
+    if (options.googleCategoryId) {
+      if (suggestion.googleCategoryId) {
+        // Direct ID match
+        matchesCategory = suggestion.googleCategoryId === options.googleCategoryId;
+      } else {
+        // Fallback: match by category name or tags
+        const googleCategory = options.googleCategories?.find(c => c.id === options.googleCategoryId);
+        if (googleCategory) {
+          const categoryNamePt = googleCategory.namePtBr.toLowerCase();
+          const categoryNameEn = googleCategory.nameEn.toLowerCase();
+          const suggestionCategoryLower = suggestion.category.toLowerCase();
+          const suggestionTags = (suggestion.tags || []).map(t => t.toLowerCase());
+          
+          // Check if product category or tags match the selected Google category
+          matchesCategory = 
+            suggestionCategoryLower.includes(categoryNamePt.split(" ")[0]) ||
+            categoryNamePt.includes(suggestionCategoryLower) ||
+            suggestionCategoryLower.includes(categoryNameEn.split(" ")[0]) ||
+            categoryNameEn.includes(suggestionCategoryLower) ||
+            suggestionTags.some(tag => 
+              categoryNamePt.includes(tag) || 
+              categoryNameEn.includes(tag) ||
+              tag.includes(categoryNamePt.split(" ")[0]) ||
+              tag.includes(categoryNameEn.split(" ")[0])
+            );
+        }
+      }
+    }
     
     const priceValue = typeof suggestion.price === "string" 
       ? parseFloat(suggestion.price) 
@@ -662,7 +679,7 @@ export async function runSuggestionAlgorithmV1(
     
     const cacheKey = searchCache.generateKey({
       recipientId: options.recipientData?.recipient.id,
-      category: options.category,
+      googleCategoryId: options.googleCategoryId,
       minBudget: options.minBudget,
       maxBudget: options.maxBudget,
       keywords: generatedQuery,
@@ -704,6 +721,11 @@ export async function runSuggestionAlgorithmV1(
   
   const hasMore = endIndex < totalAvailable;
 
+  // Get the category name from googleCategoryId for display
+  const selectedCategoryName = options.googleCategoryId && options.googleCategories
+    ? options.googleCategories.find(c => c.id === options.googleCategoryId)?.namePtBr || null
+    : null;
+  
   return {
     products: paginatedProducts,
     internalCount: totalInternalCount,
@@ -711,7 +733,7 @@ export async function runSuggestionAlgorithmV1(
     version: "2.1",
     appliedFilters: {
       keywords: keywords || "",
-      category: options.category || null,
+      category: selectedCategoryName,
       budgetRange: options.maxBudget ? { min: options.minBudget || 0, max: options.maxBudget } : null,
       recipientName: options.recipientData?.recipient.name || null,
       googleFiltersApplied,
