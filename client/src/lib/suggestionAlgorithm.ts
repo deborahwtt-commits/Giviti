@@ -1,5 +1,6 @@
 import { apiRequest } from "./queryClient";
 import type { GiftSuggestion, Recipient, RecipientProfile, GiftCategory } from "@shared/schema";
+import { searchCache } from "./searchCache";
 
 export interface UnifiedProduct {
   id: string;
@@ -67,6 +68,7 @@ interface SuggestionAlgorithmResult {
     googleFiltersNotAvailable: string[];
   };
   generatedQuery?: string;
+  googleFromCache?: boolean;
 }
 
 function getAgeRange(age: number): string {
@@ -568,6 +570,7 @@ export async function runSuggestionAlgorithmV1(
   let googleFiltersApplied: string[] = [];
   let googleFiltersNotAvailable: string[] = [];
   let generatedQuery = "";
+  let googleFromCache = false;
   
   const shouldSearchGoogle = enableGoogleSearch && (
     keywords.trim() || 
@@ -576,11 +579,35 @@ export async function runSuggestionAlgorithmV1(
   
   if (shouldSearchGoogle) {
     generatedQuery = buildGoogleSearchQuery(options);
-    const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
-    const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
-    googleUnified = filterGoogleProducts(rawGoogleUnified, options);
-    googleFiltersApplied = googleResult.filtersApplied;
-    googleFiltersNotAvailable = googleResult.filtersNotAvailable;
+    
+    const cacheKey = searchCache.generateKey({
+      recipientId: options.recipientData?.recipient.id,
+      category: options.category,
+      minBudget: options.minBudget,
+      maxBudget: options.maxBudget,
+      keywords: generatedQuery,
+    });
+    
+    const cachedProducts = searchCache.get(cacheKey);
+    
+    if (cachedProducts) {
+      googleUnified = filterGoogleProducts(cachedProducts, options);
+      googleFromCache = true;
+      googleFiltersApplied.push("Resultados do cache");
+      console.log(`[Cache] Usando ${cachedProducts.length} resultados do cache para: ${generatedQuery}`);
+    } else {
+      const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
+      const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
+      
+      if (rawGoogleUnified.length > 0) {
+        searchCache.set(cacheKey, rawGoogleUnified, generatedQuery);
+        console.log(`[Cache] Salvando ${rawGoogleUnified.length} resultados no cache para: ${generatedQuery}`);
+      }
+      
+      googleUnified = filterGoogleProducts(rawGoogleUnified, options);
+      googleFiltersApplied = googleResult.filtersApplied;
+      googleFiltersNotAvailable = googleResult.filtersNotAvailable;
+    }
   }
   
   const allProducts = [...internalUnified, ...googleUnified];
@@ -599,7 +626,9 @@ export async function runSuggestionAlgorithmV1(
       googleFiltersNotAvailable,
     },
     generatedQuery: generatedQuery || undefined,
+    googleFromCache,
   };
 }
 
+export { searchCache };
 export type { SuggestionAlgorithmResult };
