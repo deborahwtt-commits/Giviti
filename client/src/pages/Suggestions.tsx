@@ -325,6 +325,7 @@ export default function Suggestions() {
       recipientName?: string | null;
     };
     generatedQuery?: string;
+    googleFromCache?: boolean;
   } | null>(null);
   const { toast } = useToast();
 
@@ -427,6 +428,7 @@ export default function Suggestions() {
         googleCount: result.googleCount,
         appliedFilters: result.appliedFilters,
         generatedQuery: result.generatedQuery,
+        googleFromCache: result.googleFromCache,
       });
     } catch (error) {
       console.error("Algorithm error:", error);
@@ -619,6 +621,7 @@ export default function Suggestions() {
             {algorithmResult.googleCount > 0 && (
               <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                 {algorithmResult.googleCount} do Google Shopping
+                {algorithmResult.googleFromCache && " (cache)"}
               </Badge>
             )}
             {algorithmResult.generatedQuery && algorithmResult.googleCount > 0 && (

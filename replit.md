@@ -58,6 +58,7 @@ Preferred communication style: Simple, everyday language.
   - **Dynamic Interests**: Interest options in recipient form are fetched from gift categories API, ensuring consistency.
   - **Relevance Scoring**: Exact category match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
   - **Direct Matching**: When user selects "Tecnologia" as interest, products in "Tecnologia" category get highest priority.
+  - **Session Cache**: Google Shopping search results are cached in-memory during the user session. If the user changes recipient filter, then returns to a previously selected recipient, cached results are shown instantly without new API calls. Cache key is generated from: recipientId + category + budgetRange + searchQuery. Cache is cleared automatically when session ends (page refresh).
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.
