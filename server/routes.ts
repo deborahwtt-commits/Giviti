@@ -904,6 +904,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Google Product Categories Routes ==========
+
+  // GET /api/google-categories - Get all active Google product categories
+  app.get("/api/google-categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const categories = await storage.getGoogleProductCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching Google product categories:", error);
+      res.status(500).json({ message: "Failed to fetch Google product categories" });
+    }
+  });
+
   // ========== Gift Categories Routes (Admin) ==========
 
   // GET /api/admin/gift-categories - Get all gift categories

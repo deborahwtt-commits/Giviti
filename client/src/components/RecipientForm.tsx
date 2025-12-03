@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { X, ChevronDown, Loader2 } from "lucide-react";
 import RecipientProfileQuestionnaire from "./RecipientProfileQuestionnaire";
-import type { GiftCategory } from "@shared/schema";
+import type { GoogleProductCategory } from "@shared/schema";
 
 interface RecipientFormProps {
   initialData?: {
@@ -82,15 +82,15 @@ export default function RecipientForm({
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [profileData, setProfileData] = useState<any>({});
 
-  // Fetch categories from API to use as interest options
-  const { data: giftCategories, isLoading: categoriesLoading } = useQuery<GiftCategory[]>({
-    queryKey: ["/api/gift-categories"],
+  // Fetch Google product categories from API to use as interest options
+  const { data: googleCategories, isLoading: categoriesLoading } = useQuery<GoogleProductCategory[]>({
+    queryKey: ["/api/google-categories"],
   });
 
-  // Filter only active categories and get their names as interest options
-  const interestOptions = giftCategories
+  // Get Portuguese names from Google categories as interest options
+  const interestOptions = googleCategories
     ?.filter(cat => cat.isActive)
-    .map(cat => cat.name)
+    .map(cat => cat.namePtBr)
     .sort() || [];
 
   useEffect(() => {

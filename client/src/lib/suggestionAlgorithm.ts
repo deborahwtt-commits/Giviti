@@ -1,5 +1,5 @@
 import { apiRequest } from "./queryClient";
-import type { GiftSuggestion, Recipient, RecipientProfile, GiftCategory } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, GiftCategory, GoogleProductCategory } from "@shared/schema";
 import { searchCache } from "./searchCache";
 
 export interface UnifiedProduct {
@@ -52,6 +52,7 @@ export interface SuggestionAlgorithmOptions {
   googleLimit?: number;
   enableGoogleSearch?: boolean;
   giftCategories?: GiftCategory[];
+  googleCategories?: GoogleProductCategory[];
   page?: number;
   pageSize?: number;
 }
@@ -331,6 +332,37 @@ function matchesKeyword(text: string, keywords: string): boolean {
   return searchTerms.some(term => lowerText.includes(term));
 }
 
+function mapInterestsToGoogleCategoryIds(
+  interests: string[],
+  googleCategories: GoogleProductCategory[]
+): { ids: number[]; englishNames: string[] } {
+  const ids: number[] = [];
+  const englishNames: string[] = [];
+  
+  if (!interests.length || !googleCategories.length) {
+    return { ids, englishNames };
+  }
+  
+  for (const interest of interests) {
+    const interestLower = interest.toLowerCase().trim();
+    
+    for (const category of googleCategories) {
+      const namePtBrLower = category.namePtBr.toLowerCase();
+      
+      if (namePtBrLower === interestLower || 
+          namePtBrLower.includes(interestLower) || 
+          interestLower.includes(namePtBrLower)) {
+        if (!ids.includes(category.id)) {
+          ids.push(category.id);
+          englishNames.push(category.nameEn);
+        }
+      }
+    }
+  }
+  
+  return { ids, englishNames };
+}
+
 function getGiftsToAvoidTerms(recipientData?: RecipientData): string[] {
   if (!recipientData?.profile?.giftsToAvoid) return [];
   return recipientData.profile.giftsToAvoid
@@ -490,6 +522,11 @@ function filterInternalSuggestions(
   const recipientInterests = options.recipientData?.recipient.interests || [];
   const hasRecipientWithInterests = recipientInterests.length > 0 && options.recipientData;
   
+  const googleCategoryIds = options.googleCategories && recipientInterests.length > 0
+    ? mapInterestsToGoogleCategoryIds(recipientInterests, options.googleCategories).ids
+    : [];
+  const useGoogleCategoryFilter = googleCategoryIds.length > 0;
+  
   for (const suggestion of suggestions) {
     if (shouldExcludeProduct(
       suggestion.name,
@@ -515,25 +552,29 @@ function filterInternalSuggestions(
     let matchesInterests = true;
     
     if (hasRecipientWithInterests) {
-      const suggestionTags = suggestion.tags || [];
-      const suggestionCategoryLower = suggestion.category.toLowerCase();
-      
-      matchesInterests = recipientInterests.some(interest => {
-        const interestLower = interest.toLowerCase();
+      if (useGoogleCategoryFilter && suggestion.googleCategoryId) {
+        matchesInterests = googleCategoryIds.includes(suggestion.googleCategoryId);
+      } else {
+        const suggestionTags = suggestion.tags || [];
+        const suggestionCategoryLower = suggestion.category.toLowerCase();
         
-        const categoryMatch = suggestionCategoryLower === interestLower ||
-          suggestionCategoryLower.includes(interestLower) ||
-          interestLower.includes(suggestionCategoryLower);
-        
-        const tagMatch = suggestionTags.some(tag => {
-          const tagLower = tag.toLowerCase();
-          return tagLower === interestLower ||
-            tagLower.includes(interestLower) ||
-            interestLower.includes(tagLower);
+        matchesInterests = recipientInterests.some(interest => {
+          const interestLower = interest.toLowerCase();
+          
+          const categoryMatch = suggestionCategoryLower === interestLower ||
+            suggestionCategoryLower.includes(interestLower) ||
+            interestLower.includes(suggestionCategoryLower);
+          
+          const tagMatch = suggestionTags.some(tag => {
+            const tagLower = tag.toLowerCase();
+            return tagLower === interestLower ||
+              tagLower.includes(interestLower) ||
+              interestLower.includes(tagLower);
+          });
+          
+          return categoryMatch || tagMatch;
         });
-        
-        return categoryMatch || tagMatch;
-      });
+      }
       
       if (!matchesInterests) {
         continue;

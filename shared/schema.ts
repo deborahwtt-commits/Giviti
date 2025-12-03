@@ -150,6 +150,23 @@ export type EventWithRecipients = Event & {
   recipients: Recipient[];
 };
 
+// Google Product Categories table (Google Shopping Taxonomy)
+// Must be defined before giftSuggestions due to foreign key reference
+export const googleProductCategories = pgTable("google_product_categories", {
+  id: integer("id").primaryKey(),
+  nameEn: varchar("name_en").notNull(),
+  namePtBr: varchar("name_pt_br").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGoogleProductCategorySchema = createInsertSchema(googleProductCategories).omit({
+  createdAt: true,
+});
+
+export type InsertGoogleProductCategory = z.infer<typeof insertGoogleProductCategorySchema>;
+export type GoogleProductCategory = typeof googleProductCategories.$inferSelect;
+
 // Gift suggestions table
 export const giftSuggestions = pgTable("gift_suggestions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -158,6 +175,7 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   imageUrl: text("image_url").notNull(),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category").notNull(),
+  googleCategoryId: integer("google_category_id").references(() => googleProductCategories.id),
   giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   priority: integer("priority"),
@@ -225,6 +243,7 @@ export const giftCategories = pgTable("gift_categories", {
   icon: varchar("icon"),
   color: varchar("color"),
   keywords: text("keywords").array().default(sql`ARRAY[]::text[]`),
+  googleCategoryId: integer("google_category_id").references(() => googleProductCategories.id),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

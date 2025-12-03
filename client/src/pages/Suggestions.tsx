@@ -19,7 +19,7 @@ import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle,
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategory } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategory, GoogleProductCategory } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -352,6 +352,10 @@ export default function Suggestions() {
     queryKey: ["/api/gift-categories"],
   });
 
+  const { data: googleCategories } = useQuery<GoogleProductCategory[]>({
+    queryKey: ["/api/google-categories"],
+  });
+
   // Fetch recipient profile when a recipient is selected
   const { 
     data: recipientProfileData, 
@@ -429,6 +433,7 @@ export default function Suggestions() {
         recipientData: recipientDataForAlgorithm,
         enableGoogleSearch: enableGoogle,
         giftCategories: giftCategories,
+        googleCategories: googleCategories,
         page,
         pageSize: 5,
       });
@@ -457,7 +462,7 @@ export default function Suggestions() {
       setAlgorithmLoading(false);
       setLoadingMore(false);
     }
-  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories]);
+  }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories, googleCategories]);
 
   // Single effect: runs when filters change
   // Enables Google search if user has searched OR has a recipient selected

@@ -9,6 +9,7 @@ import {
   giftCategories,
   giftTypes,
   giftSuggestionCategories,
+  googleProductCategories,
   userProfiles,
   recipientProfiles,
   occasions,
@@ -72,6 +73,7 @@ import {
   type CollaborativeEventTask,
   type InsertCollaborativeEventTask,
   type Click,
+  type GoogleProductCategory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -126,6 +128,9 @@ export interface IStorage {
   createGiftSuggestion(suggestion: InsertGiftSuggestion): Promise<GiftSuggestion>;
   updateGiftSuggestion(id: string, updates: Partial<InsertGiftSuggestion>): Promise<GiftSuggestion | undefined>;
   deleteGiftSuggestion(id: string): Promise<boolean>;
+  
+  // Google Product Categories
+  getGoogleProductCategories(): Promise<GoogleProductCategory[]>;
   
   // Gift Categories Management (Admin)
   getGiftCategories(includeInactive?: boolean): Promise<GiftCategory[]>;
@@ -762,6 +767,12 @@ export class DatabaseStorage implements IStorage {
       .delete(giftSuggestions)
       .where(eq(giftSuggestions.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ========== Google Product Categories ==========
+
+  async getGoogleProductCategories(): Promise<GoogleProductCategory[]> {
+    return db.select().from(googleProductCategories).where(eq(googleProductCategories.isActive, true));
   }
 
   // ========== Gift Categories Management ==========

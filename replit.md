@@ -59,9 +59,15 @@ Preferred communication style: Simple, everyday language.
     1. First searches internal database based on recipient profile (gender, interests, category, etc.)
     2. If internal results < 5, fetches from Google Shopping API only to fill the gap
     3. Pagination: 5 results per page, maximum 15 results total (3 pages)
-  - **Dynamic Interests**: Interest options in recipient form are fetched from gift categories API, ensuring consistency.
-  - **Relevance Scoring**: Exact category match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
-  - **Direct Matching**: When user selects "Tecnologia" as interest, products in "Tecnologia" category get highest priority.
+  - **Google Product Taxonomy Integration**: 21 standardized Google Product Categories for consistent matching between internal DB and Google Shopping:
+    - `googleProductCategories` table stores taxonomy (id, nameEn, namePtBr, isActive)
+    - `giftCategories` and `giftSuggestions` have `googleCategoryId` FK for canonical reference
+    - RecipientForm interests dropdown uses Portuguese category names from `/api/google-categories`
+    - Algorithm maps recipient interests to Google category IDs for precise filtering
+    - Seeded categories: Electronics (222), Health & Beauty (469), Home & Garden (536), Media (783), Apparel (166), etc.
+  - **Dynamic Interests**: Interest options in recipient form are fetched from Google categories API, ensuring consistency with Google Shopping.
+  - **Relevance Scoring**: Exact googleCategoryId match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
+  - **Direct Matching**: When user selects "Eletrônicos" as interest, products with googleCategoryId=222 get highest priority.
   - **Session Cache**: Google Shopping search results are cached in-memory during the user session. If the user changes recipient filter, then returns to a previously selected recipient, cached results are shown instantly without new API calls. Cache key is generated from: recipientId + category + budgetRange + searchQuery. Cache is cleared automatically when session ends (page refresh).
   - **Pagination UI**: "Carregar mais" button loads next 5 results, shows current page and progress toward max 15.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
