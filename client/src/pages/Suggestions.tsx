@@ -364,13 +364,13 @@ export default function Suggestions() {
     isError: hasProfileError 
   } = useQuery<RecipientProfile>({
     queryKey: ["/api/recipients", selectedRecipient, "profile"],
-    enabled: !!selectedRecipient && selectedRecipient !== "all",
+    enabled: !!selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none",
     retry: false,
   });
 
   // Handle profile loading errors
   useEffect(() => {
-    if (hasProfileError && selectedRecipient && selectedRecipient !== "all") {
+    if (hasProfileError && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") {
       console.warn("Could not load recipient profile:", profileError);
     }
   }, [hasProfileError, profileError, selectedRecipient]);
@@ -394,7 +394,7 @@ export default function Suggestions() {
     : null;
 
   const selectedRecipientData = useMemo(() => {
-    if (!selectedRecipient || selectedRecipient === "all") return null;
+    if (!selectedRecipient || selectedRecipient === "all" || selectedRecipient === "none") return null;
     return recipients?.find(r => r.id === selectedRecipient) || null;
   }, [selectedRecipient, recipients]);
 
@@ -469,7 +469,7 @@ export default function Suggestions() {
   // Enables Google search if user has searched OR has a recipient selected OR has a category selected
   useEffect(() => {
     if (!allSuggestions || allSuggestions.length === 0) return;
-    if (profileLoading && selectedRecipient && selectedRecipient !== "all") return;
+    if (profileLoading && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") return;
     
     // Enable Google when there's an active search context (search, recipient, or category selected)
     const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm || !!selectedGoogleCategoryId;
@@ -523,7 +523,7 @@ export default function Suggestions() {
   const handleClearFilters = () => {
     setSelectedGoogleCategoryId(null);
     setBudget([1000]);
-    setSelectedRecipient("all");
+    setSelectedRecipient(""); // Reset to "Não especificado"
     setCurrentPage(1);
     setAllLoadedProducts([]);
     setSearchKeywords("");
@@ -715,14 +715,23 @@ export default function Suggestions() {
                     Presenteado
                   </Label>
                   <Select
-                    value={selectedRecipient}
-                    onValueChange={setSelectedRecipient}
+                    value={selectedRecipient || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setSelectedRecipient("");
+                        setSelectedGoogleCategoryId(null);
+                      } else {
+                        setSelectedRecipient(value);
+                        // Clear category when recipient is selected (will use recipient interests)
+                        setSelectedGoogleCategoryId(null);
+                      }
+                    }}
                   >
                     <SelectTrigger data-testid="select-recipient">
-                      <SelectValue placeholder="Todos" />
+                      <SelectValue placeholder="Não especificado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="none">Não especificado</SelectItem>
                       {recipients?.map((recipient) => (
                         <SelectItem key={recipient.id} value={recipient.id}>
                           {recipient.name}
@@ -732,33 +741,55 @@ export default function Suggestions() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">
-                    Categoria
-                  </Label>
-                  <Select
-                    value={selectedGoogleCategoryId?.toString() || "all"}
-                    onValueChange={(value) => {
-                      if (value === "all") {
-                        setSelectedGoogleCategoryId(null);
-                      } else {
-                        setSelectedGoogleCategoryId(parseInt(value, 10));
-                      }
-                    }}
-                  >
-                    <SelectTrigger data-testid="select-category">
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {googleCategories?.filter(c => c.isActive).map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          {cat.namePtBr}
-                        </SelectItem>
+                {/* Show category filter only when no recipient is selected */}
+                {!selectedRecipientData && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">
+                      Categoria
+                    </Label>
+                    <Select
+                      value={selectedGoogleCategoryId?.toString() || "all"}
+                      onValueChange={(value) => {
+                        if (value === "all") {
+                          setSelectedGoogleCategoryId(null);
+                        } else {
+                          setSelectedGoogleCategoryId(parseInt(value, 10));
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-category">
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {googleCategories?.filter(c => c.isActive).map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
+                            {cat.namePtBr}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Show recipient interests when a recipient is selected */}
+                {selectedRecipientData && selectedRecipientData.interests && selectedRecipientData.interests.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">
+                      Interesses do Presenteado
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedRecipientData.interests.map((interest) => (
+                        <Badge key={interest} variant="secondary" className="text-xs">
+                          {interest}
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Buscando presentes baseados nos interesses cadastrados
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
