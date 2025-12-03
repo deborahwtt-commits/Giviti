@@ -52,6 +52,17 @@ export interface SuggestionAlgorithmOptions {
   googleLimit?: number;
   enableGoogleSearch?: boolean;
   giftCategories?: GiftCategory[];
+  page?: number;
+  pageSize?: number;
+}
+
+interface PaginationMeta {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
+  maxResults: number;
 }
 
 interface SuggestionAlgorithmResult {
@@ -69,6 +80,7 @@ interface SuggestionAlgorithmResult {
   };
   generatedQuery?: string;
   googleFromCache?: boolean;
+  pagination: PaginationMeta;
 }
 
 function getAgeRange(age: number): string {
@@ -551,31 +563,41 @@ function filterGoogleProducts(
   });
 }
 
+const PAGE_SIZE = 5;
+const MAX_RESULTS = 15;
+
 export async function runSuggestionAlgorithmV1(
   internalSuggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions = {}
 ): Promise<SuggestionAlgorithmResult> {
   const {
     keywords = "",
-    googleLimit = 10,
     enableGoogleSearch = true,
+    page = 1,
+    pageSize = PAGE_SIZE,
   } = options;
 
+  const currentPage = Math.max(1, page);
+  const effectivePageSize = Math.min(pageSize, PAGE_SIZE);
+  
   const filteredResults = filterInternalSuggestions(internalSuggestions, options);
-  const internalUnified = filteredResults.map(({ suggestion, score }) => 
+  const allInternalUnified = filteredResults.map(({ suggestion, score }) => 
     convertInternalToUnified(suggestion, score)
   );
   
-  let googleUnified: UnifiedProduct[] = [];
+  let allGoogleUnified: UnifiedProduct[] = [];
   let googleFiltersApplied: string[] = [];
   let googleFiltersNotAvailable: string[] = [];
   let generatedQuery = "";
   let googleFromCache = false;
   
-  const shouldSearchGoogle = enableGoogleSearch && (
-    keywords.trim() || 
-    options.recipientData
-  );
+  const internalCount = allInternalUnified.length;
+  const itemsNeededTotal = currentPage * effectivePageSize;
+  const googleNeeded = Math.max(0, itemsNeededTotal - internalCount);
+  
+  const shouldSearchGoogle = enableGoogleSearch && 
+    googleNeeded > 0 && 
+    (keywords.trim() || options.recipientData);
   
   if (shouldSearchGoogle) {
     generatedQuery = buildGoogleSearchQuery(options);
@@ -591,11 +613,12 @@ export async function runSuggestionAlgorithmV1(
     const cachedProducts = searchCache.get(cacheKey);
     
     if (cachedProducts) {
-      googleUnified = filterGoogleProducts(cachedProducts, options);
+      allGoogleUnified = filterGoogleProducts(cachedProducts, options);
       googleFromCache = true;
       googleFiltersApplied.push("Resultados do cache");
       console.log(`[Cache] Usando ${cachedProducts.length} resultados do cache para: ${generatedQuery}`);
     } else {
+      const googleLimit = Math.min(googleNeeded + 5, MAX_RESULTS - internalCount);
       const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
       const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
       
@@ -604,19 +627,30 @@ export async function runSuggestionAlgorithmV1(
         console.log(`[Cache] Salvando ${rawGoogleUnified.length} resultados no cache para: ${generatedQuery}`);
       }
       
-      googleUnified = filterGoogleProducts(rawGoogleUnified, options);
+      allGoogleUnified = filterGoogleProducts(rawGoogleUnified, options);
       googleFiltersApplied = googleResult.filtersApplied;
       googleFiltersNotAvailable = googleResult.filtersNotAvailable;
     }
   }
   
-  const allProducts = [...internalUnified, ...googleUnified];
+  const allProductsCombined = [...allInternalUnified, ...allGoogleUnified];
+  
+  const totalInternalCount = allInternalUnified.length;
+  const totalGoogleCount = allGoogleUnified.length;
+  const totalAvailable = Math.min(allProductsCombined.length, MAX_RESULTS);
+  const totalPages = Math.ceil(totalAvailable / effectivePageSize);
+  
+  const startIndex = (currentPage - 1) * effectivePageSize;
+  const endIndex = Math.min(startIndex + effectivePageSize, totalAvailable);
+  const paginatedProducts = allProductsCombined.slice(startIndex, endIndex);
+  
+  const hasMore = endIndex < totalAvailable;
 
   return {
-    products: allProducts,
-    internalCount: internalUnified.length,
-    googleCount: googleUnified.length,
-    version: "2.0",
+    products: paginatedProducts,
+    internalCount: totalInternalCount,
+    googleCount: totalGoogleCount,
+    version: "2.1",
     appliedFilters: {
       keywords: keywords || "",
       category: options.category || null,
@@ -627,8 +661,16 @@ export async function runSuggestionAlgorithmV1(
     },
     generatedQuery: generatedQuery || undefined,
     googleFromCache,
+    pagination: {
+      currentPage,
+      pageSize: effectivePageSize,
+      totalItems: totalAvailable,
+      totalPages,
+      hasMore,
+      maxResults: MAX_RESULTS,
+    },
   };
 }
 
 export { searchCache };
-export type { SuggestionAlgorithmResult };
+export type { SuggestionAlgorithmResult, PaginationMeta };

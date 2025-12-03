@@ -55,10 +55,15 @@ Preferred communication style: Simple, everyday language.
 ### Feature Specifications
 - **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
   - **Algorithm V2.1**: Unified interests-categories system - recipient interests ARE product categories.
+  - **Search Order Priority**: 
+    1. First searches internal database based on recipient profile (gender, interests, category, etc.)
+    2. If internal results < 5, fetches from Google Shopping API only to fill the gap
+    3. Pagination: 5 results per page, maximum 15 results total (3 pages)
   - **Dynamic Interests**: Interest options in recipient form are fetched from gift categories API, ensuring consistency.
   - **Relevance Scoring**: Exact category match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
   - **Direct Matching**: When user selects "Tecnologia" as interest, products in "Tecnologia" category get highest priority.
   - **Session Cache**: Google Shopping search results are cached in-memory during the user session. If the user changes recipient filter, then returns to a previously selected recipient, cached results are shown instantly without new API calls. Cache key is generated from: recipientId + category + budgetRange + searchQuery. Cache is cleared automatically when session ends (page refresh).
+  - **Pagination UI**: "Carregar mais" button loads next 5 results, shows current page and progress toward max 15.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.

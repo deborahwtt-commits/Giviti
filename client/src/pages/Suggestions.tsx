@@ -23,7 +23,7 @@ import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategor
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData } from "@/lib/suggestionAlgorithm";
+import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData, type PaginationMeta } from "@/lib/suggestionAlgorithm";
 
 // Compact Coupon Badge for Suggestions page
 interface CouponBadgeCompactProps {
@@ -311,9 +311,10 @@ export default function Suggestions() {
   const [budget, setBudget] = useState([1000]);
   const [category, setCategory] = useState<string>("");
   const [selectedRecipient, setSelectedRecipient] = useState<string>(recipientIdFromUrl);
-  const [visibleCount, setVisibleCount] = useState(10);
-  const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allLoadedProducts, setAllLoadedProducts] = useState<UnifiedProduct[]>([]);
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [algorithmResult, setAlgorithmResult] = useState<{
@@ -326,11 +327,13 @@ export default function Suggestions() {
     };
     generatedQuery?: string;
     googleFromCache?: boolean;
+    pagination?: PaginationMeta;
   } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setVisibleCount(10);
+    setCurrentPage(1);
+    setAllLoadedProducts([]);
   }, [category, selectedRecipient, budget]);
 
   const { data: allSuggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
@@ -405,37 +408,54 @@ export default function Suggestions() {
   const runAlgorithm = useCallback(async (options: {
     enableGoogle: boolean;
     keywords?: string;
+    page?: number;
+    isLoadMore?: boolean;
   }) => {
     if (!allSuggestions) return;
     
-    const { enableGoogle, keywords = "" } = options;
+    const { enableGoogle, keywords = "", page = 1, isLoadMore = false } = options;
     
-    setAlgorithmLoading(true);
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setAlgorithmLoading(true);
+    }
+    
     try {
       const result = await runSuggestionAlgorithmV1(allSuggestions, {
         keywords: keywords.trim(),
         category: category || undefined,
         maxBudget: budget[0],
         recipientData: recipientDataForAlgorithm,
-        googleLimit: enableGoogle ? 10 : 0,
         enableGoogleSearch: enableGoogle,
         giftCategories: giftCategories,
+        page,
+        pageSize: 5,
       });
       
-      setUnifiedProducts(result.products);
+      if (isLoadMore) {
+        setAllLoadedProducts(prev => [...prev, ...result.products]);
+      } else {
+        setAllLoadedProducts(result.products);
+      }
+      
       setAlgorithmResult({
         internalCount: result.internalCount,
         googleCount: result.googleCount,
         appliedFilters: result.appliedFilters,
         generatedQuery: result.generatedQuery,
         googleFromCache: result.googleFromCache,
+        pagination: result.pagination,
       });
     } catch (error) {
       console.error("Algorithm error:", error);
-      setUnifiedProducts([]);
+      if (!isLoadMore) {
+        setAllLoadedProducts([]);
+      }
       setAlgorithmResult(null);
     } finally {
       setAlgorithmLoading(false);
+      setLoadingMore(false);
     }
   }, [allSuggestions, category, budget, recipientDataForAlgorithm, giftCategories]);
 
@@ -448,9 +468,12 @@ export default function Suggestions() {
     // Enable Google when there's an active search context
     const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm;
     
+    setCurrentPage(1);
     runAlgorithm({ 
       enableGoogle: shouldEnableGoogle, 
-      keywords: searchKeywords 
+      keywords: searchKeywords,
+      page: 1,
+      isLoadMore: false,
     });
   }, [allSuggestions, category, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
 
@@ -459,10 +482,13 @@ export default function Suggestions() {
     if (!allSuggestions) return;
     
     setHasSearched(true);
+    setCurrentPage(1);
     // Run immediately with Google enabled
     runAlgorithm({ 
       enableGoogle: true, 
-      keywords 
+      keywords,
+      page: 1,
+      isLoadMore: false,
     });
   }, [allSuggestions, runAlgorithm]);
 
@@ -485,21 +511,34 @@ export default function Suggestions() {
     }
   };
 
-  const visibleProducts = unifiedProducts.slice(0, visibleCount);
-  const hasMoreProducts = unifiedProducts.length > visibleCount;
+  const hasMoreProducts = algorithmResult?.pagination?.hasMore ?? false;
+  const maxResultsReached = allLoadedProducts.length >= (algorithmResult?.pagination?.maxResults ?? 15);
 
   const handleClearFilters = () => {
     setCategory("all");
     setBudget([1000]);
     setSelectedRecipient("all");
-    setVisibleCount(10);
+    setCurrentPage(1);
+    setAllLoadedProducts([]);
     setSearchKeywords("");
     setHasSearched(false);
     setAlgorithmResult(null);
   };
 
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 10);
+  const handleLoadMore = async () => {
+    if (loadingMore || maxResultsReached) return;
+    
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    
+    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm;
+    
+    await runAlgorithm({
+      enableGoogle: shouldEnableGoogle,
+      keywords: searchKeywords,
+      page: nextPage,
+      isLoadMore: true,
+    });
   };
 
   if (suggestionsLoading || recipientsLoading) {
@@ -746,11 +785,16 @@ export default function Suggestions() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <span className="ml-3 text-muted-foreground">Carregando sugestões...</span>
               </div>
-            ) : unifiedProducts.length > 0 ? (
+            ) : allLoadedProducts.length > 0 ? (
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  Mostrando {visibleProducts.length} de {unifiedProducts.length} {unifiedProducts.length === 1 ? 'sugestão' : 'sugestões'}
+                  Mostrando {allLoadedProducts.length} de {algorithmResult?.pagination?.totalItems ?? allLoadedProducts.length} {allLoadedProducts.length === 1 ? 'sugestão' : 'sugestões'}
                   {selectedRecipientData && ` para ${selectedRecipientData.name}`}
+                  {algorithmResult?.pagination && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (máx. {algorithmResult.pagination.maxResults})
+                    </span>
+                  )}
                 </div>
                 
                 {selectedRecipientData && (
@@ -761,7 +805,7 @@ export default function Suggestions() {
                 )}
                 
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {visibleProducts.map((product) => (
+                  {allLoadedProducts.map((product: UnifiedProduct) => (
                     <UnifiedProductCard
                       key={product.id}
                       product={product}
@@ -772,16 +816,33 @@ export default function Suggestions() {
                   ))}
                 </div>
                 
-                {hasMoreProducts && (
-                  <div className="flex justify-center mt-8">
+                {hasMoreProducts && !maxResultsReached && (
+                  <div className="flex flex-col items-center gap-2 mt-8">
                     <Button 
                       onClick={handleLoadMore}
                       variant="outline"
                       size="lg"
+                      disabled={loadingMore}
                       data-testid="button-load-more"
                     >
-                      Ver mais sugestões
+                      {loadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Carregando...
+                        </>
+                      ) : (
+                        `Carregar mais (${allLoadedProducts.length}/${algorithmResult?.pagination?.maxResults ?? 15})`
+                      )}
                     </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Página {currentPage} de {algorithmResult?.pagination?.totalPages ?? 1}
+                    </span>
+                  </div>
+                )}
+                
+                {maxResultsReached && (
+                  <div className="text-center mt-6 text-sm text-muted-foreground">
+                    Limite máximo de {algorithmResult?.pagination?.maxResults ?? 15} sugestões atingido
                   </div>
                 )}
               </>
