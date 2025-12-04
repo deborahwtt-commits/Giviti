@@ -202,20 +202,24 @@ export default function AdminGiftSuggestions() {
                     )}
                   </div>
                   {/* Demographic Targeting Badges */}
-                  {(suggestion.targetGender !== "unissex" || suggestion.targetAgeRange !== "todos") && (
+                  {(suggestion.targetGender && suggestion.targetGender !== "unissex") || (suggestion.targetAgeRange && suggestion.targetAgeRange !== "todos") ? (
                     <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-muted">
                       {suggestion.targetGender && suggestion.targetGender !== "unissex" && (
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {suggestion.targetGender}
+                        <Badge variant="outline" className="text-xs">
+                          {suggestion.targetGender === "masculino" ? "Masculino" : suggestion.targetGender === "feminino" ? "Feminino" : suggestion.targetGender}
                         </Badge>
                       )}
                       {suggestion.targetAgeRange && suggestion.targetAgeRange !== "todos" && (
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {suggestion.targetAgeRange === "crianca" ? "Criança" : suggestion.targetAgeRange}
+                        <Badge variant="outline" className="text-xs">
+                          {suggestion.targetAgeRange === "crianca" ? "Criança" : 
+                           suggestion.targetAgeRange === "adolescente" ? "Adolescente" : 
+                           suggestion.targetAgeRange === "adulto" ? "Adulto" : 
+                           suggestion.targetAgeRange === "idoso" ? "Idoso" : 
+                           suggestion.targetAgeRange}
                         </Badge>
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 
                 {/* Coupon Display */}

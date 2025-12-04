@@ -26,7 +26,9 @@ Preferred communication style: Simple, everyday language.
   - **Gift Suggestions**: The `giftSuggestions` table includes:
     - `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null.
     - `giftTypeId` foreign key reference to `giftTypes` table for categorizing suggestions by type.
-    - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
+    - `targetGender` (varchar, default "unissex") for demographic targeting. Valid values: "unissex", "masculino", "feminino".
+    - `targetAgeRange` (varchar, default "todos") for age targeting. Valid values: "todos", "crianca", "adolescente", "adulto", "idoso".
+    - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations, including demographic targeting via "Público-alvo" section.
   - **Gift Categories & Types System**:
     - `giftCategories`: Stores gift categories with name, description, color (hex), active status, and **keywords array** for flexible interest matching. Examples: "Tecnologia" with keywords ["tecnologia", "tech", "eletrônicos", "gadget"].
     - `giftTypes`: Stores gift types with name, description, and active status. Examples: "Presente Físico", "Experiência", "Presente Digital".
@@ -66,7 +68,8 @@ Preferred communication style: Simple, everyday language.
     - Algorithm maps recipient interests to Google category IDs for precise filtering
     - Seeded categories: Electronics (222), Health & Beauty (469), Home & Garden (536), Media (783), Apparel (166), etc.
   - **Dynamic Interests**: Interest options in recipient form are fetched from Google categories API, ensuring consistency with Google Shopping.
-  - **Relevance Scoring**: Exact googleCategoryId match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts).
+  - **Relevance Scoring**: Exact googleCategoryId match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts), gender-specific match (+25pts), age-specific match (+20pts).
+  - **Demographic Filtering**: Products are filtered based on recipient's gender and age. Products with "unissex" or "todos" pass all filters. Gender-specific products (masculino/feminino) only show for matching recipients. Age categories: criança (<13), adolescente (13-17), adulto (18-59), idoso (60+).
   - **Direct Matching**: When user selects "Eletrônicos" as interest, products with googleCategoryId=222 get highest priority.
   - **Session Cache**: Google Shopping search results are cached in-memory during the user session. If the user changes recipient filter, then returns to a previously selected recipient, cached results are shown instantly without new API calls. Cache key is generated from: recipientId + category + budgetRange + searchQuery. Cache is cleared automatically when session ends (page refresh).
   - **Pagination UI**: "Carregar mais" button loads next 5 results, shows current page and progress toward max 15.

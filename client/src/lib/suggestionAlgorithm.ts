@@ -130,16 +130,17 @@ function getRelationshipTerm(relationship: string | null | undefined): string {
   return relationshipMap[relationship] || relationship.toLowerCase();
 }
 
-function normalizeGender(gender: string | null | undefined): string {
-  if (!gender) return "";
+function normalizeGender(gender: string | null | undefined): string | null {
+  if (!gender) return null;
   const genderLower = gender.toLowerCase().trim();
   if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino";
   if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino";
-  return "";
+  if (genderLower === "unissex" || genderLower === "outro" || genderLower === "other") return null;
+  return null;
 }
 
-function getAgeCategory(age: number | null | undefined): string {
-  if (!age) return "";
+function getAgeCategory(age: number | null | undefined): string | null {
+  if (age === null || age === undefined || age <= 0) return null;
   if (age < 13) return "crianca";
   if (age < 18) return "adolescente";
   if (age < 60) return "adulto";
@@ -147,18 +148,16 @@ function getAgeCategory(age: number | null | undefined): string {
 }
 
 function matchesTargetGender(productTargetGender: string | null | undefined, recipientGender: string | null | undefined): boolean {
-  if (!productTargetGender || productTargetGender === "unissex") return true;
-  if (!recipientGender) return true;
+  if (!productTargetGender || productTargetGender.toLowerCase() === "unissex") return true;
   const normalizedRecipient = normalizeGender(recipientGender);
-  if (!normalizedRecipient) return true;
+  if (normalizedRecipient === null) return true;
   return productTargetGender.toLowerCase() === normalizedRecipient;
 }
 
 function matchesTargetAgeRange(productTargetAge: string | null | undefined, recipientAge: number | null | undefined): boolean {
-  if (!productTargetAge || productTargetAge === "todos") return true;
-  if (!recipientAge) return true;
+  if (!productTargetAge || productTargetAge.toLowerCase() === "todos") return true;
   const recipientAgeCategory = getAgeCategory(recipientAge);
-  if (!recipientAgeCategory) return true;
+  if (recipientAgeCategory === null) return true;
   return productTargetAge.toLowerCase() === recipientAgeCategory;
 }
 
@@ -530,17 +529,17 @@ function calculateRelevanceScore(
   
   // Bonus for gender-specific match (not unissex)
   const recipientGender = profile?.gender || recipient.gender;
-  if (suggestion.targetGender && suggestion.targetGender !== "unissex" && recipientGender) {
+  if (suggestion.targetGender && suggestion.targetGender.toLowerCase() !== "unissex" && recipientGender) {
     const normalizedRecipient = normalizeGender(recipientGender);
-    if (normalizedRecipient && suggestion.targetGender.toLowerCase() === normalizedRecipient) {
+    if (normalizedRecipient !== null && suggestion.targetGender.toLowerCase() === normalizedRecipient) {
       score += 25; // Bonus for matching gender-specific product
     }
   }
   
   // Bonus for age-specific match (not todos)
-  if (suggestion.targetAgeRange && suggestion.targetAgeRange !== "todos" && recipient.age) {
+  if (suggestion.targetAgeRange && suggestion.targetAgeRange.toLowerCase() !== "todos" && recipient.age) {
     const recipientAgeCategory = getAgeCategory(recipient.age);
-    if (recipientAgeCategory && suggestion.targetAgeRange.toLowerCase() === recipientAgeCategory) {
+    if (recipientAgeCategory !== null && suggestion.targetAgeRange.toLowerCase() === recipientAgeCategory) {
       score += 20; // Bonus for matching age-specific product
     }
   }
