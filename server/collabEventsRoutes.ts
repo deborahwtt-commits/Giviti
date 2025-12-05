@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
+import { sendCollaborativeEventInviteEmail } from "./emailService";
 
 // Extend Request type for TypeScript
 interface AuthenticatedRequest extends Request {
@@ -210,6 +211,16 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Get event details for the invite email
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      // Get inviter (current user) details
+      const inviter = await storage.getUser(userId);
+      const inviterName = inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : 'Alguém';
+      
       // Inject eventId from route params (avoid redundancy in request body)
       const validatedData = insertCollaborativeEventParticipantSchema.parse({
         ...req.body,
@@ -222,7 +233,44 @@ export function registerCollabEventsRoutes(app: Express) {
       }
       
       const participant = await storage.addParticipant(id, validatedData);
-      res.status(201).json(participant);
+      
+      // Send invite email if participant has an email and invite token
+      let emailSent = false;
+      if (validatedData.email && validatedData.inviteToken) {
+        try {
+          // Build invite link with token - normalize environment variables
+          let baseUrl = 'http://localhost:5000';
+          
+          if (process.env.REPLIT_DEV_DOMAIN) {
+            const domain = process.env.REPLIT_DEV_DOMAIN.trim();
+            baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+          } else if (process.env.REPLIT_DOMAINS) {
+            const domain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
+            baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+          }
+          
+          const inviteLink = `${baseUrl}/convite/${validatedData.inviteToken}`;
+          
+          await sendCollaborativeEventInviteEmail(
+            validatedData.email,
+            inviterName,
+            event.name,
+            event.eventType,
+            inviteLink
+          );
+          emailSent = true;
+          console.log(`Invite email sent to ${validatedData.email} for event ${event.name}`);
+        } catch (emailError) {
+          // Log error but don't fail the request - participant was added successfully
+          console.error("Failed to send invite email:", emailError);
+        }
+      } else if (validatedData.email && !validatedData.inviteToken) {
+        console.log(`No invite email sent to ${validatedData.email} - participant already accepted`);
+      } else if (!validatedData.email) {
+        console.log(`No invite email sent - participant has no email address`);
+      }
+      
+      res.status(201).json({ ...participant, emailSent });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid data", details: error.errors });

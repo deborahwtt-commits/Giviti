@@ -54,14 +54,17 @@ export function AddParticipantDialog({
 
   const addParticipantMutation = useMutation({
     mutationFn: async (data: AddParticipantFormValues) => {
-      return await apiRequest(`/api/collab-events/${eventId}/participants`, "POST", data);
+      const response = await apiRequest(`/api/collab-events/${eventId}/participants`, "POST", data);
+      return response.json() as Promise<{ emailSent?: boolean }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", eventId, "participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", eventId] });
       toast({
         title: "Participante adicionado",
-        description: "O participante foi adicionado com sucesso.",
+        description: data.emailSent 
+          ? "Convite enviado por email com sucesso!" 
+          : "O participante foi adicionado com sucesso.",
       });
       form.reset();
       onOpenChange(false);
