@@ -10,11 +10,14 @@ import GiftCard from "@/components/GiftCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Users, Gift, Palette, MapPin, Calendar } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
-import type { EventWithRecipients, Recipient, GiftSuggestion } from "@shared/schema";
+import type { EventWithRecipients, Recipient, GiftSuggestion, CollaborativeEvent } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -41,8 +44,12 @@ export default function Dashboard() {
     queryKey: ["/api/suggestions"],
   });
 
+  const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
+    queryKey: ["/api/collab-events"],
+  });
+
   useEffect(() => {
-    const error = statsError || recipientsError || eventsError || suggestionsError;
+    const error = statsError || recipientsError || eventsError || suggestionsError || rolesError;
     if (error && isUnauthorizedError(error as Error)) {
       toast({
         title: "Sessão Expirada",
@@ -53,7 +60,7 @@ export default function Dashboard() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [statsError, recipientsError, eventsError, suggestionsError, toast]);
+  }, [statsError, recipientsError, eventsError, suggestionsError, rolesError, toast]);
 
   const calculateDaysUntil = (eventDate: string) => {
     const today = new Date();
@@ -73,6 +80,42 @@ export default function Dashboard() {
       style: "currency",
       currency: "BRL",
     }).format(numValue);
+  };
+
+  const getRoleTypeInfo = (eventType: string) => {
+    switch (eventType) {
+      case "secret_santa":
+        return { icon: Users, label: "Amigo Secreto", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
+      case "collective_gift":
+        return { icon: Gift, label: "Presente Coletivo", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" };
+      case "themed_night":
+        return { icon: Palette, label: "Noite Temática", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
+      default:
+        return { icon: Users, label: "Rolê", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" };
+    }
+  };
+
+  const formatRoleDate = (date: Date | string | null) => {
+    if (!date) return "Sem data definida";
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return format(dateObj, "d 'de' MMM, yyyy", { locale: ptBR });
+  };
+
+  const getUpcomingRoles = () => {
+    if (!roles) return [];
+    const now = new Date();
+    return roles
+      .filter(role => role.status === "active" || role.status === "draft")
+      .filter(role => {
+        if (!role.eventDate) return true;
+        const eventDate = new Date(role.eventDate);
+        return eventDate >= now;
+      })
+      .sort((a, b) => {
+        if (!a.eventDate) return 1;
+        if (!b.eventDate) return -1;
+        return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+      });
   };
 
   if (statsLoading || recipientsLoading) {
@@ -152,6 +195,98 @@ export default function Dashboard() {
               actionLabel="Criar Evento"
               onAction={() => setLocation("/eventos")}
             />
+          )}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-heading font-semibold text-3xl text-foreground">
+                Rolês Planejados
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Seus encontros e celebrações em grupo
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setLocation("/roles")}
+              data-testid="button-add-role"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Rolê
+            </Button>
+          </div>
+
+          {rolesLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-card rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : getUpcomingRoles().length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {getUpcomingRoles().slice(0, 6).map((role) => {
+                const typeInfo = getRoleTypeInfo(role.eventType);
+                const TypeIcon = typeInfo.icon;
+                return (
+                  <Card
+                    key={role.id}
+                    className="cursor-pointer hover-elevate transition-all"
+                    onClick={() => setLocation(`/roles/${role.id}`)}
+                    data-testid={`card-role-${role.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-foreground truncate">
+                            {role.name}
+                          </h3>
+                          <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
+                            <TypeIcon className="w-3 h-3 mr-1" />
+                            {typeInfo.label}
+                          </Badge>
+                        </div>
+                        <Badge variant={role.status === "active" ? "default" : "secondary"} className="text-xs shrink-0">
+                          {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{formatRoleDate(role.eventDate)}</span>
+                        </div>
+                        {role.location && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span className="truncate">{role.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                <h3 className="font-medium text-foreground mb-1">Nenhum rolê planejado</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                  Organize amigo secreto, noites temáticas ou presentes coletivos com amigos e família.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setLocation("/roles")}
+                  data-testid="button-create-first-role"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Primeiro Rolê
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </section>
 
