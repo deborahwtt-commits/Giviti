@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +16,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Loader2 } from "lucide-react";
 import RecipientProfileQuestionnaire from "./RecipientProfileQuestionnaire";
+import type { GoogleProductCategory } from "@shared/schema";
 
 interface RecipientFormProps {
   initialData?: {
@@ -60,23 +62,6 @@ const relationships = [
   "Outro",
 ];
 
-const interestOptions = [
-  "Tecnologia",
-  "Games",
-  "Música",
-  "Esportes",
-  "Leitura",
-  "Culinária",
-  "Viagens",
-  "Fotografia",
-  "Arte",
-  "Moda",
-  "Fitness",
-  "Yoga",
-  "Cinema",
-  "Natureza",
-];
-
 export default function RecipientForm({
   initialData,
   initialProfileData,
@@ -96,6 +81,17 @@ export default function RecipientForm({
   const [newInterest, setNewInterest] = useState("");
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [profileData, setProfileData] = useState<any>({});
+
+  // Fetch Google product categories from API to use as interest options
+  const { data: googleCategories, isLoading: categoriesLoading } = useQuery<GoogleProductCategory[]>({
+    queryKey: ["/api/google-categories"],
+  });
+
+  // Get Portuguese names from Google categories as interest options
+  const interestOptions = googleCategories
+    ?.filter(cat => cat.isActive)
+    .map(cat => cat.namePtBr)
+    .sort() || [];
 
   useEffect(() => {
     if (initialProfileData && Object.keys(initialProfileData).length > 0) {
@@ -213,18 +209,30 @@ export default function RecipientForm({
             onValueChange={(value) => {
               handleAddInterest(value);
             }}
+            disabled={categoriesLoading}
           >
             <SelectTrigger id="interests" data-testid="select-interests">
-              <SelectValue placeholder="Escolha um interesse" />
+              <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
             </SelectTrigger>
             <SelectContent>
-              {interestOptions
-                .filter((opt) => !interests.includes(opt))
-                .map((interest) => (
-                  <SelectItem key={interest} value={interest}>
-                    {interest}
-                  </SelectItem>
-                ))}
+              {categoriesLoading ? (
+                <div className="p-2 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Carregando...
+                </div>
+              ) : interestOptions.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground text-center">
+                  Nenhuma categoria disponível
+                </div>
+              ) : (
+                interestOptions
+                  .filter((opt) => !interests.includes(opt))
+                  .map((interest) => (
+                    <SelectItem key={interest} value={interest}>
+                      {interest}
+                    </SelectItem>
+                  ))
+              )}
             </SelectContent>
           </Select>
         </div>

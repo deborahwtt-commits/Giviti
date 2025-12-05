@@ -3,16 +3,23 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserProfileSchema } from "@shared/schema";
-import type { UserProfile, InsertUserProfile } from "@shared/schema";
+import type { UserProfile, InsertUserProfile, GiftCategory } from "@shared/schema";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, User, Sparkles } from "lucide-react";
+import { Loader2, User, Sparkles, ChevronDown, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 
@@ -35,6 +42,10 @@ export default function Profile() {
         }
       },
     },
+  });
+
+  const { data: giftCategories = [] } = useQuery<GiftCategory[]>({
+    queryKey: ["/api/gift-categories"],
   });
 
   const { register, handleSubmit, watch, setValue, reset } = useForm<ProfileFormData>({
@@ -420,6 +431,86 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground mt-2">
               {watch("giftsToAvoid")?.length || 0}/256 caracteres
             </p>
+          </Card>
+
+          {/* Question 13 - Interests */}
+          <Card className="p-6">
+            <Label className="text-base font-semibold mb-4 block">
+              13. Quais são seus interesses?
+            </Label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Selecione as categorias que mais combinam com você
+            </p>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  data-testid="button-interests-dropdown"
+                >
+                  <span className="text-muted-foreground">
+                    {(watch("interests") || []).length > 0
+                      ? `${(watch("interests") || []).length} interesse(s) selecionado(s)`
+                      : "Selecionar interesses..."}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {giftCategories.map((category) => {
+                    const currentInterests = watch("interests") || [];
+                    const isSelected = currentInterests.includes(category.name);
+                    
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center space-x-2 p-2 hover-elevate rounded-md cursor-pointer"
+                        onClick={() => {
+                          const newInterests = isSelected
+                            ? currentInterests.filter((i) => i !== category.name)
+                            : [...currentInterests, category.name];
+                          setValue("interests", newInterests);
+                        }}
+                        data-testid={`checkbox-interest-${category.id}`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            const newInterests = checked
+                              ? [...currentInterests, category.name]
+                              : currentInterests.filter((i) => i !== category.name);
+                            setValue("interests", newInterests);
+                          }}
+                        />
+                        <span className="text-sm">{category.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {(watch("interests") || []).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {(watch("interests") || []).map((interest) => (
+                  <Badge
+                    key={interest}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => {
+                      const currentInterests = watch("interests") || [];
+                      setValue("interests", currentInterests.filter((i) => i !== interest));
+                    }}
+                    data-testid={`badge-interest-${interest}`}
+                  >
+                    {interest}
+                    <X className="w-3 h-3 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+            )}
           </Card>
 
           <div className="flex justify-end gap-4 pt-6">

@@ -8,7 +8,7 @@ const suggestions = [
     description:
       "Conjunto completo com café especial, moedor manual e xícara de porcelana. Perfeito para quem aprecia um bom café.",
     imageUrl: "https://images.unsplash.com/photo-1511920170033-f8396924c348?w=400",
-    price: 115,
+    price: "115",
     category: "Gastronomia",
     tags: ["café", "gourmet", "cozinha", "adulto"],
   },
@@ -17,7 +17,7 @@ const suggestions = [
     description:
       "Edição especial com ilustrações de capa dura. Ideal para fãs de fantasia e literatura clássica.",
     imageUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
-    price: 90,
+    price: "90",
     category: "Livros",
     tags: ["leitura", "fantasia", "literatura", "jovem", "adulto"],
   },
@@ -26,7 +26,7 @@ const suggestions = [
     description:
       "Kit completo com 36 cores, pincéis e papel especial. Ótimo para artistas iniciantes e intermediários.",
     imageUrl: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400",
-    price: 135,
+    price: "135",
     category: "Arte",
     tags: ["pintura", "arte", "criativo", "jovem", "adulto"],
   },
@@ -35,7 +35,7 @@ const suggestions = [
     description:
       "Som de alta qualidade, resistente à água, bateria de 12 horas. Ideal para festas e viagens.",
     imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400",
-    price: 225,
+    price: "225",
     category: "Eletrônicos",
     tags: ["música", "tecnologia", "portátil", "jovem", "adulto"],
   },
@@ -44,7 +44,7 @@ const suggestions = [
     description:
       "Rotina completa de cuidados com a pele: limpador, tônico, sérum e hidratante. Produtos naturais.",
     imageUrl: "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400",
-    price: 185,
+    price: "185",
     category: "Beleza",
     tags: ["beleza", "autocuidado", "cosméticos", "mulher", "adulto"],
   },
@@ -53,7 +53,7 @@ const suggestions = [
     description:
       "Jogo estratégico de trens para 2-5 jogadores. Diversão garantida para toda a família.",
     imageUrl: "https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=400",
-    price: 230,
+    price: "230",
     category: "Jogos",
     tags: ["jogos", "estratégia", "família", "diversão", "jovem", "adulto"],
   },
@@ -62,7 +62,7 @@ const suggestions = [
     description:
       "Conjunto com vasos, sementes orgânicas, terra e ferramentas. Perfeito para quem quer cultivar em casa.",
     imageUrl: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400",
-    price: 110,
+    price: "110",
     category: "Casa & Jardim",
     tags: ["plantas", "jardinagem", "sustentável", "adulto"],
   },
@@ -71,7 +71,7 @@ const suggestions = [
     description:
       "Tecnologia premium de cancelamento de ruído, bluetooth 5.0, bateria de 30 horas.",
     imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
-    price: 375,
+    price: "375",
     category: "Eletrônicos",
     tags: ["música", "tecnologia", "áudio", "jovem", "adulto"],
   },
@@ -80,7 +80,7 @@ const suggestions = [
     description:
       "Aula particular com chef profissional. Escolha entre massas italianas, sushi ou confeitaria.",
     imageUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400",
-    price: 300,
+    price: "300",
     category: "Experiências",
     tags: ["culinária", "experiência", "aprendizado", "adulto"],
   },
@@ -89,7 +89,7 @@ const suggestions = [
     description:
       "Tecnologia de amortecimento avançada, leve e respirável. Ideal para corredores sérios.",
     imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    price: 450,
+    price: "450",
     category: "Esportes",
     tags: ["corrida", "esporte", "fitness", "ativo", "jovem", "adulto"],
   },
@@ -98,7 +98,7 @@ const suggestions = [
     description:
       "Conjunto com 2000+ peças para construir modelos detalhados. Diversão e desafio para todas as idades.",
     imageUrl: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400",
-    price: 525,
+    price: "525",
     category: "Brinquedos",
     tags: ["construção", "criativo", "hobby", "criança", "jovem", "adulto"],
   },
@@ -107,7 +107,7 @@ const suggestions = [
     description:
       "Fragrância sofisticada e duradoura. Embalagem premium, ideal para presentes especiais.",
     imageUrl: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400",
-    price: 325,
+    price: "325",
     category: "Perfumaria",
     tags: ["perfume", "luxo", "elegância", "adulto"],
   },
@@ -116,7 +116,7 @@ const suggestions = [
     description:
       "Resistente à água, compartimentos organizados, alças ergonômicas. Perfeita para aventureiros.",
     imageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400",
-    price: 265,
+    price: "265",
     category: "Esportes",
     tags: ["aventura", "trilha", "viagem", "outdoor", "jovem", "adulto"],
   },
@@ -125,7 +125,7 @@ const suggestions = [
     description:
       "Conjunto com facas profissionais, espetos inox e avental personalizado. Para mestres churrasqueiros.",
     imageUrl: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400",
-    price: 225,
+    price: "225",
     category: "Casa & Cozinha",
     tags: ["churrasco", "culinária", "homem", "adulto"],
   },
@@ -134,7 +134,7 @@ const suggestions = [
     description:
       "Monitor cardíaco, GPS, à prova d'água, bateria de 7 dias. Acompanha sua saúde 24/7.",
     imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400",
-    price: 600,
+    price: "600",
     category: "Tecnologia",
     tags: ["fitness", "tecnologia", "saúde", "esporte", "jovem", "adulto"],
   },
@@ -143,7 +143,7 @@ const suggestions = [
     description:
       "Decorativo e educativo, base de madeira, iluminação LED. Perfeito para curiosos e viajantes.",
     imageUrl: "https://images.unsplash.com/photo-1569163139394-de4798aa62b5?w=400",
-    price: 150,
+    price: "150",
     category: "Decoração",
     tags: ["decoração", "educação", "viagem", "geografia", "jovem", "adulto"],
   },
@@ -152,7 +152,7 @@ const suggestions = [
     description:
       "Seleção de chocolates belgas e suíços premium. Embalagem elegante, ideal para ocasiões especiais.",
     imageUrl: "https://images.unsplash.com/photo-1481391319762-47dff72954d9?w=400",
-    price: 140,
+    price: "140",
     category: "Gastronomia",
     tags: ["chocolate", "doce", "gourmet", "luxo", "adulto"],
   },
@@ -161,7 +161,7 @@ const suggestions = [
     description:
       "Antiderrapante, ecológico, extra confortável. Inclui bloco de apoio e bolsa de transporte.",
     imageUrl: "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400",
-    price: 185,
+    price: "185",
     category: "Esportes",
     tags: ["yoga", "fitness", "bem-estar", "meditação", "adulto"],
   },
@@ -170,7 +170,7 @@ const suggestions = [
     description:
       "Vinho tinto premium + par de taças de cristal. Apresentação elegante em caixa de madeira.",
     imageUrl: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400",
-    price: 250,
+    price: "250",
     category: "Bebidas",
     tags: ["vinho", "bebida", "elegante", "adulto", "luxo"],
   },
@@ -179,7 +179,7 @@ const suggestions = [
     description:
       "Fotos instantâneas coloridas, modo selfie, flash automático. Diversão retrô garantida!",
     imageUrl: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400",
-    price: 400,
+    price: "400",
     category: "Fotografia",
     tags: ["fotografia", "diversão", "criativo", "jovem", "adulto"],
   },

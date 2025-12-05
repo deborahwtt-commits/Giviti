@@ -37,6 +37,7 @@ interface CategoryFormData {
   description: string;
   color: string;
   icon: string;
+  keywords: string[];
   isActive: boolean;
 }
 
@@ -64,8 +65,11 @@ export default function AdminGiftCategoriesTypes() {
     description: "",
     color: "#6B7280",
     icon: "tag",
+    keywords: [],
     isActive: true,
   });
+  
+  const [keywordsInput, setKeywordsInput] = useState("");
   
   const [typeForm, setTypeForm] = useState<TypeFormData>({
     name: "",
@@ -249,8 +253,10 @@ export default function AdminGiftCategoriesTypes() {
       description: "",
       color: "#6B7280",
       icon: "tag",
+      keywords: [],
       isActive: true,
     });
+    setKeywordsInput("");
     setSelectedCategory(null);
   };
 
@@ -275,8 +281,10 @@ export default function AdminGiftCategoriesTypes() {
       description: category.description || "",
       color: category.color || "#6B7280",
       icon: category.icon || "tag",
+      keywords: category.keywords || [],
       isActive: category.isActive,
     });
+    setKeywordsInput((category.keywords || []).join(", "));
     setIsCategoryDialogOpen(true);
   };
 
@@ -295,6 +303,13 @@ export default function AdminGiftCategoriesTypes() {
     setIsTypeDialogOpen(true);
   };
 
+  const parseKeywords = (input: string): string[] => {
+    return input
+      .split(/[,;]+/)
+      .map(k => k.trim().toLowerCase())
+      .filter(k => k.length > 0);
+  };
+
   const handleCategorySubmit = () => {
     if (!categoryForm.name.trim()) {
       toast({
@@ -305,13 +320,18 @@ export default function AdminGiftCategoriesTypes() {
       return;
     }
 
+    const formData = {
+      ...categoryForm,
+      keywords: parseKeywords(keywordsInput),
+    };
+
     if (selectedCategory) {
       updateCategoryMutation.mutate({
         id: selectedCategory.id,
-        data: categoryForm,
+        data: formData,
       });
     } else {
-      createCategoryMutation.mutate(categoryForm);
+      createCategoryMutation.mutate(formData);
     }
   };
 
@@ -431,9 +451,23 @@ export default function AdminGiftCategoriesTypes() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                     {category.description || "Sem descrição"}
                   </p>
+                  {category.keywords && category.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {category.keywords.slice(0, 5).map((keyword, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {keyword}
+                        </Badge>
+                      ))}
+                      {category.keywords.length > 5 && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          +{category.keywords.length - 5}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -560,6 +594,21 @@ export default function AdminGiftCategoriesTypes() {
                 rows={3}
                 data-testid="input-category-description"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-keywords">Palavras-chave</Label>
+              <Textarea
+                id="category-keywords"
+                value={keywordsInput}
+                onChange={(e) => setKeywordsInput(e.target.value)}
+                placeholder="tecnologia, gadgets, eletrônicos, computador, celular (separados por vírgula)"
+                rows={2}
+                data-testid="input-category-keywords"
+              />
+              <p className="text-xs text-muted-foreground">
+                Termos que serão usados para conectar interesses do presenteado com esta categoria. 
+                Separe por vírgula ou ponto e vírgula.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="category-color">Cor</Label>

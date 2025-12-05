@@ -26,13 +26,15 @@ Preferred communication style: Simple, everyday language.
   - **Gift Suggestions**: The `giftSuggestions` table includes:
     - `priority` column (integer, nullable) for prioritizing gift suggestions. Valid values: 1, 2, 3, or null.
     - `giftTypeId` foreign key reference to `giftTypes` table for categorizing suggestions by type.
-    - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations.
+    - `targetGender` (varchar, default "unissex") for demographic targeting. Valid values: "unissex", "masculino", "feminino".
+    - `targetAgeRange` (varchar, default "todos") for age targeting. Valid values: "todos", "crianca", "adolescente", "adulto", "idoso".
+    - Admins can manage suggestions through the admin panel at `/admin/sugestoes` with full CRUD operations, including demographic targeting via "Público-alvo" section.
   - **Gift Categories & Types System**:
-    - `giftCategories`: Stores gift categories with name, description, color (hex), and active status. Examples: "Tecnologia", "Casa & Decoração".
+    - `giftCategories`: Stores gift categories with name, description, color (hex), active status, and **keywords array** for flexible interest matching. Examples: "Tecnologia" with keywords ["tecnologia", "tech", "eletrônicos", "gadget"].
     - `giftTypes`: Stores gift types with name, description, and active status. Examples: "Presente Físico", "Experiência", "Presente Digital".
     - `giftSuggestionCategories`: Junction table enabling many-to-many relationship between suggestions and categories.
     - Each suggestion can have one type (via `giftTypeId`) and multiple categories (via junction table).
-    - Admin panel at `/admin/categorias-tipos` provides full CRUD for categories and types.
+    - Admin panel at `/admin/categorias-tipos` provides full CRUD for categories and types, including keyword management via textarea input (comma/semicolon separated).
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
 ### UI/UX Decisions
@@ -54,6 +56,23 @@ Preferred communication style: Simple, everyday language.
 
 ### Feature Specifications
 - **Personalized Suggestions**: Intelligent matching based on recipient profiles and interests.
+  - **Algorithm V2.1**: Unified interests-categories system - recipient interests ARE product categories.
+  - **Search Order Priority**: 
+    1. First searches internal database based on recipient profile (gender, interests, category, etc.)
+    2. If internal results < 5, fetches from Google Shopping API only to fill the gap
+    3. Pagination: 5 results per page, maximum 15 results total (3 pages)
+  - **Google Product Taxonomy Integration**: 21 standardized Google Product Categories for consistent matching between internal DB and Google Shopping:
+    - `googleProductCategories` table stores taxonomy (id, nameEn, namePtBr, isActive)
+    - `giftCategories` and `giftSuggestions` have `googleCategoryId` FK for canonical reference
+    - RecipientForm interests dropdown uses Portuguese category names from `/api/google-categories`
+    - Algorithm maps recipient interests to Google category IDs for precise filtering
+    - Seeded categories: Electronics (222), Health & Beauty (469), Home & Garden (536), Media (783), Apparel (166), etc.
+  - **Dynamic Interests**: Interest options in recipient form are fetched from Google categories API, ensuring consistency with Google Shopping.
+  - **Relevance Scoring**: Exact googleCategoryId match (+50pts), partial category match (+30pts), tag match (+15pts), keyword expansion match (+5-10pts), interestCategory questionnaire (+20pts), giftPreference match (+5pts), giftsToAvoid penalty (-50pts), gender-specific match (+25pts), age-specific match (+20pts).
+  - **Demographic Filtering**: Products are filtered based on recipient's gender and age. Products with "unissex" or "todos" pass all filters. Gender-specific products (masculino/feminino) only show for matching recipients. Age categories: criança (<13), adolescente (13-17), adulto (18-59), idoso (60+).
+  - **Direct Matching**: When user selects "Eletrônicos" as interest, products with googleCategoryId=222 get highest priority.
+  - **Session Cache**: Google Shopping search results are cached in-memory during the user session. If the user changes recipient filter, then returns to a previously selected recipient, cached results are shown instantly without new API calls. Cache key is generated from: recipientId + category + budgetRange + searchQuery. Cache is cleared automatically when session ends (page refresh).
+  - **Pagination UI**: "Carregar mais" button loads next 5 results, shows current page and progress toward max 15.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.

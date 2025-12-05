@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -14,15 +15,15 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info } from "lucide-react";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { GiftSuggestion, Recipient, UserGift } from "@shared/schema";
+import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategory, GoogleProductCategory } from "@shared/schema";
 import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { runSuggestionAlgorithmV1, type UnifiedProduct } from "@/lib/suggestionAlgorithm";
+import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData, type PaginationMeta } from "@/lib/suggestionAlgorithm";
 
 // Compact Coupon Badge for Suggestions page
 interface CouponBadgeCompactProps {
@@ -302,13 +303,18 @@ function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedP
 }
 
 export default function Suggestions() {
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const recipientIdFromUrl = urlParams.get("recipientId") || "";
+  
   const [showFilters, setShowFilters] = useState(false);
   const [budget, setBudget] = useState([1000]);
-  const [category, setCategory] = useState<string>("");
-  const [selectedRecipient, setSelectedRecipient] = useState<string>("");
-  const [visibleCount, setVisibleCount] = useState(10);
-  const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
+  const [selectedGoogleCategoryId, setSelectedGoogleCategoryId] = useState<number | null>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<string>(recipientIdFromUrl);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allLoadedProducts, setAllLoadedProducts] = useState<UnifiedProduct[]>([]);
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [algorithmResult, setAlgorithmResult] = useState<{
@@ -317,13 +323,18 @@ export default function Suggestions() {
     appliedFilters?: {
       googleFiltersApplied: string[];
       googleFiltersNotAvailable: string[];
+      recipientName?: string | null;
     };
+    generatedQuery?: string;
+    googleFromCache?: boolean;
+    pagination?: PaginationMeta;
   } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setVisibleCount(10);
-  }, [category, selectedRecipient, budget]);
+    setCurrentPage(1);
+    setAllLoadedProducts([]);
+  }, [selectedGoogleCategoryId, selectedRecipient, budget]);
 
   const { data: allSuggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
     queryKey: ["/api/suggestions"],
@@ -336,6 +347,33 @@ export default function Suggestions() {
   const { data: userGifts } = useQuery<UserGift[]>({
     queryKey: ["/api/gifts"],
   });
+
+  const { data: giftCategories } = useQuery<GiftCategory[]>({
+    queryKey: ["/api/gift-categories"],
+  });
+
+  const { data: googleCategories } = useQuery<GoogleProductCategory[]>({
+    queryKey: ["/api/google-categories"],
+  });
+
+  // Fetch recipient profile when a recipient is selected
+  const { 
+    data: recipientProfileData, 
+    isLoading: profileLoading, 
+    error: profileError,
+    isError: hasProfileError 
+  } = useQuery<RecipientProfile>({
+    queryKey: ["/api/recipients", selectedRecipient, "profile"],
+    enabled: !!selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none",
+    retry: false,
+  });
+
+  // Handle profile loading errors
+  useEffect(() => {
+    if (hasProfileError && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") {
+      console.warn("Could not load recipient profile:", profileError);
+    }
+  }, [hasProfileError, profileError, selectedRecipient]);
 
   useEffect(() => {
     if (suggestionsError && isUnauthorizedError(suggestionsError as Error)) {
@@ -350,105 +388,115 @@ export default function Suggestions() {
     }
   }, [suggestionsError, toast]);
 
-  const categories = Array.from(
-    new Set(allSuggestions?.map((s) => s.category) || [])
-  ).sort();
-
-  const selectedRecipientData = selectedRecipient && selectedRecipient !== "all"
-    ? recipients?.find(r => r.id === selectedRecipient)
+  // Get the display name for the selected category
+  const selectedCategoryName = selectedGoogleCategoryId 
+    ? googleCategories?.find(c => c.id === selectedGoogleCategoryId)?.namePtBr 
     : null;
+
+  const selectedRecipientData = useMemo(() => {
+    if (!selectedRecipient || selectedRecipient === "all" || selectedRecipient === "none") return null;
+    return recipients?.find(r => r.id === selectedRecipient) || null;
+  }, [selectedRecipient, recipients]);
 
   const selectedRecipientNames = selectedRecipientData ? [selectedRecipientData.name] : [];
 
-  const executeSearch = useCallback(async (keywords: string) => {
+  // Combine recipient and profile data for the algorithm - memoized to prevent infinite loops
+  const recipientDataForAlgorithm: RecipientData | undefined = useMemo(() => {
+    if (!selectedRecipientData) return undefined;
+    return {
+      recipient: selectedRecipientData,
+      profile: recipientProfileData || null,
+    };
+  }, [selectedRecipientData, recipientProfileData]);
+
+  // Unified algorithm runner - handles both internal filtering and Google search
+  const runAlgorithm = useCallback(async (options: {
+    enableGoogle: boolean;
+    keywords?: string;
+    page?: number;
+    isLoadMore?: boolean;
+  }) => {
     if (!allSuggestions) return;
     
-    setAlgorithmLoading(true);
-    setHasSearched(true);
+    const { enableGoogle, keywords = "", page = 1, isLoadMore = false } = options;
+    
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setAlgorithmLoading(true);
+    }
+    
     try {
       const result = await runSuggestionAlgorithmV1(allSuggestions, {
         keywords: keywords.trim(),
-        category: category || undefined,
+        googleCategoryId: selectedGoogleCategoryId || undefined,
         maxBudget: budget[0],
-        recipientInterests: selectedRecipientData?.interests || undefined,
-        googleLimit: 10,
-        enableGoogleSearch: keywords.trim().length > 0,
+        recipientData: recipientDataForAlgorithm,
+        enableGoogleSearch: enableGoogle,
+        giftCategories: giftCategories,
+        googleCategories: googleCategories,
+        page,
+        pageSize: 5,
       });
-      setUnifiedProducts(result.products);
+      
+      if (isLoadMore) {
+        setAllLoadedProducts(prev => [...prev, ...result.products]);
+      } else {
+        setAllLoadedProducts(result.products);
+      }
+      
       setAlgorithmResult({
         internalCount: result.internalCount,
         googleCount: result.googleCount,
         appliedFilters: result.appliedFilters,
+        generatedQuery: result.generatedQuery,
+        googleFromCache: result.googleFromCache,
+        pagination: result.pagination,
       });
     } catch (error) {
       console.error("Algorithm error:", error);
-      setUnifiedProducts([]);
+      if (!isLoadMore) {
+        setAllLoadedProducts([]);
+      }
       setAlgorithmResult(null);
     } finally {
       setAlgorithmLoading(false);
+      setLoadingMore(false);
     }
-  }, [allSuggestions, category, budget, selectedRecipientData]);
+  }, [allSuggestions, selectedGoogleCategoryId, budget, recipientDataForAlgorithm, giftCategories, googleCategories]);
 
+  // Single effect: runs when filters change
+  // Enables Google search if user has searched OR has a recipient selected OR has a category selected
   useEffect(() => {
-    if (allSuggestions && allSuggestions.length > 0 && !hasSearched) {
-      const runInitialLoad = async () => {
-        setAlgorithmLoading(true);
-        try {
-          const result = await runSuggestionAlgorithmV1(allSuggestions, {
-            keywords: "",
-            category: category || undefined,
-            maxBudget: budget[0],
-            recipientInterests: selectedRecipientData?.interests || undefined,
-            googleLimit: 0,
-            enableGoogleSearch: false,
-          });
-          setUnifiedProducts(result.products);
-          setAlgorithmResult({
-            internalCount: result.internalCount,
-            googleCount: 0,
-            appliedFilters: result.appliedFilters,
-          });
-        } catch (error) {
-          console.error("Initial load error:", error);
-          setUnifiedProducts([]);
-        } finally {
-          setAlgorithmLoading(false);
-        }
-      };
-      runInitialLoad();
-    }
-  }, [allSuggestions]);
+    if (!allSuggestions || allSuggestions.length === 0) return;
+    if (profileLoading && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") return;
+    
+    // Enable Google when there's an active search context (search, recipient, or category selected)
+    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm || !!selectedGoogleCategoryId;
+    
+    setCurrentPage(1);
+    runAlgorithm({ 
+      enableGoogle: shouldEnableGoogle, 
+      keywords: searchKeywords,
+      page: 1,
+      isLoadMore: false,
+    });
+  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
 
-  useEffect(() => {
-    if (hasSearched && searchKeywords.trim()) {
-      executeSearch(searchKeywords);
-    } else if (allSuggestions && !searchKeywords.trim()) {
-      const runFilterOnly = async () => {
-        setAlgorithmLoading(true);
-        try {
-          const result = await runSuggestionAlgorithmV1(allSuggestions, {
-            keywords: "",
-            category: category || undefined,
-            maxBudget: budget[0],
-            recipientInterests: selectedRecipientData?.interests || undefined,
-            googleLimit: 0,
-            enableGoogleSearch: false,
-          });
-          setUnifiedProducts(result.products);
-          setAlgorithmResult({
-            internalCount: result.internalCount,
-            googleCount: 0,
-            appliedFilters: result.appliedFilters,
-          });
-        } catch (error) {
-          console.error("Filter error:", error);
-        } finally {
-          setAlgorithmLoading(false);
-        }
-      };
-      runFilterOnly();
-    }
-  }, [category, budget, selectedRecipientData]);
+  // Execute explicit search (when user clicks "Buscar")
+  const executeSearch = useCallback(async (keywords: string) => {
+    if (!allSuggestions) return;
+    
+    setHasSearched(true);
+    setCurrentPage(1);
+    // Run immediately with Google enabled
+    runAlgorithm({ 
+      enableGoogle: true, 
+      keywords,
+      page: 1,
+      isLoadMore: false,
+    });
+  }, [allSuggestions, runAlgorithm]);
 
   const handleSearch = () => {
     if (!searchKeywords.trim()) {
@@ -469,21 +517,34 @@ export default function Suggestions() {
     }
   };
 
-  const visibleProducts = unifiedProducts.slice(0, visibleCount);
-  const hasMoreProducts = unifiedProducts.length > visibleCount;
+  const hasMoreProducts = algorithmResult?.pagination?.hasMore ?? false;
+  const maxResultsReached = allLoadedProducts.length >= (algorithmResult?.pagination?.maxResults ?? 15);
 
   const handleClearFilters = () => {
-    setCategory("all");
+    setSelectedGoogleCategoryId(null);
     setBudget([1000]);
-    setSelectedRecipient("all");
-    setVisibleCount(10);
+    setSelectedRecipient(""); // Reset to "Não especificado"
+    setCurrentPage(1);
+    setAllLoadedProducts([]);
     setSearchKeywords("");
     setHasSearched(false);
     setAlgorithmResult(null);
   };
 
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 10);
+  const handleLoadMore = async () => {
+    if (loadingMore || maxResultsReached) return;
+    
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    
+    const shouldEnableGoogle = hasSearched || !!recipientDataForAlgorithm;
+    
+    await runAlgorithm({
+      enableGoogle: shouldEnableGoogle,
+      keywords: searchKeywords,
+      page: nextPage,
+      isLoadMore: true,
+    });
   };
 
   if (suggestionsLoading || recipientsLoading) {
@@ -506,10 +567,30 @@ export default function Suggestions() {
               Sugestões de Presentes
             </h1>
             {selectedRecipientNames.length > 0 ? (
-              <p className="text-muted-foreground mt-2 flex items-center gap-2">
-                <Gift className="w-4 h-4" />
-                Para: <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
-              </p>
+              <div className="mt-2">
+                <div className="text-muted-foreground flex items-center gap-2">
+                  <Gift className="w-4 h-4" />
+                  <span>Para:</span> <span className="font-medium text-foreground">{selectedRecipientNames.join(", ")}</span>
+                  {profileLoading && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block" />
+                      Carregando perfil...
+                    </span>
+                  )}
+                </div>
+                {hasProfileError && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Não foi possível carregar o perfil completo. A busca usará dados básicos.
+                  </div>
+                )}
+                {!profileLoading && !hasProfileError && recipientProfileData && (
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Perfil carregado - busca personalizada ativada
+                  </div>
+                )}
+              </div>
             ) : (
               <p className="text-muted-foreground mt-2">
                 Encontre o presente perfeito
@@ -572,6 +653,11 @@ export default function Suggestions() {
                 Busca: "{searchKeywords}"
               </Badge>
             )}
+            {algorithmResult.appliedFilters?.recipientName && (
+              <Badge variant="secondary" className="text-xs bg-primary/10">
+                Personalizado para: {algorithmResult.appliedFilters.recipientName}
+              </Badge>
+            )}
             {algorithmResult.internalCount > 0 && (
               <Badge variant="outline" className="text-xs">
                 {algorithmResult.internalCount} da nossa base
@@ -580,7 +666,14 @@ export default function Suggestions() {
             {algorithmResult.googleCount > 0 && (
               <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                 {algorithmResult.googleCount} do Google Shopping
+                {algorithmResult.googleFromCache && " (cache)"}
               </Badge>
+            )}
+            {algorithmResult.generatedQuery && algorithmResult.googleCount > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="text-generated-query">
+                <Search className="w-3 h-3" />
+                <span>Query: {algorithmResult.generatedQuery}</span>
+              </div>
             )}
             {algorithmResult.appliedFilters?.googleFiltersNotAvailable && 
              algorithmResult.appliedFilters.googleFiltersNotAvailable.length > 0 && (
@@ -622,14 +715,23 @@ export default function Suggestions() {
                     Presenteado
                   </Label>
                   <Select
-                    value={selectedRecipient}
-                    onValueChange={setSelectedRecipient}
+                    value={selectedRecipient || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setSelectedRecipient("");
+                        setSelectedGoogleCategoryId(null);
+                      } else {
+                        setSelectedRecipient(value);
+                        // Clear category when recipient is selected (will use recipient interests)
+                        setSelectedGoogleCategoryId(null);
+                      }
+                    }}
                   >
                     <SelectTrigger data-testid="select-recipient">
-                      <SelectValue placeholder="Todos" />
+                      <SelectValue placeholder="Não especificado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="none">Não especificado</SelectItem>
                       {recipients?.map((recipient) => (
                         <SelectItem key={recipient.id} value={recipient.id}>
                           {recipient.name}
@@ -639,27 +741,55 @@ export default function Suggestions() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">
-                    Categoria
-                  </Label>
-                  <Select
-                    value={category}
-                    onValueChange={setCategory}
-                  >
-                    <SelectTrigger data-testid="select-category">
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
+                {/* Show category filter only when no recipient is selected */}
+                {!selectedRecipientData && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">
+                      Categoria
+                    </Label>
+                    <Select
+                      value={selectedGoogleCategoryId?.toString() || "all"}
+                      onValueChange={(value) => {
+                        if (value === "all") {
+                          setSelectedGoogleCategoryId(null);
+                        } else {
+                          setSelectedGoogleCategoryId(parseInt(value, 10));
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-category">
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {googleCategories?.filter(c => c.isActive).map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
+                            {cat.namePtBr}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Show recipient interests when a recipient is selected */}
+                {selectedRecipientData && selectedRecipientData.interests && selectedRecipientData.interests.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">
+                      Interesses do Presenteado
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedRecipientData.interests.map((interest) => (
+                        <Badge key={interest} variant="secondary" className="text-xs">
+                          {interest}
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Buscando presentes baseados nos interesses cadastrados
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
@@ -698,11 +828,16 @@ export default function Suggestions() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <span className="ml-3 text-muted-foreground">Carregando sugestões...</span>
               </div>
-            ) : unifiedProducts.length > 0 ? (
+            ) : allLoadedProducts.length > 0 ? (
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  Mostrando {visibleProducts.length} de {unifiedProducts.length} {unifiedProducts.length === 1 ? 'sugestão' : 'sugestões'}
+                  Mostrando {allLoadedProducts.length} de {algorithmResult?.pagination?.totalItems ?? allLoadedProducts.length} {allLoadedProducts.length === 1 ? 'sugestão' : 'sugestões'}
                   {selectedRecipientData && ` para ${selectedRecipientData.name}`}
+                  {algorithmResult?.pagination && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (máx. {algorithmResult.pagination.maxResults})
+                    </span>
+                  )}
                 </div>
                 
                 {selectedRecipientData && (
@@ -713,7 +848,7 @@ export default function Suggestions() {
                 )}
                 
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {visibleProducts.map((product) => (
+                  {allLoadedProducts.map((product: UnifiedProduct) => (
                     <UnifiedProductCard
                       key={product.id}
                       product={product}
@@ -724,16 +859,33 @@ export default function Suggestions() {
                   ))}
                 </div>
                 
-                {hasMoreProducts && (
-                  <div className="flex justify-center mt-8">
+                {hasMoreProducts && !maxResultsReached && (
+                  <div className="flex flex-col items-center gap-2 mt-8">
                     <Button 
                       onClick={handleLoadMore}
                       variant="outline"
                       size="lg"
+                      disabled={loadingMore}
                       data-testid="button-load-more"
                     >
-                      Ver mais sugestões
+                      {loadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Carregando...
+                        </>
+                      ) : (
+                        `Carregar mais (${allLoadedProducts.length}/${algorithmResult?.pagination?.maxResults ?? 15})`
+                      )}
                     </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Página {currentPage} de {algorithmResult?.pagination?.totalPages ?? 1}
+                    </span>
+                  </div>
+                )}
+                
+                {maxResultsReached && (
+                  <div className="text-center mt-6 text-sm text-muted-foreground">
+                    Limite máximo de {algorithmResult?.pagination?.maxResults ?? 15} sugestões atingido
                   </div>
                 )}
               </>

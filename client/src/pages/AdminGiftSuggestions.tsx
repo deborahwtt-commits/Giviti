@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers, Ticket, Calendar, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers, Ticket, Calendar, AlertTriangle, Users } from "lucide-react";
 import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Switch } from "@/components/ui/switch";
@@ -201,6 +201,25 @@ export default function AdminGiftSuggestions() {
                       </span>
                     )}
                   </div>
+                  {/* Demographic Targeting Badges */}
+                  {(suggestion.targetGender && suggestion.targetGender !== "unissex") || (suggestion.targetAgeRange && suggestion.targetAgeRange !== "todos") ? (
+                    <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-muted">
+                      {suggestion.targetGender && suggestion.targetGender !== "unissex" && (
+                        <Badge variant="outline" className="text-xs">
+                          {suggestion.targetGender === "masculino" ? "Masculino" : suggestion.targetGender === "feminino" ? "Feminino" : suggestion.targetGender}
+                        </Badge>
+                      )}
+                      {suggestion.targetAgeRange && suggestion.targetAgeRange !== "todos" && (
+                        <Badge variant="outline" className="text-xs">
+                          {suggestion.targetAgeRange === "crianca" ? "Criança" : 
+                           suggestion.targetAgeRange === "adolescente" ? "Adolescente" : 
+                           suggestion.targetAgeRange === "adulto" ? "Adulto" : 
+                           suggestion.targetAgeRange === "idoso" ? "Idoso" : 
+                           suggestion.targetAgeRange}
+                        </Badge>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 
                 {/* Coupon Display */}
@@ -331,6 +350,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
     cupom: suggestion?.cupom || "",
     validadeCupom: suggestion?.validadeCupom || "",
     showCoupon: !!(suggestion?.cupom),
+    targetGender: suggestion?.targetGender || "unissex",
+    targetAgeRange: suggestion?.targetAgeRange || "todos",
   });
 
   const { data: giftCategories = [] } = useQuery<GiftCategory[]>({
@@ -359,6 +380,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         cupom: suggestion.cupom || "",
         validadeCupom: suggestion.validadeCupom || "",
         showCoupon: !!(suggestion.cupom),
+        targetGender: suggestion.targetGender || "unissex",
+        targetAgeRange: suggestion.targetAgeRange || "todos",
       });
     } else {
       setFormData({
@@ -375,6 +398,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         cupom: "",
         validadeCupom: "",
         showCoupon: false,
+        targetGender: "unissex",
+        targetAgeRange: "todos",
       });
     }
   }, [suggestion, open]);
@@ -403,6 +428,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         giftTypeId: data.giftTypeId === "__none__" ? null : data.giftTypeId,
         cupom: data.showCoupon && data.cupom ? data.cupom.trim().toUpperCase() : null,
         validadeCupom: data.showCoupon && data.validadeCupom ? data.validadeCupom : null,
+        targetGender: data.targetGender || "unissex",
+        targetAgeRange: data.targetAgeRange || "todos",
       };
 
       if (mode === "create") {
@@ -433,6 +460,8 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
         cupom: "",
         validadeCupom: "",
         showCoupon: false,
+        targetGender: "unissex",
+        targetAgeRange: "todos",
       });
     },
     onError: (error: any) => {
@@ -727,6 +756,53 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
                 <SelectItem value="3">Baixa (3)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Demographic Targeting Section */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <Label className="font-medium">Público-alvo</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="targetGender">Gênero</Label>
+                <Select
+                  value={formData.targetGender}
+                  onValueChange={(value) => setFormData({ ...formData, targetGender: value })}
+                >
+                  <SelectTrigger data-testid="select-suggestion-target-gender">
+                    <SelectValue placeholder="Selecione o gênero" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unissex">Unissex</SelectItem>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="targetAgeRange">Faixa Etária</Label>
+                <Select
+                  value={formData.targetAgeRange}
+                  onValueChange={(value) => setFormData({ ...formData, targetAgeRange: value })}
+                >
+                  <SelectTrigger data-testid="select-suggestion-target-age">
+                    <SelectValue placeholder="Selecione a faixa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas as idades</SelectItem>
+                    <SelectItem value="crianca">Criança (até 12 anos)</SelectItem>
+                    <SelectItem value="adolescente">Adolescente (13-17 anos)</SelectItem>
+                    <SelectItem value="adulto">Adulto (18-59 anos)</SelectItem>
+                    <SelectItem value="idoso">Idoso (60+ anos)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Defina para qual público este produto é mais indicado. Produtos unissex/todas as idades aparecerão para todos.
+            </p>
           </div>
 
           {/* Coupon Section */}

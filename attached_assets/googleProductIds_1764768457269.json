@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "name_en": "Animals & Pet Supplies",
+    "name_pt_br": "Animais e Suprimentos para Pets"
+  },
+  {
+    "id": 166,
+    "name_en": "Apparel & Accessories",
+    "name_pt_br": "Roupas e Acessórios"
+  },
+  {
+    "id": 8,
+    "name_en": "Arts & Entertainment",
+    "name_pt_br": "Artes e Entretenimento"
+  },
+  {
+    "id": 537,
+    "name_en": "Baby & Toddler",
+    "name_pt_br": "Bebê e Infantil"
+  },
+  {
+    "id": 111,
+    "name_en": "Business & Industrial",
+    "name_pt_br": "Negócios e Indústria"
+  },
+  {
+    "id": 141,
+    "name_en": "Cameras & Optics",
+    "name_pt_br": "Câmeras e Óptica"
+  },
+  {
+    "id": 222,
+    "name_en": "Electronics",
+    "name_pt_br": "Eletrônicos"
+  },
+  {
+    "id": 412,
+    "name_en": "Food, Beverages & Tobacco",
+    "name_pt_br": "Alimentos, Bebidas e Tabaco"
+  },
+  {
+    "id": 436,
+    "name_en": "Furniture",
+    "name_pt_br": "Móveis"
+  },
+  {
+    "id": 632,
+    "name_en": "Hardware",
+    "name_pt_br": "Ferramentas e Hardware"
+  },
+  {
+    "id": 469,
+    "name_en": "Health & Beauty",
+    "name_pt_br": "Saúde e Beleza"
+  },
+  {
+    "id": 536,
+    "name_en": "Home & Garden",
+    "name_pt_br": "Casa e Jardim"
+  },
+  {
+    "id": 5181,
+    "name_en": "Luggage & Bags",
+    "name_pt_br": "Malas e Bolsas"
+  },
+  {
+    "id": 772,
+    "name_en": "Mature",
+    "name_pt_br": "Conteúdo Adulto"
+  },
+  {
+    "id": 783,
+    "name_en": "Media",
+    "name_pt_br": "Mídia"
+  },
+  {
+    "id": 922,
+    "name_en": "Office Supplies",
+    "name_pt_br": "Material de Escritório"
+  },
+  {
+    "id": 5605,
+    "name_en": "Religious & Ceremonial",
+    "name_pt_br": "Religioso e Cerimonial"
+  },
+  {
+    "id": 2092,
+    "name_en": "Software",
+    "name_pt_br": "Software"
+  },
+  {
+    "id": 988,
+    "name_en": "Sporting Goods",
+    "name_pt_br": "Esportes e Lazer"
+  },
+  {
+    "id": 1239,
+    "name_en": "Toys & Games",
+    "name_pt_br": "Brinquedos e Jogos"
+  },
+  {
+    "id": 888,
+    "name_en": "Vehicles & Parts",
+    "name_pt_br": "Veículos e Peças"
+  }
+]

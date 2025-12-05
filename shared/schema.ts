@@ -150,6 +150,23 @@ export type EventWithRecipients = Event & {
   recipients: Recipient[];
 };
 
+// Google Product Categories table (Google Shopping Taxonomy)
+// Must be defined before giftSuggestions due to foreign key reference
+export const googleProductCategories = pgTable("google_product_categories", {
+  id: integer("id").primaryKey(),
+  nameEn: varchar("name_en").notNull(),
+  namePtBr: varchar("name_pt_br").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGoogleProductCategorySchema = createInsertSchema(googleProductCategories).omit({
+  createdAt: true,
+});
+
+export type InsertGoogleProductCategory = z.infer<typeof insertGoogleProductCategorySchema>;
+export type GoogleProductCategory = typeof googleProductCategories.$inferSelect;
+
 // Gift suggestions table
 export const giftSuggestions = pgTable("gift_suggestions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -158,12 +175,15 @@ export const giftSuggestions = pgTable("gift_suggestions", {
   imageUrl: text("image_url").notNull(),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   category: varchar("category").notNull(),
+  googleCategoryId: integer("google_category_id").references(() => googleProductCategories.id),
   giftTypeId: varchar("gift_type_id"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   priority: integer("priority"),
   productUrl: text("product_url").notNull().default(""),
   cupom: varchar("cupom"),
   validadeCupom: date("validade_cupom"),
+  targetGender: varchar("target_gender").default("unissex"),
+  targetAgeRange: varchar("target_age_range").default("todos"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   priorityCheck: check("priority_check", sql`${table.priority} IS NULL OR ${table.priority} IN (1, 2, 3)`)
@@ -186,6 +206,8 @@ const baseGiftSuggestionSchema = createInsertSchema(giftSuggestions, {
   }, "URL deve começar com http:// ou https://"),
   cupom: z.string().max(50, "Cupom deve ter no máximo 50 caracteres").nullable().optional(),
   validadeCupom: z.string().nullable().optional(),
+  targetGender: z.enum(["masculino", "feminino", "unissex"]).default("unissex"),
+  targetAgeRange: z.enum(["crianca", "adolescente", "adulto", "idoso", "todos"]).default("todos"),
 }).omit({
   id: true,
   createdAt: true,
@@ -224,6 +246,8 @@ export const giftCategories = pgTable("gift_categories", {
   description: text("description"),
   icon: varchar("icon"),
   color: varchar("color"),
+  keywords: text("keywords").array().default(sql`ARRAY[]::text[]`),
+  googleCategoryId: integer("google_category_id").references(() => googleProductCategories.id),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -340,6 +364,7 @@ export const userProfiles = pgTable("user_profiles", {
   giftGivingStyle: varchar("gift_giving_style"),
   specialTalent: varchar("special_talent"),
   giftsToAvoid: varchar("gifts_to_avoid", { length: 256 }),
+  interests: text("interests").array(),
   isCompleted: boolean("is_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -392,26 +417,6 @@ export type InsertRecipientProfile = z.infer<typeof insertRecipientProfileSchema
 export type RecipientProfile = typeof recipientProfiles.$inferSelect;
 
 // ==================== ADMIN MODULE TABLES ====================
-
-// Categories table - gift categories for parametrization
-export const categories = pgTable("categories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull().unique(),
-  description: text("description"),
-  icon: varchar("icon"),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertCategory = z.infer<typeof insertCategorySchema>;
-export type Category = typeof categories.$inferSelect;
 
 // Occasions table - special dates and occasions
 export const occasions = pgTable("occasions", {
