@@ -83,6 +83,7 @@ Preferred communication style: Simple, everyday language.
   - **Themed Night Categories**: Dynamic "Qual é a boa?" subcategory system for themed nights. Admins can create/manage categories (name, description, activity suggestions). When creating a "Noite Temática" rolê, users select from active categories. Category details displayed on event detail page.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
   - **Date Validation**: Rolês follow the same date validation rules as regular events - only today or future dates are allowed.
+  - **Email Invites**: When adding participants via "Convidar > Adicionar participante", the system automatically sends invite emails using Resend. The invite includes event details and a personalized link. Toast notifications indicate if email was sent successfully.
 
 ## External Dependencies
 - **Database Service**: Neon PostgreSQL (serverless database).
