@@ -327,9 +327,15 @@ export default function RoleDetail() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "pairs"] });
+      
+      let description = data.message || "O sorteio foi realizado com sucesso.";
+      if (data.emailsSent !== undefined && data.emailsSent > 0) {
+        description += ` ${data.emailsSent} email(s) enviado(s) aos participantes.`;
+      }
+      
       toast({
         title: "Sorteio realizado!",
-        description: data.message || "O sorteio foi realizado com sucesso.",
+        description,
       });
       setConfirmDrawOpen(false);
     },

@@ -241,3 +241,148 @@ export async function sendCollaborativeEventInviteEmail(
     `
   });
 }
+
+export interface SecretSantaDrawEmailOptions {
+  to: string;
+  participantName: string;
+  receiverName: string;
+  eventName: string;
+  eventDate?: string | null;
+  eventLocation?: string | null;
+  eventDescription?: string | null;
+  rules?: {
+    minGiftValue?: number | null;
+    maxGiftValue?: number | null;
+    rulesDescription?: string | null;
+  } | null;
+  signupLink: string;
+}
+
+export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEmailOptions) {
+  const {
+    to,
+    participantName,
+    receiverName,
+    eventName,
+    eventDate,
+    eventLocation,
+    eventDescription,
+    rules,
+    signupLink
+  } = options;
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formattedDate = formatDate(eventDate);
+
+  const hasRules = rules && (rules.minGiftValue || rules.maxGiftValue || rules.rulesDescription);
+
+  let rulesHtml = '';
+  if (hasRules) {
+    rulesHtml = `
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+        <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">Regras do Amigo Secreto</h3>
+        ${rules.minGiftValue || rules.maxGiftValue ? `
+          <p style="color: #78350f; margin: 8px 0; font-size: 14px;">
+            <strong>Valor do presente:</strong> 
+            ${rules.minGiftValue ? `mínimo R$ ${rules.minGiftValue.toFixed(2)}` : ''}
+            ${rules.minGiftValue && rules.maxGiftValue ? ' - ' : ''}
+            ${rules.maxGiftValue ? `máximo R$ ${rules.maxGiftValue.toFixed(2)}` : ''}
+          </p>
+        ` : ''}
+        ${rules.rulesDescription ? `
+          <p style="color: #78350f; margin: 8px 0; font-size: 14px;">
+            <strong>Observações:</strong> ${rules.rulesDescription}
+          </p>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  return sendEmail({
+    to,
+    subject: `O sorteio do Amigo Secreto "${eventName}" foi realizado!`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #e11d48; margin-bottom: 10px;">O sorteio foi realizado!</h1>
+          <p style="color: #6b7280; font-size: 14px;">Amigo Secreto: ${eventName}</p>
+        </div>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Olá <strong>${participantName}</strong>!
+        </p>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Temos uma notícia quentinha pra você! O sorteio do Amigo Secreto foi realizado e...
+        </p>
+
+        <div style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: white; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; opacity: 0.9;">Você tirou:</p>
+          <p style="margin: 0; font-size: 28px; font-weight: bold;">${receiverName}</p>
+        </div>
+
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">Detalhes do Evento</h3>
+          
+          ${formattedDate ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Quando:</strong> ${formattedDate}
+            </p>
+          ` : ''}
+          
+          ${eventLocation ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Onde:</strong> ${eventLocation}
+            </p>
+          ` : ''}
+          
+          ${eventDescription ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Sobre:</strong> ${eventDescription}
+            </p>
+          ` : ''}
+        </div>
+
+        ${rulesHtml}
+
+        <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 20px; border-radius: 12px; margin: 30px 0; text-align: center;">
+          <p style="color: #065f46; font-size: 16px; margin: 0 0 12px 0; font-weight: 600;">
+            Quer facilitar a vida de quem te tirou?
+          </p>
+          <p style="color: #047857; font-size: 14px; margin: 0 0 20px 0; line-height: 1.5;">
+            Cadastre-se no Giviti e preencha suas preferências! Assim, seu amigo secreto 
+            não vai precisar adivinhar se você prefere meias ou um drone. 
+            (Spoiler: ninguém quer meias. Ou quer? Conte pra gente!)
+          </p>
+          <a href="${signupLink}" 
+             style="display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; 
+                    text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            Criar Conta e Preencher Preferências
+          </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Este email foi enviado automaticamente pelo Giviti. 
+          Psiu... não conta pra ninguém quem você tirou!
+        </p>
+      </div>
+    `
+  });
+}

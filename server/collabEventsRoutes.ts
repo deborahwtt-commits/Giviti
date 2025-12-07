@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
-import { sendCollaborativeEventInviteEmail } from "./emailService";
+import { sendCollaborativeEventInviteEmail, sendSecretSantaDrawResultEmail } from "./emailService";
 
 // Extend Request type for TypeScript
 interface AuthenticatedRequest extends Request {
@@ -564,10 +564,77 @@ export function registerCollabEventsRoutes(app: Express) {
       // Save pairs
       const savedPairs = await storage.savePairs(id, pairs);
       
+      // Create participant map for quick lookup
+      const participantMap = new Map(confirmedParticipants.map(p => [p.id, p]));
+      
+      // Get base URL for signup link
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers['host'] || 'localhost:5000';
+      const baseUrl = `${protocol}://${host}`;
+      const signupLink = `${baseUrl}/cadastro`;
+      
+      // Extract rules from event data
+      const rules = event.typeSpecificData as {
+        minGiftValue?: number | null;
+        maxGiftValue?: number | null;
+        rulesDescription?: string | null;
+      } | null;
+      
+      // Send emails to all participants with their draw results
+      let emailsSent = 0;
+      let emailsFailed = 0;
+      
+      const emailPromises = savedPairs.map(async (pair) => {
+        const giver = participantMap.get(pair.giverParticipantId);
+        const receiver = participantMap.get(pair.receiverParticipantId);
+        
+        if (!giver || !receiver) {
+          console.error(`[Draw] Missing participant data for pair: giver=${pair.giverParticipantId}, receiver=${pair.receiverParticipantId}`);
+          emailsFailed++;
+          return;
+        }
+        
+        // Skip if giver has no email
+        if (!giver.email) {
+          console.log(`[Draw] Skipping email for participant ${giver.name || giver.id} - no email address`);
+          return;
+        }
+        
+        try {
+          const eventDateISO = event.eventDate 
+            ? (typeof event.eventDate === 'string' ? event.eventDate : event.eventDate.toISOString())
+            : null;
+          
+          await sendSecretSantaDrawResultEmail({
+            to: giver.email,
+            participantName: giver.name || 'Participante',
+            receiverName: receiver.name || 'Seu amigo secreto',
+            eventName: event.name,
+            eventDate: eventDateISO,
+            eventLocation: event.location,
+            eventDescription: event.description,
+            rules,
+            signupLink,
+          });
+          emailsSent++;
+          console.log(`[Draw] Email sent to ${giver.email}`);
+        } catch (emailError) {
+          console.error(`[Draw] Failed to send email to ${giver.email}:`, emailError);
+          emailsFailed++;
+        }
+      });
+      
+      // Wait for all emails to be sent (don't block response on failure)
+      await Promise.allSettled(emailPromises);
+      
+      console.log(`[Draw] Email summary: ${emailsSent} sent, ${emailsFailed} failed`);
+      
       res.status(201).json({ 
         success: true, 
-        message: `Draw completed! ${savedPairs.length} pairs created.`,
-        pairsCount: savedPairs.length 
+        message: `Sorteio realizado com sucesso! ${savedPairs.length} pares criados.`,
+        pairsCount: savedPairs.length,
+        emailsSent,
+        emailsFailed,
       });
     } catch (error) {
       console.error("Error performing draw:", error);
