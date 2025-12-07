@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +49,9 @@ import {
   Clock,
   X,
   Mail,
+  Save,
+  DollarSign,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +72,12 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
+interface SecretSantaRules {
+  minGiftValue?: number | null;
+  maxGiftValue?: number | null;
+  rulesDescription?: string | null;
+}
+
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -73,6 +85,10 @@ export default function RoleDetail() {
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
   const [confirmDrawOpen, setConfirmDrawOpen] = useState(false);
+  
+  const [minGiftValue, setMinGiftValue] = useState<string>("");
+  const [maxGiftValue, setMaxGiftValue] = useState<string>("");
+  const [rulesDescription, setRulesDescription] = useState<string>("");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -143,6 +159,46 @@ export default function RoleDetail() {
     },
     enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
   });
+
+  useEffect(() => {
+    if (event && event.eventType === "secret_santa" && event.typeSpecificData) {
+      const data = event.typeSpecificData as SecretSantaRules;
+      setMinGiftValue(data.minGiftValue?.toString() || "");
+      setMaxGiftValue(data.maxGiftValue?.toString() || "");
+      setRulesDescription(data.rulesDescription || "");
+    }
+  }, [event]);
+
+  const saveRulesMutation = useMutation({
+    mutationFn: async (rules: SecretSantaRules) => {
+      return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
+        typeSpecificData: rules
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Regras salvas",
+        description: "As regras do Amigo Secreto foram atualizadas.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar regras",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveRules = () => {
+    const rules: SecretSantaRules = {
+      minGiftValue: minGiftValue ? parseFloat(minGiftValue) : null,
+      maxGiftValue: maxGiftValue ? parseFloat(maxGiftValue) : null,
+      rulesDescription: rulesDescription || null,
+    };
+    saveRulesMutation.mutate(rules);
+  };
 
   const removeParticipantMutation = useMutation({
     mutationFn: async (participantId: string) => {
@@ -401,21 +457,58 @@ export default function RoleDetail() {
               </CardContent>
             </Card>
 
-            {budgetLimit !== null && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configurações do Amigo Secreto</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Limite de Orçamento</p>
-                    <p className="text-2xl font-bold text-primary" data-testid="text-budget-limit">
-                      R$ {budgetLimit}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {event.eventType === "secret_santa" && (() => {
+              const rules = event.typeSpecificData as SecretSantaRules | null;
+              const hasRules = rules && (rules.minGiftValue || rules.maxGiftValue || rules.rulesDescription);
+              
+              if (!hasRules && !isOwner) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gift className="w-5 h-5" />
+                      Regras do Amigo Secreto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {(rules?.minGiftValue || rules?.maxGiftValue) && (
+                      <div className="flex items-start gap-3">
+                        <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Faixa de Valor do Presente</p>
+                          <p className="text-lg font-semibold text-primary" data-testid="text-gift-value-range">
+                            {rules?.minGiftValue && rules?.maxGiftValue ? (
+                              <>R$ {rules.minGiftValue} - R$ {rules.maxGiftValue}</>
+                            ) : rules?.minGiftValue ? (
+                              <>A partir de R$ {rules.minGiftValue}</>
+                            ) : (
+                              <>Até R$ {rules?.maxGiftValue}</>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {rules?.rulesDescription && (
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Regras</p>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-rules-description">
+                            {rules.rulesDescription}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {!hasRules && (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma regra definida ainda. {isOwner && "Vá em Configurações para definir as regras."}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
 
           {event.eventType === "secret_santa" && isOwner && (
@@ -664,16 +757,96 @@ export default function RoleDetail() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
+          {event?.eventType === "secret_santa" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="w-5 h-5" />
+                  Regras do Amigo Secreto
+                </CardTitle>
+                <CardDescription>
+                  Defina o valor do presente e outras regras para os participantes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="minGiftValue" className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                      Valor Mínimo (R$)
+                    </Label>
+                    <Input
+                      id="minGiftValue"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Ex: 50,00"
+                      value={minGiftValue}
+                      onChange={(e) => setMinGiftValue(e.target.value)}
+                      data-testid="input-min-gift-value"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maxGiftValue" className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                      Valor Máximo (R$)
+                    </Label>
+                    <Input
+                      id="maxGiftValue"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Ex: 100,00"
+                      value={maxGiftValue}
+                      onChange={(e) => setMaxGiftValue(e.target.value)}
+                      data-testid="input-max-gift-value"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="rulesDescription" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    Descrição das Regras
+                  </Label>
+                  <Textarea
+                    id="rulesDescription"
+                    placeholder="Descreva as regras do seu Amigo Secreto... Ex: 'Não vale presente repetido, vale presente caseiro, etc.'"
+                    rows={4}
+                    value={rulesDescription}
+                    onChange={(e) => setRulesDescription(e.target.value)}
+                    data-testid="textarea-rules-description"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveRules}
+                    disabled={saveRulesMutation.isPending}
+                    data-testid="button-save-rules"
+                  >
+                    {saveRulesMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar Regras
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <Card>
             <CardHeader>
-              <CardTitle>Configurações do Rolê</CardTitle>
+              <CardTitle>Configurações Gerais</CardTitle>
               <CardDescription>
                 Ajuste as configurações do seu rolê
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Configurações em desenvolvimento
+                Outras configurações em desenvolvimento
               </p>
             </CardContent>
           </Card>
