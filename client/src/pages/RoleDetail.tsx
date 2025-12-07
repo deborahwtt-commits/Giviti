@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { AddParticipantDialog } from "@/components/AddParticipantDialog";
+import { ParticipantPreferencesDialog } from "@/components/ParticipantPreferencesDialog";
 import {
   Gift,
   PartyPopper,
@@ -53,6 +54,7 @@ import {
   Save,
   DollarSign,
   FileText,
+  ClipboardCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -100,6 +102,27 @@ interface MyPairResponse {
   receiver: CollaborativeEventParticipant;
 }
 
+interface ParticipantUserProfile {
+  ageRange: string | null;
+  gender: string | null;
+  zodiacSign: string | null;
+  giftPreference: string | null;
+  freeTimeActivity: string | null;
+  musicalStyle: string | null;
+  monthlyGiftPreference: string | null;
+  surpriseReaction: string | null;
+  giftPriority: string | null;
+  giftGivingStyle: string | null;
+  specialTalent: string | null;
+  giftsToAvoid: string | null;
+  interests: string[] | null;
+}
+
+interface ParticipantWithProfile extends CollaborativeEventParticipant {
+  hasFilledProfile: boolean;
+  userProfile: ParticipantUserProfile | null;
+}
+
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -107,6 +130,7 @@ export default function RoleDetail() {
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
   const [confirmDrawOpen, setConfirmDrawOpen] = useState(false);
+  const [selectedParticipantForProfile, setSelectedParticipantForProfile] = useState<ParticipantWithProfile | null>(null);
   
   const [minGiftValue, setMinGiftValue] = useState<string>("");
   const [maxGiftValue, setMaxGiftValue] = useState<string>("");
@@ -132,7 +156,7 @@ export default function RoleDetail() {
     enabled: !!id,
   });
 
-  const { data: participants, isLoading: participantsLoading, error: participantsError } = useQuery<CollaborativeEventParticipant[]>({
+  const { data: participants, isLoading: participantsLoading, error: participantsError } = useQuery<ParticipantWithProfile[]>({
     queryKey: ["/api/collab-events", id, "participants"],
     queryFn: async () => {
       const response = await fetch(`/api/collab-events/${id}/participants`, {
@@ -858,6 +882,22 @@ export default function RoleDetail() {
                           <p className="font-medium" data-testid={`text-participant-name-${participant.id}`}>
                             {participant.name || participant.email}
                           </p>
+                          {participant.hasFilledProfile && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => setSelectedParticipantForProfile(participant)}
+                                  className="text-green-600 dark:text-green-500 hover:text-green-700 dark:hover:text-green-400 transition-colors"
+                                  data-testid={`button-view-profile-${participant.id}`}
+                                >
+                                  <ClipboardCheck className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Ver preferências</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                           {participant.name && participant.email && (
                             <span className="text-sm text-muted-foreground truncate" data-testid={`text-participant-email-${participant.id}`}>
                               ({participant.email})
@@ -1180,6 +1220,13 @@ export default function RoleDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ParticipantPreferencesDialog
+        open={selectedParticipantForProfile !== null}
+        onOpenChange={(open) => !open && setSelectedParticipantForProfile(null)}
+        participantName={selectedParticipantForProfile?.name || "Participante"}
+        userProfile={selectedParticipantForProfile?.userProfile || null}
+      />
     </div>
   );
 }
