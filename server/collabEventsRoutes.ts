@@ -345,6 +345,81 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // POST /api/collab-events/:eventId/participants/:participantId/resend-invite - Resend invite email
+  app.post("/api/collab-events/:eventId/participants/:participantId/resend-invite", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { eventId, participantId } = req.params;
+      
+      const hasAccess = await canAccessEvent(userId, eventId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Get event details
+      const event = await storage.getCollaborativeEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      // Get participant details
+      const participants = await storage.getParticipants(eventId);
+      const participant = participants.find(p => p.id === participantId);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      if (!participant.email) {
+        return res.status(400).json({ error: "Participant has no email address" });
+      }
+      
+      // Get inviter (current user) details
+      const inviter = await storage.getUser(userId);
+      const inviterName = inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email : 'Alguém';
+      
+      // Generate new invite token if participant doesn't have one
+      let inviteToken = participant.inviteToken;
+      if (!inviteToken) {
+        inviteToken = crypto.randomBytes(32).toString("hex");
+        await storage.updateParticipantInviteToken(participantId, inviteToken);
+      }
+      
+      // Build invite link
+      let baseUrl = 'http://localhost:5000';
+      
+      console.log('[ResendInvite] Building invite link...');
+      
+      if (process.env.REPLIT_DEV_DOMAIN) {
+        const domain = process.env.REPLIT_DEV_DOMAIN.trim();
+        baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      } else if (process.env.REPLIT_DOMAINS) {
+        const domain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
+        baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      }
+      
+      const inviteLink = `${baseUrl}/convite/${inviteToken}`;
+      console.log('[ResendInvite] Invite link:', inviteLink);
+      
+      // Send invite email
+      console.log('[ResendInvite] Sending invite email to:', participant.email);
+      await sendCollaborativeEventInviteEmail(
+        participant.email,
+        inviterName,
+        event.name,
+        event.eventType,
+        inviteLink
+      );
+      
+      console.log(`[ResendInvite] SUCCESS: Invite email resent to ${participant.email} for event ${event.name}`);
+      
+      res.json({ success: true, message: "Convite reenviado com sucesso" });
+    } catch (error) {
+      console.error("[ResendInvite] Error resending invite:", error);
+      res.status(500).json({ error: "Failed to resend invite email" });
+    }
+  });
+
   // ========== SHARE LINK ROUTES ==========
 
   // GET /api/collab-events/:id/share-links - Get all share links for an event

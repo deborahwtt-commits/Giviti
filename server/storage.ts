@@ -236,6 +236,7 @@ export interface IStorage {
   getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]>;
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
   
   // Share Link Operations
@@ -1663,6 +1664,19 @@ export class DatabaseStorage implements IStorage {
       .set({
         status,
         joinedAt: status === 'confirmed' ? sql`now()` : undefined,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        inviteToken,
         updatedAt: sql`now()`,
       })
       .where(eq(collaborativeEventParticipants.id, id))

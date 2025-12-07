@@ -45,6 +45,7 @@ import {
   Check,
   Clock,
   X,
+  Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -181,6 +182,25 @@ export default function RoleDetail() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: async (participantId: string) => {
+      return await apiRequest(`/api/collab-events/${id}/participants/${participantId}/resend-invite`, "POST", {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Convite reenviado",
+        description: "O email de convite foi reenviado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao reenviar convite",
         description: error.message,
         variant: "destructive",
       });
@@ -597,6 +617,16 @@ export default function RoleDetail() {
                             <X className="w-4 h-4 mr-2" />
                             Recusar
                           </DropdownMenuItem>
+                          {participant.email && (
+                            <DropdownMenuItem
+                              onClick={() => resendInviteMutation.mutate(participant.id)}
+                              disabled={resendInviteMutation.isPending}
+                              data-testid={`menu-item-resend-invite-${participant.id}`}
+                            >
+                              <Mail className="w-4 h-4 mr-2" />
+                              Reenviar convite
+                            </DropdownMenuItem>
+                          )}
                           {participant.role !== "owner" && (
                             <>
                               <DropdownMenuItem
