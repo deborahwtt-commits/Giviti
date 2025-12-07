@@ -604,19 +604,14 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
 
 export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants, {
   status: z.enum(["invited", "pending", "accepted", "declined"]).default("pending"),
+  email: z.string().email("Email inválido"),
+  name: z.string().min(1, "Nome é obrigatório").max(255, "Nome muito longo"),
 })
   .omit({
     id: true,
     createdAt: true,
     updatedAt: true,
-  })
-  .refine(
-    (data) => !!(data.userId || (data.email && data.name)),
-    {
-      message: "Either userId or both email and name must be provided",
-      path: ["userId"],
-    }
-  );
+  });
 
 export type InsertCollaborativeEventParticipant = z.infer<typeof insertCollaborativeEventParticipantSchema>;
 export type CollaborativeEventParticipant = typeof collaborativeEventParticipants.$inferSelect;
