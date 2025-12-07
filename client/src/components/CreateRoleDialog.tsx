@@ -242,31 +242,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            {selectedType === "secret_santa" && (
-              <FormField
-                control={form.control}
-                name="budgetLimit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Limite de Orçamento (R$)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Ex: 50.00"
-                        data-testid="input-budget-limit"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Valor máximo sugerido para os presentes
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
             {selectedType === "themed_night" && (
               <FormField
                 control={form.control}
