@@ -831,11 +831,18 @@ export default function RoleDetail() {
                           {getInitials(participant.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium" data-testid={`text-participant-name-${participant.id}`}>
-                          {participant.name || participant.email}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium" data-testid={`text-participant-name-${participant.id}`}>
+                            {participant.name || participant.email}
+                          </p>
+                          {participant.name && participant.email && (
+                            <span className="text-sm text-muted-foreground truncate" data-testid={`text-participant-email-${participant.id}`}>
+                              ({participant.email})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <Badge variant="outline">
                             {participant.role === "owner" ? "Organizador" : "Participante"}
                           </Badge>
