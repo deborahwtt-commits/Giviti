@@ -78,6 +78,26 @@ import {
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
 
+// Enriched participant type with profile data
+export type ParticipantWithProfile = CollaborativeEventParticipant & {
+  hasFilledProfile: boolean;
+  userProfile: {
+    ageRange: string | null;
+    gender: string | null;
+    zodiacSign: string | null;
+    giftPreference: string | null;
+    freeTimeActivity: string | null;
+    musicalStyle: string | null;
+    monthlyGiftPreference: string | null;
+    surpriseReaction: string | null;
+    giftPriority: string | null;
+    giftGivingStyle: string | null;
+    specialTalent: string | null;
+    giftsToAvoid: string | null;
+    interests: string[] | null;
+  } | null;
+};
+
 // Storage interface with all CRUD operations
 export interface IStorage {
   // User operations - email/password authentication
@@ -234,6 +254,7 @@ export interface IStorage {
   // Participant Operations
   addParticipant(eventId: string, participant: InsertCollaborativeEventParticipant): Promise<CollaborativeEventParticipant>;
   getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]>;
+  getParticipantsWithProfiles(eventId: string): Promise<ParticipantWithProfile[]>;
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
@@ -1649,6 +1670,37 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(collaborativeEventParticipants)
       .where(eq(collaborativeEventParticipants.eventId, eventId));
+  }
+
+  async getParticipantsWithProfiles(eventId: string): Promise<ParticipantWithProfile[]> {
+    const results = await db
+      .select({
+        participant: collaborativeEventParticipants,
+        profile: userProfiles,
+      })
+      .from(collaborativeEventParticipants)
+      .leftJoin(userProfiles, eq(collaborativeEventParticipants.userId, userProfiles.userId))
+      .where(eq(collaborativeEventParticipants.eventId, eventId));
+
+    return results.map(({ participant, profile }) => ({
+      ...participant,
+      hasFilledProfile: profile?.isCompleted === true,
+      userProfile: profile ? {
+        ageRange: profile.ageRange,
+        gender: profile.gender,
+        zodiacSign: profile.zodiacSign,
+        giftPreference: profile.giftPreference,
+        freeTimeActivity: profile.freeTimeActivity,
+        musicalStyle: profile.musicalStyle,
+        monthlyGiftPreference: profile.monthlyGiftPreference,
+        surpriseReaction: profile.surpriseReaction,
+        giftPriority: profile.giftPriority,
+        giftGivingStyle: profile.giftGivingStyle,
+        specialTalent: profile.specialTalent,
+        giftsToAvoid: profile.giftsToAvoid,
+        interests: profile.interests,
+      } : null,
+    }));
   }
 
   async getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined> {

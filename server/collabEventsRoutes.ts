@@ -197,7 +197,7 @@ export function registerCollabEventsRoutes(app: Express) {
 
   // ========== PARTICIPANT ROUTES ==========
 
-  // GET /api/collab-events/:id/participants - Get all participants for an event
+  // GET /api/collab-events/:id/participants - Get all participants for an event (with profile data)
   app.get("/api/collab-events/:id/participants", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
@@ -208,7 +208,7 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const participants = await storage.getParticipants(id);
+      const participants = await storage.getParticipantsWithProfiles(id);
       res.json(participants);
     } catch (error) {
       console.error("Error fetching participants:", error);
