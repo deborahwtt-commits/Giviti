@@ -78,6 +78,27 @@ interface SecretSantaRules {
   rulesDescription?: string | null;
 }
 
+interface EnrichedPair {
+  id: string;
+  eventId: string;
+  giverParticipantId: string;
+  receiverParticipantId: string;
+  isRevealed: boolean;
+  giver: CollaborativeEventParticipant;
+  receiver: CollaborativeEventParticipant;
+}
+
+interface MyPairResponse {
+  pair: {
+    id: string;
+    eventId: string;
+    giverParticipantId: string;
+    receiverParticipantId: string;
+    isRevealed: boolean;
+  };
+  receiver: CollaborativeEventParticipant;
+}
+
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -159,6 +180,42 @@ export default function RoleDetail() {
     },
     enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
   });
+
+  // Query: All pairs (owner only) - for displaying in Overview after draw
+  const { data: allPairs, isLoading: allPairsLoading } = useQuery<EnrichedPair[]>({
+    queryKey: ["/api/collab-events", id, "pairs"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/pairs`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar pares");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner && drawStatus?.isDrawPerformed === true,
+  });
+
+  // Query: My pair (participant view) - for non-owners to see who they got
+  const { data: myPair, isLoading: myPairLoading } = useQuery<MyPairResponse>({
+    queryKey: ["/api/collab-events", id, "my-pair"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/my-pair`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error("Erro ao buscar seu par");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
+  });
+
+  // State for confirming redraw
+  const [confirmRedrawOpen, setConfirmRedrawOpen] = useState(false);
 
   useEffect(() => {
     if (event && event.eventType === "secret_santa" && event.typeSpecificData) {
@@ -269,6 +326,7 @@ export default function RoleDetail() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "pairs"] });
       toast({
         title: "Sorteio realizado!",
         description: data.message || "O sorteio foi realizado com sucesso.",
@@ -282,6 +340,30 @@ export default function RoleDetail() {
         variant: "destructive",
       });
       setConfirmDrawOpen(false);
+    },
+  });
+
+  const deletePairsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/collab-events/${id}/pairs`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "pairs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-pair"] });
+      toast({
+        title: "Pares removidos",
+        description: "Os pares foram removidos. Você pode realizar um novo sorteio.",
+      });
+      setConfirmRedrawOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover pares",
+        description: error.message,
+        variant: "destructive",
+      });
+      setConfirmRedrawOpen(false);
     },
   });
 
@@ -527,24 +609,81 @@ export default function RoleDetail() {
                 ) : (
                   <div className="space-y-4">
                     {drawStatus && drawStatus.isDrawPerformed ? (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-green-600 dark:text-green-500">
-                            Sorteio realizado!
-                          </p>
-                          {drawStatus.isOwner && drawStatus.pairsCount && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {drawStatus.pairsCount} pares criados
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600 dark:text-green-500">
+                              Sorteio realizado!
                             </p>
-                          )}
+                            {drawStatus.isOwner && drawStatus.pairsCount && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {drawStatus.pairsCount} pares criados
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="w-5 h-5 text-green-600 dark:text-green-500" />
+                            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                              Concluído
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-5 h-5 text-green-600 dark:text-green-500" />
-                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                            Concluído
-                          </Badge>
+                        
+                        {/* Display pairs for owner */}
+                        {allPairsLoading ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : allPairs && allPairs.length > 0 && (
+                          <div className="mt-4 space-y-3">
+                            <p className="text-sm font-medium">Pares do Sorteio:</p>
+                            <div className="space-y-2">
+                              {allPairs.map((pair) => (
+                                <div 
+                                  key={pair.id} 
+                                  className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
+                                  data-testid={`pair-${pair.id}`}
+                                >
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(pair.giver?.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      {pair.giver?.name || "Participante"}
+                                    </p>
+                                  </div>
+                                  <Gift className="w-4 h-4 text-primary" />
+                                  <div className="flex-1 text-right">
+                                    <p className="text-sm font-medium">
+                                      {pair.receiver?.name || "Participante"}
+                                    </p>
+                                  </div>
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(pair.receiver?.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Redraw button */}
+                        <div className="mt-4 pt-4 border-t">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setConfirmRedrawOpen(true)}
+                            className="w-full"
+                            data-testid="button-redraw-secret-santa"
+                          >
+                            <Gift className="w-4 h-4 mr-2" />
+                            Realizar Novo Sorteio
+                          </Button>
                         </div>
-                      </div>
+                      </>
                     ) : (
                       <>
                         {drawStatus?.isOwner ? (
@@ -578,6 +717,52 @@ export default function RoleDetail() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Participant view: show their assigned pair */}
+          {event.eventType === "secret_santa" && !isOwner && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="w-5 h-5" />
+                  Seu Amigo Secreto
+                </CardTitle>
+                <CardDescription>
+                  Descubra quem você tirou no sorteio
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {myPairLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : myPair && myPair.receiver ? (
+                  <div className="flex items-center gap-4 p-4 rounded-lg border bg-primary/5">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="text-lg">
+                        {getInitials(myPair.receiver.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-lg font-semibold" data-testid="text-my-pair-name">
+                        {myPair.receiver.name || "Participante"}
+                      </p>
+                      {myPair.receiver.email && (
+                        <p className="text-sm text-muted-foreground" data-testid="text-my-pair-email">
+                          {myPair.receiver.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-4">
+                    <p className="text-sm text-muted-foreground">
+                      O sorteio ainda não foi realizado. Aguarde o organizador.
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -880,6 +1065,33 @@ export default function RoleDetail() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Realizar Sorteio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmRedrawOpen} onOpenChange={setConfirmRedrawOpen}>
+        <AlertDialogContent data-testid="dialog-confirm-redraw">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Realizar Novo Sorteio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja refazer o sorteio? Os pares atuais serão apagados e um novo sorteio será necessário.
+              <br /><br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-redraw">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletePairsMutation.mutate()}
+              disabled={deletePairsMutation.isPending}
+              data-testid="button-confirm-redraw"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletePairsMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Apagar Pares
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
