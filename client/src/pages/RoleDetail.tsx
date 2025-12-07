@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -786,15 +787,36 @@ export default function RoleDetail() {
                     Gerencie os participantes do seu rolê
                   </CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAddParticipantOpen(true)}
-                  data-testid="button-invite-participants"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Convidar
-                </Button>
+                {event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          data-testid="button-invite-participants"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Convidar
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Realize um novo sorteio para adicionar participantes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddParticipantOpen(true)}
+                    data-testid="button-invite-participants"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Convidar
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -939,15 +961,36 @@ export default function RoleDetail() {
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">Nenhum participante ainda</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setAddParticipantOpen(true)}
-                    data-testid="button-add-first-participant"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Adicionar Primeiro Participante
-                  </Button>
+                  {event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            variant="outline"
+                            className="mt-4"
+                            disabled
+                            data-testid="button-add-first-participant"
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Adicionar Primeiro Participante
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Realize um novo sorteio para adicionar participantes</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => setAddParticipantOpen(true)}
+                      data-testid="button-add-first-participant"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Adicionar Primeiro Participante
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
