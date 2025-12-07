@@ -31,7 +31,22 @@ export function registerCollabEventsRoutes(app: Express) {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
       const events = await storage.getCollaborativeEvents(userId);
-      res.json(events);
+      
+      // Enrich secret_santa events with draw status
+      const enrichedEvents = await Promise.all(
+        events.map(async (event) => {
+          if (event.eventType === "secret_santa") {
+            const pairs = await storage.getPairsByEvent(event.id);
+            return {
+              ...event,
+              isDrawPerformed: pairs.length > 0,
+            };
+          }
+          return event;
+        })
+      );
+      
+      res.json(enrichedEvents);
     } catch (error) {
       console.error("Error fetching collaborative events:", error);
       res.status(500).json({ error: "Failed to fetch events" });
