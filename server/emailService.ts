@@ -85,8 +85,23 @@ export async function sendEmail(options: SendEmailOptions) {
   try {
     const { client, fromEmail } = await getUncachableResendClient();
     
+    // Check if fromEmail domain is likely unverified (gmail, outlook, etc.)
+    // Use Resend's test email for unverified domains
+    const unverifiedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com'];
+    const emailDomain = fromEmail?.split('@')[1]?.toLowerCase();
+    const isUnverifiedDomain = emailDomain && unverifiedDomains.includes(emailDomain);
+    
+    // Use test email for unverified domains, otherwise use configured email
+    const effectiveFromEmail = isUnverifiedDomain 
+      ? 'Giviti <onboarding@resend.dev>'
+      : fromEmail;
+    
+    if (isUnverifiedDomain) {
+      console.log('[EmailService] Using Resend test email (domain not verified):', effectiveFromEmail);
+    }
+    
     const emailPayload: any = {
-      from: fromEmail,
+      from: effectiveFromEmail,
       to: options.to,
       subject: options.subject,
     };
