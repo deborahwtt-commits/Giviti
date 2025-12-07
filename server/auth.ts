@@ -61,6 +61,12 @@ export async function setupAuth(app: Express): Promise<void> {
         validatedData.lastName ?? undefined
       );
 
+      // Link any pending participant invitations to this new user
+      const linkedCount = await storage.linkParticipantsByEmail(validatedData.email, newUser.id);
+      if (linkedCount > 0) {
+        console.log(`[Register] Linked ${linkedCount} participant invitation(s) to new user ${newUser.id}`);
+      }
+
       // Regenerate session to prevent session fixation
       req.session.regenerate((err) => {
         if (err) {

@@ -243,6 +243,15 @@ export function registerCollabEventsRoutes(app: Express) {
         eventId: id,
       });
       
+      // Check if a user with this email already exists and link them
+      if (validatedData.email) {
+        const existingUser = await storage.getUserByEmail(validatedData.email);
+        if (existingUser) {
+          validatedData.userId = existingUser.id;
+          console.log(`[AddParticipant] Found existing user for email ${validatedData.email}, linking userId: ${existingUser.id}`);
+        }
+      }
+      
       // Generate invite token if not accepted
       if (validatedData.status !== "accepted") {
         validatedData.inviteToken = crypto.randomBytes(32).toString("hex");

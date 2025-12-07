@@ -238,6 +238,7 @@ export interface IStorage {
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
+  linkParticipantsByEmail(email: string, userId: string): Promise<number>;
   
   // Share Link Operations
   createShareLink(link: InsertCollaborativeEventLink): Promise<CollaborativeEventLink>;
@@ -1697,6 +1698,24 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  async linkParticipantsByEmail(email: string, userId: string): Promise<number> {
+    const result = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        userId,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(collaborativeEventParticipants.email, email.toLowerCase()),
+          sql`${collaborativeEventParticipants.userId} IS NULL`
+        )
+      )
+      .returning();
+
+    return result.length;
   }
 
   // ========== Share Link Operations ==========
