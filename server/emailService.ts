@@ -85,6 +85,13 @@ export async function sendEmail(options: SendEmailOptions) {
   try {
     const { client, fromEmail } = await getUncachableResendClient();
     
+    // Normalize recipient email(s) to lowercase (Resend is case-sensitive for test accounts)
+    const normalizedTo = Array.isArray(options.to) 
+      ? options.to.map(email => email.toLowerCase().trim())
+      : options.to.toLowerCase().trim();
+    
+    console.log('[EmailService] Normalized To:', normalizedTo);
+    
     // Check if fromEmail domain is likely unverified (gmail, outlook, etc.)
     // Use Resend's test email for unverified domains
     const unverifiedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com'];
@@ -102,7 +109,7 @@ export async function sendEmail(options: SendEmailOptions) {
     
     const emailPayload: any = {
       from: effectiveFromEmail,
-      to: options.to,
+      to: normalizedTo,
       subject: options.subject,
     };
     
