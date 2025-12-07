@@ -84,6 +84,12 @@ Preferred communication style: Simple, everyday language.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
   - **Date Validation**: Rolês follow the same date validation rules as regular events - only today or future dates are allowed.
   - **Email Invites**: When adding participants via "Convidar > Adicionar participante", the system automatically sends invite emails using Resend. The invite includes event details and a personalized link. Toast notifications indicate if email was sent successfully.
+  - **Email Service Configuration**:
+    - Uses Resend connector for API key management
+    - Automatic fallback to Resend test email (onboarding@resend.dev) for unverified domains (gmail.com, outlook.com, etc.)
+    - Email normalization to lowercase to handle Resend's case-sensitive validation
+    - **Test Account Limitation**: With unverified domain, can only send to account owner's email (deborahwtt@gmail.com)
+    - **Production Requirement**: Must verify custom domain in Resend dashboard to send to any recipient
 
 ## External Dependencies
 - **Database Service**: Neon PostgreSQL (serverless database).
