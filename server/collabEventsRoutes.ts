@@ -236,10 +236,20 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Send invite email if participant has an email and invite token
       let emailSent = false;
+      console.log('[AddParticipant] Checking email conditions:', {
+        email: validatedData.email,
+        hasInviteToken: !!validatedData.inviteToken,
+        status: validatedData.status
+      });
+      
       if (validatedData.email && validatedData.inviteToken) {
         try {
           // Build invite link with token - normalize environment variables
           let baseUrl = 'http://localhost:5000';
+          
+          console.log('[AddParticipant] Building invite link...');
+          console.log('[AddParticipant] REPLIT_DEV_DOMAIN:', process.env.REPLIT_DEV_DOMAIN);
+          console.log('[AddParticipant] REPLIT_DOMAINS:', process.env.REPLIT_DOMAINS);
           
           if (process.env.REPLIT_DEV_DOMAIN) {
             const domain = process.env.REPLIT_DEV_DOMAIN.trim();
@@ -250,7 +260,9 @@ export function registerCollabEventsRoutes(app: Express) {
           }
           
           const inviteLink = `${baseUrl}/convite/${validatedData.inviteToken}`;
+          console.log('[AddParticipant] Invite link:', inviteLink);
           
+          console.log('[AddParticipant] Attempting to send invite email...');
           await sendCollaborativeEventInviteEmail(
             validatedData.email,
             inviterName,
@@ -259,15 +271,15 @@ export function registerCollabEventsRoutes(app: Express) {
             inviteLink
           );
           emailSent = true;
-          console.log(`Invite email sent to ${validatedData.email} for event ${event.name}`);
+          console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email} for event ${event.name}`);
         } catch (emailError) {
           // Log error but don't fail the request - participant was added successfully
-          console.error("Failed to send invite email:", emailError);
+          console.error("[AddParticipant] FAILED to send invite email:", emailError);
         }
       } else if (validatedData.email && !validatedData.inviteToken) {
-        console.log(`No invite email sent to ${validatedData.email} - participant already accepted`);
+        console.log(`[AddParticipant] No invite email sent to ${validatedData.email} - participant already accepted`);
       } else if (!validatedData.email) {
-        console.log(`No invite email sent - participant has no email address`);
+        console.log(`[AddParticipant] No invite email sent - participant has no email address`);
       }
       
       res.status(201).json({ ...participant, emailSent });

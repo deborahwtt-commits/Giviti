@@ -3,7 +3,11 @@ import { Resend } from 'resend';
 let connectionSettings: any;
 
 async function getCredentials() {
+  console.log('[EmailService] Getting Resend credentials...');
+  
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  console.log('[EmailService] Connectors hostname:', hostname ? 'configured' : 'NOT CONFIGURED');
+  
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
     : process.env.WEB_REPL_RENEWAL 
@@ -11,26 +15,50 @@ async function getCredentials() {
     : null;
 
   if (!xReplitToken) {
+    console.error('[EmailService] ERROR: X_REPLIT_TOKEN not found - REPL_IDENTITY and WEB_REPL_RENEWAL are both undefined');
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
+  
+  console.log('[EmailService] Token type:', xReplitToken.startsWith('repl') ? 'REPL' : 'DEPL');
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
+  try {
+    const url = 'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend';
+    console.log('[EmailService] Fetching credentials from connectors API...');
+    
+    const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
         'X_REPLIT_TOKEN': xReplitToken
       }
+    });
+    
+    console.log('[EmailService] API response status:', response.status);
+    
+    const data = await response.json();
+    connectionSettings = data.items?.[0];
+    
+    if (!connectionSettings) {
+      console.error('[EmailService] ERROR: No Resend connection found in response. Make sure Resend integration is connected.');
+      console.error('[EmailService] Response data:', JSON.stringify(data, null, 2));
+      throw new Error('Resend not connected - no connection found');
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
+    
+    if (!connectionSettings.settings?.api_key) {
+      console.error('[EmailService] ERROR: Resend connection exists but API key is missing');
+      throw new Error('Resend not connected - missing API key');
+    }
+    
+    console.log('[EmailService] Credentials obtained successfully');
+    console.log('[EmailService] From email:', connectionSettings.settings.from_email);
+    
+    return {
+      apiKey: connectionSettings.settings.api_key, 
+      fromEmail: connectionSettings.settings.from_email
+    };
+  } catch (error) {
+    console.error('[EmailService] Failed to get credentials:', error);
+    throw error;
   }
-  return {
-    apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email
-  };
 }
 
 async function getUncachableResendClient() {
@@ -50,29 +78,45 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions) {
-  const { client, fromEmail } = await getUncachableResendClient();
+  console.log('[EmailService] Preparing to send email...');
+  console.log('[EmailService] To:', options.to);
+  console.log('[EmailService] Subject:', options.subject);
   
-  const emailPayload: any = {
-    from: fromEmail,
-    to: options.to,
-    subject: options.subject,
-  };
-  
-  if (options.html) {
-    emailPayload.html = options.html;
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    
+    const emailPayload: any = {
+      from: fromEmail,
+      to: options.to,
+      subject: options.subject,
+    };
+    
+    if (options.html) {
+      emailPayload.html = options.html;
+    }
+    
+    if (options.text) {
+      emailPayload.text = options.text;
+    }
+    
+    if (options.replyTo) {
+      emailPayload.replyTo = options.replyTo;
+    }
+    
+    console.log('[EmailService] Sending email via Resend...');
+    const result = await client.emails.send(emailPayload);
+    
+    if (result.error) {
+      console.error('[EmailService] Resend API error:', result.error);
+      throw new Error(`Resend error: ${result.error.message}`);
+    }
+    
+    console.log('[EmailService] Email sent successfully! ID:', result.data?.id);
+    return result;
+  } catch (error) {
+    console.error('[EmailService] Failed to send email:', error);
+    throw error;
   }
-  
-  if (options.text) {
-    emailPayload.text = options.text;
-  }
-  
-  if (options.replyTo) {
-    emailPayload.replyTo = options.replyTo;
-  }
-  
-  const result = await client.emails.send(emailPayload);
-
-  return result;
 }
 
 export async function sendWelcomeEmail(to: string, userName: string) {
