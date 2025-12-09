@@ -114,6 +114,10 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
   });
 
   const selectedType = form.watch("eventType");
+  const selectedCategoryId = form.watch("themedNightCategoryId");
+  
+  // Find the selected category to show its description
+  const selectedCategory = themedCategories.find(cat => cat.id === selectedCategoryId);
 
   // Show toast error if categories fail to load
   if (categoriesError && selectedType === "themed_night") {
@@ -288,6 +292,17 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                       Escolha o tema da noite temática
                     </FormDescription>
                     <FormMessage />
+                    
+                    {/* Show selected category description */}
+                    {selectedCategory?.description && (
+                      <div 
+                        className="mt-3 p-3 rounded-md bg-muted/50 border border-muted text-sm text-muted-foreground"
+                        data-testid="themed-category-description"
+                      >
+                        <p className="font-medium text-foreground mb-1">{selectedCategory.name}</p>
+                        <p>{selectedCategory.description}</p>
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
