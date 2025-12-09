@@ -55,6 +55,11 @@ import {
   DollarSign,
   FileText,
   ClipboardCheck,
+  Music,
+  Home,
+  Lightbulb,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -195,6 +200,21 @@ export default function RoleDetail() {
   // Fetch themed night category if applicable
   const { data: themedCategory } = useQuery<{ id: string; name: string; description: string | null }>({
     queryKey: ["/api/themed-night-categories", event?.themedNightCategoryId],
+    enabled: !!event && event.eventType === "themed_night" && !!event.themedNightCategoryId,
+  });
+
+  // Fetch themed night suggestions for the category
+  const { data: themedSuggestions } = useQuery<Array<{
+    id: string;
+    categoryId: string;
+    title: string;
+    suggestionType: string;
+    content: string | null;
+    mediaUrl: string | null;
+    priority: number | null;
+    tags: string[] | null;
+  }>>({
+    queryKey: ["/api/themed-night-categories", event?.themedNightCategoryId, "suggestions"],
     enabled: !!event && event.eventType === "themed_night" && !!event.themedNightCategoryId,
   });
 
@@ -585,6 +605,85 @@ export default function RoleDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Themed Night Suggestions Card */}
+            {event.eventType === "themed_night" && themedSuggestions && themedSuggestions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb className="w-5 h-5" />
+                    Sugestões para o Rolê
+                  </CardTitle>
+                  <CardDescription>
+                    Dicas e ideias para tornar sua noite ainda mais especial
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Group by suggestion type */}
+                  {['produto', 'ambiente', 'atividade', 'playlist'].map((type) => {
+                    const suggestionsOfType = themedSuggestions.filter(s => s.suggestionType === type);
+                    if (suggestionsOfType.length === 0) return null;
+                    
+                    const typeLabels: Record<string, { label: string; Icon: LucideIcon }> = {
+                      produto: { label: 'Produtos', Icon: ShoppingBag },
+                      ambiente: { label: 'Ambiente', Icon: Home },
+                      atividade: { label: 'Atividades', Icon: Sparkles },
+                      playlist: { label: 'Playlists', Icon: Music },
+                    };
+                    
+                    const { label, Icon } = typeLabels[type] || { label: type, Icon: Lightbulb };
+                    
+                    return (
+                      <div key={type} className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                          <span>{label}</span>
+                        </div>
+                        <div className="grid gap-2 pl-6">
+                          {suggestionsOfType.map((suggestion) => (
+                            <div 
+                              key={suggestion.id} 
+                              className="p-3 rounded-md bg-muted/50 hover-elevate"
+                              data-testid={`suggestion-${suggestion.id}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{suggestion.title}</p>
+                                  {suggestion.content && (
+                                    <p className="text-sm text-muted-foreground mt-1">{suggestion.content}</p>
+                                  )}
+                                  {suggestion.tags && suggestion.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {suggestion.tags.map((tag, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {suggestion.mediaUrl && (
+                                  <a 
+                                    href={suggestion.mediaUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="shrink-0"
+                                  >
+                                    <Button size="icon" variant="ghost">
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Button>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
 
             {event.eventType === "secret_santa" && (() => {
               const rules = event.typeSpecificData as SecretSantaRules | null;

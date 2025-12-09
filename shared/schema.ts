@@ -547,6 +547,32 @@ export const insertThemedNightCategorySchema = createInsertSchema(themedNightCat
 export type InsertThemedNightCategory = z.infer<typeof insertThemedNightCategorySchema>;
 export type ThemedNightCategory = typeof themedNightCategories.$inferSelect;
 
+// Themed night suggestions table - personalized suggestions per themed night category
+export const themedNightSuggestions = pgTable("themed_night_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id")
+    .notNull()
+    .references(() => themedNightCategories.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  suggestionType: varchar("suggestion_type").notNull().default("produto"), // produto, ambiente, atividade, playlist
+  content: text("content"), // detailed description
+  mediaUrl: varchar("media_url"), // optional link (image, Spotify, YouTube)
+  priority: integer("priority").default(0),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertThemedNightSuggestionSchema = createInsertSchema(themedNightSuggestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertThemedNightSuggestion = z.infer<typeof insertThemedNightSuggestionSchema>;
+export type ThemedNightSuggestion = typeof themedNightSuggestions.$inferSelect;
+
 // Collaborative events table - main table for hangout planning
 export const collaborativeEvents = pgTable("collaborative_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

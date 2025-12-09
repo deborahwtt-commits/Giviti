@@ -17,6 +17,7 @@ import {
   insertAuditLogSchema,
   insertGiftSuggestionSchema,
   updateGiftSuggestionSchema,
+  insertThemedNightSuggestionSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -79,6 +80,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching themed night category:", error);
       res.status(500).json({ message: "Failed to fetch themed night category" });
+    }
+  });
+
+  // ========== Themed Night Suggestions Routes ==========
+  
+  // GET /api/themed-night-categories/:categoryId/suggestions - Get all suggestions for a category
+  app.get("/api/themed-night-categories/:categoryId/suggestions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { categoryId } = req.params;
+      const includeInactive = req.query.includeInactive === 'true';
+      const suggestions = await storage.getThemedNightSuggestions(categoryId, includeInactive);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching themed night suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch suggestions" });
+    }
+  });
+  
+  // GET /api/themed-night-suggestions/:id - Get a specific suggestion
+  app.get("/api/themed-night-suggestions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const suggestion = await storage.getThemedNightSuggestion(id);
+      
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.json(suggestion);
+    } catch (error) {
+      console.error("Error fetching themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to fetch suggestion" });
+    }
+  });
+  
+  // POST /api/themed-night-categories/:categoryId/suggestions - Create a new suggestion (admin only)
+  app.post("/api/themed-night-categories/:categoryId/suggestions", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { categoryId } = req.params;
+      const validatedData = insertThemedNightSuggestionSchema.parse({
+        ...req.body,
+        categoryId,
+      });
+      const newSuggestion = await storage.createThemedNightSuggestion(validatedData);
+      res.status(201).json(newSuggestion);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid suggestion data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to create suggestion" });
+    }
+  });
+  
+  // PUT /api/themed-night-suggestions/:id - Update a suggestion (admin only)
+  app.put("/api/themed-night-suggestions/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const existingSuggestion = await storage.getThemedNightSuggestion(id);
+      
+      if (!existingSuggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      const updatedSuggestion = await storage.updateThemedNightSuggestion(id, req.body);
+      res.json(updatedSuggestion);
+    } catch (error) {
+      console.error("Error updating themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to update suggestion" });
+    }
+  });
+  
+  // DELETE /api/themed-night-suggestions/:id - Delete a suggestion (admin only)
+  app.delete("/api/themed-night-suggestions/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteThemedNightSuggestion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.json({ message: "Suggestion deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to delete suggestion" });
     }
   });
 

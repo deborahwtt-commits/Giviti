@@ -18,6 +18,7 @@ import {
   systemSettings,
   auditLogs,
   themedNightCategories,
+  themedNightSuggestions,
   collaborativeEvents,
   collaborativeEventParticipants,
   collaborativeEventLinks,
@@ -60,6 +61,8 @@ import {
   type InsertAuditLog,
   type ThemedNightCategory,
   type InsertThemedNightCategory,
+  type ThemedNightSuggestion,
+  type InsertThemedNightSuggestion,
   type CollaborativeEvent,
   type InsertCollaborativeEvent,
   type CollaborativeEventParticipant,
@@ -217,6 +220,13 @@ export interface IStorage {
   createThemedNightCategory(category: InsertThemedNightCategory): Promise<ThemedNightCategory>;
   updateThemedNightCategory(id: string, updates: Partial<InsertThemedNightCategory>): Promise<ThemedNightCategory | undefined>;
   deleteThemedNightCategory(id: string): Promise<boolean>;
+  
+  // Themed Night Suggestions Management
+  getThemedNightSuggestions(categoryId: string, includeInactive?: boolean): Promise<ThemedNightSuggestion[]>;
+  getThemedNightSuggestion(id: string): Promise<ThemedNightSuggestion | undefined>;
+  createThemedNightSuggestion(suggestion: InsertThemedNightSuggestion): Promise<ThemedNightSuggestion>;
+  updateThemedNightSuggestion(id: string, updates: Partial<InsertThemedNightSuggestion>): Promise<ThemedNightSuggestion | undefined>;
+  deleteThemedNightSuggestion(id: string): Promise<boolean>;
   
   // System Settings Management
   getSystemSettings(publicOnly?: boolean): Promise<SystemSetting[]>;
@@ -1217,6 +1227,48 @@ export class DatabaseStorage implements IStorage {
   
   async deleteThemedNightCategory(id: string): Promise<boolean> {
     const result = await db.delete(themedNightCategories).where(eq(themedNightCategories.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Themed Night Suggestions Management
+  async getThemedNightSuggestions(categoryId: string, includeInactive = false): Promise<ThemedNightSuggestion[]> {
+    if (includeInactive) {
+      return await db.select()
+        .from(themedNightSuggestions)
+        .where(eq(themedNightSuggestions.categoryId, categoryId))
+        .orderBy(themedNightSuggestions.priority);
+    }
+    
+    return await db.select()
+      .from(themedNightSuggestions)
+      .where(and(
+        eq(themedNightSuggestions.categoryId, categoryId),
+        eq(themedNightSuggestions.isActive, true)
+      ))
+      .orderBy(themedNightSuggestions.priority);
+  }
+  
+  async getThemedNightSuggestion(id: string): Promise<ThemedNightSuggestion | undefined> {
+    const [suggestion] = await db.select().from(themedNightSuggestions).where(eq(themedNightSuggestions.id, id));
+    return suggestion;
+  }
+  
+  async createThemedNightSuggestion(suggestion: InsertThemedNightSuggestion): Promise<ThemedNightSuggestion> {
+    const [newSuggestion] = await db.insert(themedNightSuggestions).values(suggestion).returning();
+    return newSuggestion;
+  }
+  
+  async updateThemedNightSuggestion(id: string, updates: Partial<InsertThemedNightSuggestion>): Promise<ThemedNightSuggestion | undefined> {
+    const [updated] = await db
+      .update(themedNightSuggestions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(themedNightSuggestions.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteThemedNightSuggestion(id: string): Promise<boolean> {
+    const result = await db.delete(themedNightSuggestions).where(eq(themedNightSuggestions.id, id)).returning();
     return result.length > 0;
   }
   
