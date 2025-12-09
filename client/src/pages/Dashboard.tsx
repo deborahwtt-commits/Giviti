@@ -85,13 +85,15 @@ export default function Dashboard() {
   const getRoleTypeInfo = (eventType: string) => {
     switch (eventType) {
       case "secret_santa":
-        return { icon: Users, label: "Amigo Secreto", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
-      case "collective_gift":
-        return { icon: Gift, label: "Presente Coletivo", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" };
+        return { icon: Gift, label: "Amigo Secreto", color: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800" };
       case "themed_night":
-        return { icon: Palette, label: "Noite Temática", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
+        return { icon: Palette, label: "Noite Temática", color: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800" };
+      case "collective_gift":
+        return { icon: Gift, label: "Presente Coletivo", color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" };
+      case "creative_challenge":
+        return { icon: Palette, label: "Desafio Criativo", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" };
       default:
-        return { icon: Users, label: "Rolê", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" };
+        return { icon: Users, label: "Rolê", color: "bg-muted text-muted-foreground" };
     }
   };
 
