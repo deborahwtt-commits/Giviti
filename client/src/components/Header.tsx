@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Gift, Menu, X, Sun, Moon, LogOut, User, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Event } from "@shared/schema";
 
 interface HeaderProps {
   onToggleTheme?: () => void;
@@ -20,15 +18,8 @@ export default function Header({
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, hasAdminAccess } = useAuth();
+  const { hasAdminAccess } = useAuth();
   const { toast } = useToast();
-  
-  const { data: upcomingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events?upcoming=true"],
-    enabled: isAuthenticated,
-  });
-  
-  const upcomingEventsCount = upcomingEvents?.length || 0;
 
   // Logout mutation with proper error handling
   const logoutMutation = useMutation({
@@ -92,14 +83,6 @@ export default function Header({
                 data-testid={`link-${item.label.toLowerCase()}`}
               >
                 {item.label}
-                {item.label === "Eventos" && upcomingEventsCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center text-xs"
-                  >
-                    {upcomingEventsCount}
-                  </Badge>
-                )}
               </Link>
             ))}
           </nav>
@@ -185,11 +168,6 @@ export default function Header({
                   data-testid={`link-mobile-${item.label.toLowerCase()}`}
                 >
                   {item.label}
-                  {item.label === "Eventos" && upcomingEventsCount > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      {upcomingEventsCount} próximos
-                    </Badge>
-                  )}
                 </Link>
               ))}
               {hasAdminAccess && (
