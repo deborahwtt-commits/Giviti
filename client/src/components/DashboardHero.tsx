@@ -8,9 +8,11 @@ interface DashboardHeroProps {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    upcomingRoles: number;
   };
   onCreateRecipient: () => void;
   onExploreSuggestions: () => void;
+  onRolesClick?: () => void;
 }
 
 export default function DashboardHero({
@@ -18,6 +20,7 @@ export default function DashboardHero({
   stats,
   onCreateRecipient,
   onExploreSuggestions,
+  onRolesClick,
 }: DashboardHeroProps) {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-accent/10 to-background rounded-lg">
@@ -50,7 +53,7 @@ export default function DashboardHero({
             personalizadas prontas para você.
           </p>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border">
               <div className="text-2xl font-bold text-foreground">
                 {stats.totalRecipients}
@@ -63,6 +66,25 @@ export default function DashboardHero({
               </div>
               <div className="text-xs text-muted-foreground">
                 Eventos próximos
+              </div>
+            </div>
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onRolesClick}
+              data-testid="stat-upcoming-roles"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onRolesClick?.();
+                }
+              }}
+            >
+              <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
+                {stats.upcomingRoles}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Rolês próximos
               </div>
             </div>
             <div className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border">

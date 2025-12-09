@@ -141,9 +141,16 @@ export default function Dashboard() {
             totalRecipients: stats?.totalRecipients || 0,
             upcomingEvents: stats?.upcomingEvents || 0,
             giftsPurchased: stats?.giftsPurchased || 0,
+            upcomingRoles: getUpcomingRoles().length,
           }}
           onCreateRecipient={() => setLocation("/presenteados")}
           onExploreSuggestions={() => setLocation("/sugestoes")}
+          onRolesClick={() => {
+            const rolesSection = document.getElementById("roles-section");
+            if (rolesSection) {
+              rolesSection.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
         />
 
         <section>
@@ -198,7 +205,7 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section>
+        <section id="roles-section">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading font-semibold text-3xl text-foreground">
