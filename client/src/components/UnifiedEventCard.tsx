@@ -32,18 +32,34 @@ export default function UnifiedEventCard({
   const [, setLocation] = useLocation();
   const isPastEvent = daysUntil < 0;
 
-  const roleTypeInfo: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
-    secret_santa: { label: "Amigo Secreto", color: "destructive", Icon: Gift },
-    themed_night: { label: "Noite Temática", color: "default", Icon: PartyPopper },
-    collective_gift: { label: "Presente Coletivo", color: "secondary", Icon: Heart },
-    creative_challenge: { label: "Desafio Criativo", color: "outline", Icon: Sparkles },
+  const roleTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
+    secret_santa: { 
+      label: "Amigo Secreto", 
+      className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
+      Icon: Gift 
+    },
+    themed_night: { 
+      label: "Noite Temática", 
+      className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
+      Icon: PartyPopper 
+    },
+    collective_gift: { 
+      label: "Presente Coletivo", 
+      className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
+      Icon: Heart 
+    },
+    creative_challenge: { 
+      label: "Desafio Criativo", 
+      className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
+      Icon: Sparkles 
+    },
   };
 
   if (item.type === 'role') {
     const role = item as CollaborativeEvent & { type: 'role' };
     const typeInfo = roleTypeInfo[role.eventType] || {
       label: role.eventType,
-      color: "default",
+      className: "",
       Icon: Calendar,
     };
     const IconComponent = typeInfo.Icon;
@@ -104,7 +120,7 @@ export default function UnifiedEventCard({
             )}
 
             <div className="flex items-center gap-2">
-              <Badge variant={typeInfo.color as any}>
+              <Badge variant="outline" className={typeInfo.className}>
                 {typeInfo.label}
               </Badge>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">

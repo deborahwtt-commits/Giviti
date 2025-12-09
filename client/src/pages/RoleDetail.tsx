@@ -61,11 +61,27 @@ import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
 import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/schema";
 
-const eventTypeInfo: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
-  secret_santa: { label: "Amigo Secreto", color: "destructive", Icon: Gift },
-  themed_night: { label: "Noite Temática", color: "default", Icon: PartyPopper },
-  collective_gift: { label: "Presente Coletivo", color: "secondary", Icon: Heart },
-  creative_challenge: { label: "Desafio Criativo", color: "outline", Icon: Sparkles },
+const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
+  secret_santa: { 
+    label: "Amigo Secreto", 
+    className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
+    Icon: Gift 
+  },
+  themed_night: { 
+    label: "Noite Temática", 
+    className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
+    Icon: PartyPopper 
+  },
+  collective_gift: { 
+    label: "Presente Coletivo", 
+    className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
+    Icon: Heart 
+  },
+  creative_challenge: { 
+    label: "Desafio Criativo", 
+    className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
+    Icon: Sparkles 
+  },
 };
 
 const statusLabels: Record<string, string> = {
@@ -435,7 +451,7 @@ export default function RoleDetail() {
 
   const typeInfo = eventTypeInfo[event.eventType] || {
     label: event.eventType,
-    color: "default",
+    className: "",
     Icon: Calendar,
   };
   const TypeIcon = typeInfo.Icon;
@@ -474,7 +490,7 @@ export default function RoleDetail() {
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-role-name">{event.name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={typeInfo.color as any} data-testid="badge-role-type">
+                <Badge variant="outline" className={typeInfo.className} data-testid="badge-role-type">
                   {typeInfo.label}
                 </Badge>
                 <Badge variant="outline" data-testid="badge-role-status">
