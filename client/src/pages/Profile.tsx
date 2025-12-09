@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserProfileSchema } from "@shared/schema";
-import type { UserProfile, InsertUserProfile, GiftCategory } from "@shared/schema";
+import type { UserProfile, InsertUserProfile, GoogleProductCategory } from "@shared/schema";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,8 +44,8 @@ export default function Profile() {
     },
   });
 
-  const { data: giftCategories = [] } = useQuery<GiftCategory[]>({
-    queryKey: ["/api/gift-categories"],
+  const { data: googleCategories = [] } = useQuery<GoogleProductCategory[]>({
+    queryKey: ["/api/google-categories"],
   });
 
   const { register, handleSubmit, watch, setValue, reset } = useForm<ProfileFormData>({
@@ -459,9 +459,9 @@ export default function Profile() {
               </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="start">
                 <div className="max-h-60 overflow-y-auto p-2">
-                  {giftCategories.map((category) => {
+                  {googleCategories.filter(cat => cat.isActive).map((category) => {
                     const currentInterests = watch("interests") || [];
-                    const isSelected = currentInterests.includes(category.name);
+                    const isSelected = currentInterests.includes(category.namePtBr);
                     
                     return (
                       <div
@@ -469,8 +469,8 @@ export default function Profile() {
                         className="flex items-center space-x-2 p-2 hover-elevate rounded-md cursor-pointer"
                         onClick={() => {
                           const newInterests = isSelected
-                            ? currentInterests.filter((i) => i !== category.name)
-                            : [...currentInterests, category.name];
+                            ? currentInterests.filter((i) => i !== category.namePtBr)
+                            : [...currentInterests, category.namePtBr];
                           setValue("interests", newInterests);
                         }}
                         data-testid={`checkbox-interest-${category.id}`}
@@ -479,12 +479,12 @@ export default function Profile() {
                           checked={isSelected}
                           onCheckedChange={(checked) => {
                             const newInterests = checked
-                              ? [...currentInterests, category.name]
-                              : currentInterests.filter((i) => i !== category.name);
+                              ? [...currentInterests, category.namePtBr]
+                              : currentInterests.filter((i) => i !== category.namePtBr);
                             setValue("interests", newInterests);
                           }}
                         />
-                        <span className="text-sm">{category.name}</span>
+                        <span className="text-sm">{category.namePtBr}</span>
                       </div>
                     );
                   })}
