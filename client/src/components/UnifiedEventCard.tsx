@@ -87,7 +87,7 @@ export default function UnifiedEventCard({
               <h3 className="font-semibold text-lg text-foreground truncate" data-testid={`text-role-name-${role.id}`}>
                 {role.name}
               </h3>
-              <Badge variant="outline" className="shrink-0">
+              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
                 Rolê
               </Badge>
             </div>
@@ -167,7 +167,7 @@ export default function UnifiedEventCard({
             <h3 className="font-semibold text-lg text-foreground truncate">
               {eventName}
             </h3>
-            <Badge variant="outline" className="shrink-0">
+            <Badge variant="outline" className="shrink-0 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
               Evento
             </Badge>
           </div>
