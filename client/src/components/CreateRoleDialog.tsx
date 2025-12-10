@@ -53,6 +53,12 @@ const createRoleSchema = z.object({
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
   themedNightCategoryId: z.string().optional(),
+  // Collective gift specific fields
+  giftName: z.string().max(100).optional(),
+  giftDescription: z.string().max(500).optional(),
+  purchaseLink: z.string().url("Link inválido").max(500).optional().or(z.literal("")),
+  targetAmount: z.string().optional(),
+  recipientName: z.string().max(100).optional(),
 }).refine((data) => {
   if (!data.eventDate) return true;
   const today = startOfDay(new Date());
@@ -61,6 +67,15 @@ const createRoleSchema = z.object({
 }, {
   message: "A data do rolê deve ser hoje ou no futuro",
   path: ["eventDate"],
+}).refine((data) => {
+  // Require targetAmount for collective gift
+  if (data.eventType === "collective_gift") {
+    return data.targetAmount && parseFloat(data.targetAmount) > 0;
+  }
+  return true;
+}, {
+  message: "O valor alvo é obrigatório para presente coletivo",
+  path: ["targetAmount"],
 });
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>;
@@ -110,6 +125,11 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       isPublic: false,
       budgetLimit: "",
       themedNightCategoryId: "",
+      giftName: "",
+      giftDescription: "",
+      purchaseLink: "",
+      targetAmount: "",
+      recipientName: "",
     },
   });
 
@@ -134,6 +154,25 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       
       if (data.eventType === "secret_santa" && data.budgetLimit) {
         typeSpecificData.budgetLimit = parseFloat(data.budgetLimit);
+      }
+      
+      if (data.eventType === "collective_gift") {
+        // Store amounts in cents for precision
+        if (data.targetAmount) {
+          typeSpecificData.targetAmount = Math.round(parseFloat(data.targetAmount) * 100);
+        }
+        if (data.giftName) {
+          typeSpecificData.giftName = data.giftName;
+        }
+        if (data.giftDescription) {
+          typeSpecificData.giftDescription = data.giftDescription;
+        }
+        if (data.purchaseLink) {
+          typeSpecificData.purchaseLink = data.purchaseLink;
+        }
+        if (data.recipientName) {
+          typeSpecificData.recipientName = data.recipientName;
+        }
       }
 
       const payload = {
@@ -306,6 +345,121 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                   </FormItem>
                 )}
               />
+            )}
+
+            {/* Collective Gift specific fields */}
+            {selectedType === "collective_gift" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-pink-50/50 dark:bg-pink-950/20">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-pink-500" />
+                  Detalhes do Presente
+                </h4>
+                
+                <FormField
+                  control={form.control}
+                  name="recipientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quem vai receber o presente?</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: Maria (aniversariante)"
+                          data-testid="input-recipient-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nome da pessoa que vai receber o presente coletivo
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="targetAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor alvo (R$) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Ex: 500.00"
+                          data-testid="input-target-amount"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Valor total que o grupo pretende arrecadar
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="giftName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do presente (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: iPhone 15 Pro"
+                          data-testid="input-gift-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="giftDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição do presente (opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Detalhes sobre o presente escolhido..."
+                          data-testid="input-gift-description"
+                          className="resize-none"
+                          rows={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="purchaseLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link para compra (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://loja.com/produto"
+                          data-testid="input-purchase-link"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Link do produto na loja online
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             <FormField
