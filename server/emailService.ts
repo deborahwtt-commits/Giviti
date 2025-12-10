@@ -442,7 +442,7 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
     suggestionsHtml = `
       <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #d8b4fe; padding: 20px; border-radius: 12px; margin: 20px 0;">
         <h3 style="color: #7c3aed; margin: 0 0 12px 0; font-size: 16px;">
-          Dicas para arrasar no rolê
+          Que tal escolher um dos itens abaixo pra arrasar no rolê?
         </h3>
         <ul style="margin: 0; padding-left: 20px;">
           ${suggestionsList}
