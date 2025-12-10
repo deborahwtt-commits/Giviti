@@ -284,6 +284,15 @@ export interface IStorage {
   getPairsByEvent(eventId: string): Promise<SecretSantaPair[]>;
   getPairForParticipant(eventId: string, participantId: string): Promise<SecretSantaPair | undefined>;
   deletePairsByEvent(eventId: string): Promise<boolean>;
+  
+  // Collective Gift Contribution Operations
+  getContributions(eventId: string): Promise<CollectiveGiftContribution[]>;
+  getContribution(id: string): Promise<CollectiveGiftContribution | undefined>;
+  getContributionByParticipant(eventId: string, participantId: string): Promise<CollectiveGiftContribution | undefined>;
+  createContribution(contribution: InsertCollectiveGiftContribution): Promise<CollectiveGiftContribution>;
+  updateContribution(id: string, updates: Partial<InsertCollectiveGiftContribution>): Promise<CollectiveGiftContribution | undefined>;
+  deleteContribution(id: string): Promise<boolean>;
+  getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1928,6 +1937,73 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  // ========== Collective Gift Contribution Operations ==========
+
+  async getContributions(eventId: string): Promise<CollectiveGiftContribution[]> {
+    return await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.eventId, eventId))
+      .orderBy(collectiveGiftContributions.createdAt);
+  }
+
+  async getContribution(id: string): Promise<CollectiveGiftContribution | undefined> {
+    const [contribution] = await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.id, id));
+    return contribution;
+  }
+
+  async getContributionByParticipant(eventId: string, participantId: string): Promise<CollectiveGiftContribution | undefined> {
+    const [contribution] = await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(
+        and(
+          eq(collectiveGiftContributions.eventId, eventId),
+          eq(collectiveGiftContributions.participantId, participantId)
+        )
+      );
+    return contribution;
+  }
+
+  async createContribution(contribution: InsertCollectiveGiftContribution): Promise<CollectiveGiftContribution> {
+    const [newContribution] = await db
+      .insert(collectiveGiftContributions)
+      .values(contribution)
+      .returning();
+    return newContribution;
+  }
+
+  async updateContribution(id: string, updates: Partial<InsertCollectiveGiftContribution>): Promise<CollectiveGiftContribution | undefined> {
+    const [updated] = await db
+      .update(collectiveGiftContributions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(collectiveGiftContributions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContribution(id: string): Promise<boolean> {
+    const result = await db
+      .delete(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }> {
+    const contributions = await this.getContributions(eventId);
+    
+    const totalDue = contributions.reduce((sum, c) => sum + c.amountDue, 0);
+    const totalPaid = contributions.reduce((sum, c) => sum + c.amountPaid, 0);
+    const participantsCount = contributions.length;
+    const paidCount = contributions.filter(c => c.isPaid).length;
+    
+    return { totalDue, totalPaid, participantsCount, paidCount };
   }
 }
 
