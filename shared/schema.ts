@@ -621,6 +621,7 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
   name: varchar("name"),
   role: varchar("role").notNull().default("participant"), // owner, participant
   status: varchar("status").notNull().default("invited"), // invited, pending, accepted, declined
+  emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
   inviteToken: varchar("invite_token").unique(),
   participantData: jsonb("participant_data"), // For wishlists, preferences, etc.
   joinedAt: timestamp("joined_at"),
