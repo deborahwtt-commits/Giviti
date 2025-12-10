@@ -898,4 +898,260 @@ export function registerCollabEventsRoutes(app: Express) {
       res.status(500).json({ error: "Failed to delete pairs" });
     }
   });
+
+  // ========== COLLECTIVE GIFT CONTRIBUTION ROUTES ==========
+
+  // GET /api/collab-events/:id/contributions - Get all contributions for a collective gift event
+  app.get("/api/collab-events/:id/contributions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "collective_gift") {
+        return res.status(400).json({ error: "This event is not a collective gift" });
+      }
+      
+      const contributions = await storage.getContributions(id);
+      
+      // Enrich with participant details
+      const enrichedContributions = await Promise.all(
+        contributions.map(async (contribution) => {
+          const participant = await storage.getParticipant(contribution.participantId);
+          return {
+            ...contribution,
+            participant,
+          };
+        })
+      );
+      
+      res.json(enrichedContributions);
+    } catch (error) {
+      console.error("Error fetching contributions:", error);
+      res.status(500).json({ error: "Failed to fetch contributions" });
+    }
+  });
+
+  // GET /api/collab-events/:id/contributions/summary - Get summary of contributions
+  app.get("/api/collab-events/:id/contributions/summary", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "collective_gift") {
+        return res.status(400).json({ error: "This event is not a collective gift" });
+      }
+      
+      const summary = await storage.getContributionsSummary(id);
+      
+      // Get target amount from typeSpecificData
+      const typeData = event.typeSpecificData as Record<string, unknown> | null;
+      const targetAmount = (typeData?.targetAmount as number) || 0;
+      
+      res.json({
+        ...summary,
+        targetAmount,
+        progress: targetAmount > 0 ? Math.round((summary.totalPaid / targetAmount) * 100) : 0,
+      });
+    } catch (error) {
+      console.error("Error fetching contribution summary:", error);
+      res.status(500).json({ error: "Failed to fetch summary" });
+    }
+  });
+
+  // POST /api/collab-events/:id/contributions - Create a contribution
+  app.post("/api/collab-events/:id/contributions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "collective_gift") {
+        return res.status(400).json({ error: "This event is not a collective gift" });
+      }
+      
+      // Validate request body
+      const contributionSchema = z.object({
+        participantId: z.string(),
+        amountDue: z.number().min(0),
+        amountPaid: z.number().min(0).optional(),
+        isPaid: z.boolean().optional(),
+        paymentNotes: z.string().optional(),
+      });
+      
+      const data = contributionSchema.parse(req.body);
+      
+      // Check if contribution already exists for this participant
+      const existing = await storage.getContributionByParticipant(id, data.participantId);
+      if (existing) {
+        return res.status(400).json({ error: "Contribution already exists for this participant" });
+      }
+      
+      const contribution = await storage.createContribution({
+        eventId: id,
+        participantId: data.participantId,
+        amountDue: data.amountDue,
+        amountPaid: data.amountPaid || 0,
+        isPaid: data.isPaid || false,
+        paymentNotes: data.paymentNotes,
+      });
+      
+      res.status(201).json(contribution);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      console.error("Error creating contribution:", error);
+      res.status(500).json({ error: "Failed to create contribution" });
+    }
+  });
+
+  // PATCH /api/collab-events/:id/contributions/:contributionId - Update a contribution
+  app.patch("/api/collab-events/:id/contributions/:contributionId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id, contributionId } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "collective_gift") {
+        return res.status(400).json({ error: "This event is not a collective gift" });
+      }
+      
+      // Validate request body
+      const updateSchema = z.object({
+        amountDue: z.number().min(0).optional(),
+        amountPaid: z.number().min(0).optional(),
+        isPaid: z.boolean().optional(),
+        paymentNotes: z.string().optional().nullable(),
+      });
+      
+      const data = updateSchema.parse(req.body);
+      
+      // If marking as paid and no amountPaid specified, set it to amountDue
+      let updates: Record<string, unknown> = { ...data };
+      if (data.isPaid === true && data.amountPaid === undefined) {
+        const existingContribution = await storage.getContribution(contributionId);
+        if (existingContribution) {
+          updates.amountPaid = existingContribution.amountDue;
+          updates.paidAt = new Date();
+        }
+      }
+      
+      const contribution = await storage.updateContribution(contributionId, updates);
+      
+      if (!contribution) {
+        return res.status(404).json({ error: "Contribution not found" });
+      }
+      
+      res.json(contribution);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      console.error("Error updating contribution:", error);
+      res.status(500).json({ error: "Failed to update contribution" });
+    }
+  });
+
+  // DELETE /api/collab-events/:id/contributions/:contributionId - Delete a contribution (owner only)
+  app.delete("/api/collab-events/:id/contributions/:contributionId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id, contributionId } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      // Only owner can delete contributions
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can delete contributions" });
+      }
+      
+      const success = await storage.deleteContribution(contributionId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Contribution not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting contribution:", error);
+      res.status(500).json({ error: "Failed to delete contribution" });
+    }
+  });
+
+  // POST /api/collab-events/:id/contributions/initialize - Initialize contributions for all participants
+  app.post("/api/collab-events/:id/contributions/initialize", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "collective_gift") {
+        return res.status(400).json({ error: "This event is not a collective gift" });
+      }
+      
+      // Only owner can initialize
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can initialize contributions" });
+      }
+      
+      const participants = await storage.getParticipants(id);
+      const existingContributions = await storage.getContributions(id);
+      const existingParticipantIds = new Set(existingContributions.map(c => c.participantId));
+      
+      // Get target amount and divide equally
+      const typeData = event.typeSpecificData as Record<string, unknown> | null;
+      const targetAmount = (typeData?.targetAmount as number) || 0;
+      const contributingParticipants = participants.filter(p => !existingParticipantIds.has(p.id));
+      const amountPerPerson = contributingParticipants.length > 0 
+        ? Math.ceil(targetAmount / (participants.length || 1)) 
+        : 0;
+      
+      // Create contributions for participants who don't have one
+      const newContributions = await Promise.all(
+        contributingParticipants.map(async (participant) => {
+          return await storage.createContribution({
+            eventId: id,
+            participantId: participant.id,
+            amountDue: amountPerPerson,
+            amountPaid: 0,
+            isPaid: false,
+          });
+        })
+      );
+      
+      res.status(201).json({
+        created: newContributions.length,
+        amountPerPerson,
+        contributions: newContributions,
+      });
+    } catch (error) {
+      console.error("Error initializing contributions:", error);
+      res.status(500).json({ error: "Failed to initialize contributions" });
+    }
+  });
 }
