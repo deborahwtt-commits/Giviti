@@ -84,6 +84,7 @@ Preferred communication style: Simple, everyday language.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.
   - **Date Validation**: Rolês follow the same date validation rules as regular events - only today or future dates are allowed.
   - **Email Invites**: When adding participants via "Convidar > Adicionar participante", the system automatically sends invite emails using Resend. The invite includes event details and a personalized link. Toast notifications indicate if email was sent successfully.
+  - **Email Status Tracking**: The `collaborative_event_participants` table includes an `emailStatus` field with values: "not_sent" (default), "pending", "sent", "failed". The participant list displays colored status indicators (green for sent, amber for pending, red for failed) with tooltips for each non-owner participant.
   - **Email Service Configuration**:
     - Uses Resend connector for API key management
     - Automatic fallback to Resend test email (onboarding@resend.dev) for unverified domains (gmail.com, outlook.com, etc.)
