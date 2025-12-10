@@ -392,6 +392,7 @@ export interface ThemedNightInviteEmailOptions {
   inviterName: string;
   eventName: string;
   categoryName?: string | null;
+  categoryDescription?: string | null;
   eventDate?: string | null;
   eventLocation?: string | null;
   eventDescription?: string | null;
@@ -405,6 +406,7 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
     inviterName,
     eventName,
     categoryName,
+    categoryDescription,
     eventDate,
     eventLocation,
     eventDescription,
@@ -475,9 +477,14 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
           <p style="margin: 0; font-size: 24px; font-weight: bold; color: #5b21b6;">
             ${eventName}${categoryBadge}
           </p>
-          ${eventDescription ? `
+          ${categoryDescription ? `
             <p style="margin: 12px 0 0 0; font-size: 16px; color: #6b21a8; font-style: italic;">
-              "${eventDescription}"
+              "${categoryDescription}"
+            </p>
+          ` : ''}
+          ${eventDescription ? `
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #7c3aed;">
+              ${eventDescription}
             </p>
           ` : ''}
         </div>

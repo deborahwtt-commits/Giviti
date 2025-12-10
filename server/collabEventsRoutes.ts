@@ -293,6 +293,7 @@ export function registerCollabEventsRoutes(app: Express) {
           if (event.eventType === 'themed_night') {
             // Fetch category details for themed night email
             let categoryName: string | null = null;
+            let categoryDescription: string | null = null;
             let categorySuggestions: string[] | null = null;
             
             if (event.themedNightCategoryId) {
@@ -300,6 +301,7 @@ export function registerCollabEventsRoutes(app: Express) {
                 const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
                 if (category) {
                   categoryName = category.name;
+                  categoryDescription = category.description || null;
                   
                   // First try to get personalized suggestions from themedNightSuggestions table
                   const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
@@ -321,6 +323,7 @@ export function registerCollabEventsRoutes(app: Express) {
               inviterName,
               eventName: event.name,
               categoryName,
+              categoryDescription,
               eventDate: event.eventDate ? event.eventDate.toString() : null,
               eventLocation: event.location || null,
               eventDescription: event.description || null,
@@ -475,6 +478,7 @@ export function registerCollabEventsRoutes(app: Express) {
       if (event.eventType === 'themed_night') {
         // Fetch category details for themed night email
         let categoryName: string | null = null;
+        let categoryDescription: string | null = null;
         let categorySuggestions: string[] | null = null;
         
         if (event.themedNightCategoryId) {
@@ -482,6 +486,7 @@ export function registerCollabEventsRoutes(app: Express) {
             const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
             if (category) {
               categoryName = category.name;
+              categoryDescription = category.description || null;
               
               // First try to get personalized suggestions from themedNightSuggestions table
               const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
@@ -503,6 +508,7 @@ export function registerCollabEventsRoutes(app: Express) {
           inviterName,
           eventName: event.name,
           categoryName,
+          categoryDescription,
           eventDate: event.eventDate ? event.eventDate.toString() : null,
           eventLocation: event.location || null,
           eventDescription: event.description || null,
