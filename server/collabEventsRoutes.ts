@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
-import { sendCollaborativeEventInviteEmail, sendSecretSantaDrawResultEmail, sendThemedNightInviteEmail } from "./emailService";
+import { sendCollaborativeEventInviteEmail, sendSecretSantaDrawResultEmail, sendThemedNightInviteEmail, sendCollectiveGiftInviteEmail } from "./emailService";
 
 // Extend Request type for TypeScript
 interface AuthenticatedRequest extends Request {
@@ -328,6 +328,45 @@ export function registerCollabEventsRoutes(app: Express) {
               eventLocation: event.location || null,
               eventDescription: event.description || null,
               categorySuggestions,
+              signupLink: inviteLink
+            });
+          } else if (event.eventType === 'collective_gift') {
+            // Use specialized email for collective gift events
+            const giftData = event.typeSpecificData as {
+              targetAmount?: number;
+              giftName?: string;
+              giftDescription?: string;
+              purchaseLink?: string;
+              recipientName?: string;
+            } | null;
+            
+            // Calculate amount per person based on all participants (including new one)
+            // Include all status except 'declined' - owner/accepted/confirmed/pending all contribute
+            let amountPerPerson: number | null = null;
+            if (giftData?.targetAmount) {
+              const existingParticipants = await storage.getEventParticipants(eventId as string);
+              // Count all participants except declined ones - they all contribute
+              const contributingCount = existingParticipants.filter(
+                p => p.status !== 'declined'
+              ).length;
+              // Use contributing count (which now includes the just-added participant)
+              if (contributingCount > 0) {
+                amountPerPerson = Math.ceil(giftData.targetAmount / contributingCount);
+              }
+            }
+            
+            await sendCollectiveGiftInviteEmail({
+              to: validatedData.email,
+              inviterName,
+              eventName: event.name,
+              recipientName: giftData?.recipientName || null,
+              giftName: giftData?.giftName || null,
+              giftDescription: giftData?.giftDescription || null,
+              targetAmount: giftData?.targetAmount || null,
+              amountPerPerson,
+              eventDate: event.eventDate ? event.eventDate.toString() : null,
+              eventDescription: event.description || null,
+              purchaseLink: giftData?.purchaseLink || null,
               signupLink: inviteLink
             });
           } else {

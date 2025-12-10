@@ -544,3 +544,167 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
     `
   });
 }
+
+export interface CollectiveGiftInviteEmailOptions {
+  to: string;
+  inviterName: string;
+  eventName: string;
+  recipientName?: string | null;
+  giftName?: string | null;
+  giftDescription?: string | null;
+  targetAmount?: number | null;
+  amountPerPerson?: number | null;
+  eventDate?: string | null;
+  eventDescription?: string | null;
+  purchaseLink?: string | null;
+  signupLink: string;
+}
+
+export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInviteEmailOptions) {
+  const {
+    to,
+    inviterName,
+    eventName,
+    recipientName,
+    giftName,
+    giftDescription,
+    targetAmount,
+    amountPerPerson,
+    eventDate,
+    eventDescription,
+    purchaseLink,
+    signupLink
+  } = options;
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formattedDate = formatDate(eventDate);
+  const formattedTarget = targetAmount ? (targetAmount / 100).toFixed(2) : null;
+  const formattedPerPerson = amountPerPerson ? (amountPerPerson / 100).toFixed(2) : null;
+
+  let giftDetailsHtml = '';
+  if (giftName || giftDescription) {
+    giftDetailsHtml = `
+      <div style="background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%); border: 1px solid #fbcfe8; padding: 20px; border-radius: 12px; margin: 20px 0;">
+        <h3 style="color: #be185d; margin: 0 0 12px 0; font-size: 16px;">
+          Sobre o Presente
+        </h3>
+        ${giftName ? `<p style="color: #9d174d; margin: 8px 0; font-size: 18px; font-weight: bold;">${giftName}</p>` : ''}
+        ${giftDescription ? `<p style="color: #be185d; margin: 8px 0; font-size: 14px;">${giftDescription}</p>` : ''}
+        ${purchaseLink ? `
+          <p style="margin: 16px 0 0 0;">
+            <a href="${purchaseLink}" style="color: #be185d; font-size: 14px; text-decoration: underline;">
+              Ver produto na loja
+            </a>
+          </p>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  let contributionHtml = '';
+  if (formattedPerPerson || formattedTarget) {
+    contributionHtml = `
+      <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
+        <p style="color: #065f46; font-size: 14px; margin: 0 0 8px 0;">Sua contribuição sugerida:</p>
+        ${formattedPerPerson ? `
+          <p style="color: #047857; font-size: 28px; font-weight: bold; margin: 0;">
+            R$ ${formattedPerPerson}
+          </p>
+        ` : ''}
+        ${formattedTarget ? `
+          <p style="color: #6b7280; font-size: 12px; margin: 8px 0 0 0;">
+            Valor total do presente: R$ ${formattedTarget}
+          </p>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  return sendEmail({
+    to,
+    subject: `${inviterName} te convidou para um Presente Coletivo${recipientName ? ` para ${recipientName}` : ''}!`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%); padding: 30px 20px; border-radius: 16px; margin-bottom: 20px;">
+            <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você foi convidado(a) para</p>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Presente Coletivo</h1>
+          </div>
+        </div>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
+          <strong>${inviterName}</strong> te convidou para participar de um presente especial!
+        </p>
+
+        <div style="background-color: #fdf2f8; border: 2px solid #f9a8d4; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; color: #be185d;">${eventName}</p>
+          ${recipientName ? `
+            <p style="margin: 0; font-size: 14px; color: #9d174d;">
+              Presente para: <span style="font-size: 20px; font-weight: bold; display: block; margin-top: 4px;">${recipientName}</span>
+            </p>
+          ` : ''}
+          ${eventDescription ? `
+            <p style="margin: 12px 0 0 0; font-size: 14px; color: #be185d;">
+              ${eventDescription}
+            </p>
+          ` : ''}
+        </div>
+
+        ${giftDetailsHtml}
+
+        ${contributionHtml}
+
+        ${formattedDate ? `
+          <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="color: #6b7280; margin: 0; font-size: 14px;">
+              <strong>Data limite para contribuição:</strong> ${formattedDate}
+            </p>
+          </div>
+        ` : ''}
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${signupLink}" 
+             style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
+                    text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);">
+            Participar do Presente
+          </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0;">
+          Ao clicar acima, você será direcionado para criar sua conta ou fazer login no Giviti.
+        </p>
+
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>Como funciona:</strong> O organizador do presente irá acompanhar as contribuições e, 
+            quando o valor for atingido, fará a compra do presente. Você pode contribuir com qualquer valor!
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">
+          Se você não esperava este convite, pode ignorar este email.
+        </p>
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Este email foi enviado automaticamente pelo Giviti. 
+          Juntos, presenteamos melhor!
+        </p>
+      </div>
+    `
+  });
+}
