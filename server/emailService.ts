@@ -386,3 +386,155 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
     `
   });
 }
+
+export interface ThemedNightInviteEmailOptions {
+  to: string;
+  inviterName: string;
+  eventName: string;
+  categoryName?: string | null;
+  eventDate?: string | null;
+  eventLocation?: string | null;
+  eventDescription?: string | null;
+  categorySuggestions?: string[] | null;
+  signupLink: string;
+}
+
+export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmailOptions) {
+  const {
+    to,
+    inviterName,
+    eventName,
+    categoryName,
+    eventDate,
+    eventLocation,
+    eventDescription,
+    categorySuggestions,
+    signupLink
+  } = options;
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formattedDate = formatDate(eventDate);
+
+  let suggestionsHtml = '';
+  if (categorySuggestions && categorySuggestions.length > 0) {
+    const suggestionsList = categorySuggestions.slice(0, 5).map(s => 
+      `<li style="color: #6b21a8; margin: 6px 0; font-size: 14px;">${s}</li>`
+    ).join('');
+    
+    suggestionsHtml = `
+      <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #d8b4fe; padding: 20px; border-radius: 12px; margin: 20px 0;">
+        <h3 style="color: #7c3aed; margin: 0 0 12px 0; font-size: 16px;">
+          Dicas para arrasar no rolê
+        </h3>
+        <ul style="margin: 0; padding-left: 20px;">
+          ${suggestionsList}
+        </ul>
+      </div>
+    `;
+  }
+
+  const categoryBadge = categoryName 
+    ? `<span style="display: inline-block; background-color: #a855f7; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 8px;">${categoryName}</span>`
+    : '';
+
+  return sendEmail({
+    to,
+    subject: `${inviterName} te convidou para uma Noite Temática!`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%); padding: 30px 20px; border-radius: 16px; margin-bottom: 20px;">
+            <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você foi convidado(a) para</p>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Noite Temática</h1>
+          </div>
+        </div>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
+          <strong>${inviterName}</strong> te convidou para participar de um rolê especial!
+        </p>
+
+        <div style="background-color: #faf5ff; border: 2px solid #c4b5fd; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; color: #7c3aed;">O tema é:</p>
+          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #5b21b6;">
+            ${eventName}${categoryBadge}
+          </p>
+        </div>
+
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">Detalhes do Evento</h3>
+          
+          ${formattedDate ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Quando:</strong> ${formattedDate}
+            </p>
+          ` : ''}
+          
+          ${eventLocation ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Onde:</strong> ${eventLocation}
+            </p>
+          ` : ''}
+          
+          ${eventDescription ? `
+            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+              <strong>Sobre:</strong> ${eventDescription}
+            </p>
+          ` : ''}
+
+          ${!formattedDate && !eventLocation && !eventDescription ? `
+            <p style="color: #9ca3af; margin: 0; font-size: 14px; font-style: italic;">
+              Mais detalhes em breve...
+            </p>
+          ` : ''}
+        </div>
+
+        ${suggestionsHtml}
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${signupLink}" 
+             style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 16px 32px; 
+                    text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
+            Confirmar Presença
+          </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0;">
+          Ao clicar acima, você será direcionado para criar sua conta ou fazer login no Giviti.
+        </p>
+
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>Dica:</strong> Ao criar sua conta, você pode preencher suas preferências 
+            e facilitar a vida de quem quiser te dar presentes no futuro!
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">
+          Se você não esperava este convite, pode ignorar este email.
+        </p>
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Este email foi enviado automaticamente pelo Giviti. 
+          Preparado(a) para o rolê?
+        </p>
+      </div>
+    `
+  });
+}

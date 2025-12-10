@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
-import { sendCollaborativeEventInviteEmail, sendSecretSantaDrawResultEmail } from "./emailService";
+import { sendCollaborativeEventInviteEmail, sendSecretSantaDrawResultEmail, sendThemedNightInviteEmail } from "./emailService";
 
 // Extend Request type for TypeScript
 interface AuthenticatedRequest extends Request {
@@ -288,15 +288,57 @@ export function registerCollabEventsRoutes(app: Express) {
           console.log('[AddParticipant] Invite link:', inviteLink);
           
           console.log('[AddParticipant] Attempting to send invite email...');
-          await sendCollaborativeEventInviteEmail(
-            validatedData.email,
-            inviterName,
-            event.name,
-            event.eventType,
-            inviteLink
-          );
+          
+          // Use specialized email for themed_night events
+          if (event.eventType === 'themed_night') {
+            // Fetch category details for themed night email
+            let categoryName: string | null = null;
+            let categorySuggestions: string[] | null = null;
+            
+            if (event.themedNightCategoryId) {
+              try {
+                const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
+                if (category) {
+                  categoryName = category.name;
+                  
+                  // First try to get personalized suggestions from themedNightSuggestions table
+                  const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
+                  if (detailedSuggestions && detailedSuggestions.length > 0) {
+                    // Convert structured suggestions to displayable strings
+                    categorySuggestions = detailedSuggestions.slice(0, 5).map(s => s.title);
+                  } else if (category.suggestions && category.suggestions.length > 0) {
+                    // Fall back to simple category suggestions
+                    categorySuggestions = category.suggestions;
+                  }
+                }
+              } catch (catError) {
+                console.log('[AddParticipant] Could not fetch category details:', catError);
+              }
+            }
+            
+            await sendThemedNightInviteEmail({
+              to: validatedData.email,
+              inviterName,
+              eventName: event.name,
+              categoryName,
+              eventDate: event.eventDate ? event.eventDate.toString() : null,
+              eventLocation: event.location || null,
+              eventDescription: event.description || null,
+              categorySuggestions,
+              signupLink: inviteLink
+            });
+          } else {
+            await sendCollaborativeEventInviteEmail(
+              validatedData.email,
+              inviterName,
+              event.name,
+              event.eventType,
+              inviteLink
+            );
+          }
+          
           emailSent = true;
-          console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email} for event ${event.name}`);
+          console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email} for event ${event.name} (type: ${event.eventType})`);
         } catch (emailError) {
           // Log error but don't fail the request - participant was added successfully
           console.error("[AddParticipant] FAILED to send invite email:", emailError);
@@ -428,15 +470,56 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Send invite email
       console.log('[ResendInvite] Sending invite email to:', participant.email);
-      await sendCollaborativeEventInviteEmail(
-        participant.email,
-        inviterName,
-        event.name,
-        event.eventType,
-        inviteLink
-      );
       
-      console.log(`[ResendInvite] SUCCESS: Invite email resent to ${participant.email} for event ${event.name}`);
+      // Use specialized email for themed_night events
+      if (event.eventType === 'themed_night') {
+        // Fetch category details for themed night email
+        let categoryName: string | null = null;
+        let categorySuggestions: string[] | null = null;
+        
+        if (event.themedNightCategoryId) {
+          try {
+            const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
+            if (category) {
+              categoryName = category.name;
+              
+              // First try to get personalized suggestions from themedNightSuggestions table
+              const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
+              if (detailedSuggestions && detailedSuggestions.length > 0) {
+                // Convert structured suggestions to displayable strings
+                categorySuggestions = detailedSuggestions.slice(0, 5).map(s => s.title);
+              } else if (category.suggestions && category.suggestions.length > 0) {
+                // Fall back to simple category suggestions
+                categorySuggestions = category.suggestions;
+              }
+            }
+          } catch (catError) {
+            console.log('[ResendInvite] Could not fetch category details:', catError);
+          }
+        }
+        
+        await sendThemedNightInviteEmail({
+          to: participant.email,
+          inviterName,
+          eventName: event.name,
+          categoryName,
+          eventDate: event.eventDate ? event.eventDate.toString() : null,
+          eventLocation: event.location || null,
+          eventDescription: event.description || null,
+          categorySuggestions,
+          signupLink: inviteLink
+        });
+      } else {
+        await sendCollaborativeEventInviteEmail(
+          participant.email,
+          inviterName,
+          event.name,
+          event.eventType,
+          inviteLink
+        );
+      }
+      
+      console.log(`[ResendInvite] SUCCESS: Invite email resent to ${participant.email} for event ${event.name} (type: ${event.eventType})`);
       
       res.json({ success: true, message: "Convite reenviado com sucesso" });
     } catch (error) {
