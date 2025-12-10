@@ -92,23 +92,14 @@ export async function sendEmail(options: SendEmailOptions) {
     
     console.log('[EmailService] Normalized To:', normalizedTo);
     
-    // Check if fromEmail domain is likely unverified (gmail, outlook, etc.)
-    // Use Resend's test email for unverified domains
-    const unverifiedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com'];
-    const emailDomain = fromEmail?.split('@')[1]?.toLowerCase();
-    const isUnverifiedDomain = emailDomain && unverifiedDomains.includes(emailDomain);
+    // Use verified domain email for sending
+    // giviti.com.br is verified in Resend
+    const verifiedFromEmail = 'Giviti <contato@giviti.com.br>';
     
-    // Use test email for unverified domains, otherwise use configured email
-    const effectiveFromEmail = isUnverifiedDomain 
-      ? 'Giviti <onboarding@resend.dev>'
-      : fromEmail;
-    
-    if (isUnverifiedDomain) {
-      console.log('[EmailService] Using Resend test email (domain not verified):', effectiveFromEmail);
-    }
+    console.log('[EmailService] Using verified domain email:', verifiedFromEmail);
     
     const emailPayload: any = {
-      from: effectiveFromEmail,
+      from: verifiedFromEmail,
       to: normalizedTo,
       subject: options.subject,
     };
