@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -142,6 +143,35 @@ interface ParticipantUserProfile {
 interface ParticipantWithProfile extends CollaborativeEventParticipant {
   hasFilledProfile: boolean;
   userProfile: ParticipantUserProfile | null;
+}
+
+interface CollectiveGiftData {
+  targetAmount?: number;
+  giftName?: string;
+  giftDescription?: string;
+  purchaseLink?: string;
+  recipientName?: string;
+}
+
+interface ContributionWithParticipant {
+  id: string;
+  eventId: string;
+  participantId: string;
+  amountDue: number;
+  amountPaid: number;
+  isPaid: boolean;
+  paidAt: string | null;
+  paymentNotes: string | null;
+  participant: CollaborativeEventParticipant | null;
+}
+
+interface ContributionsSummary {
+  totalDue: number;
+  totalPaid: number;
+  participantsCount: number;
+  paidCount: number;
+  targetAmount: number;
+  progress: number;
 }
 
 export default function RoleDetail() {
@@ -281,6 +311,81 @@ export default function RoleDetail() {
 
   // State for confirming redraw
   const [confirmRedrawOpen, setConfirmRedrawOpen] = useState(false);
+
+  // Collective Gift Queries
+  const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
+    queryKey: ["/api/collab-events", id, "contributions"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/contributions`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar contribuições");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "collective_gift",
+  });
+
+  const { data: contributionsSummary, isLoading: summaryLoading } = useQuery<ContributionsSummary>({
+    queryKey: ["/api/collab-events", id, "contributions", "summary"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/contributions/summary`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar resumo");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "collective_gift",
+  });
+
+  // Initialize contributions mutation
+  const initializeContributionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/collab-events/${id}/contributions/initialize`, "POST");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions", "summary"] });
+      toast({
+        title: "Contribuições criadas",
+        description: `${data.created} contribuições criadas. Valor por pessoa: R$ ${(data.amountPerPerson / 100).toFixed(2)}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar as contribuições",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update contribution mutation
+  const updateContributionMutation = useMutation({
+    mutationFn: async ({ contributionId, updates }: { contributionId: string; updates: Record<string, unknown> }) => {
+      const response = await apiRequest(`/api/collab-events/${id}/contributions/${contributionId}`, "PATCH", updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions", "summary"] });
+      toast({
+        title: "Contribuição atualizada",
+        description: "O status da contribuição foi atualizado.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a contribuição",
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     if (event && event.eventType === "secret_santa" && event.typeSpecificData) {
@@ -782,6 +887,187 @@ export default function RoleDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Collective Gift Section */}
+            {event.eventType === "collective_gift" && (() => {
+              const giftData = event.typeSpecificData as CollectiveGiftData | null;
+              const targetAmount = giftData?.targetAmount || 0;
+              const targetAmountFormatted = (targetAmount / 100).toFixed(2);
+              const totalPaid = contributionsSummary?.totalPaid || 0;
+              const totalPaidFormatted = (totalPaid / 100).toFixed(2);
+              const progress = contributionsSummary?.progress || 0;
+              
+              return (
+                <>
+                  {/* Gift Details Card */}
+                  <Card className="border-pink-200 dark:border-pink-800 bg-gradient-to-br from-pink-50/50 to-rose-50/50 dark:from-pink-950/20 dark:to-rose-950/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Heart className="w-5 h-5 text-pink-500" />
+                        Detalhes do Presente
+                      </CardTitle>
+                      {giftData?.recipientName && (
+                        <CardDescription>
+                          Presente para: <span className="font-semibold text-foreground">{giftData.recipientName}</span>
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Progress */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Arrecadado</span>
+                          <span className="font-semibold">
+                            R$ {totalPaidFormatted} / R$ {targetAmountFormatted}
+                          </span>
+                        </div>
+                        <Progress value={progress} className="h-3" data-testid="progress-contributions" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{progress}% do objetivo</span>
+                          <span>
+                            {contributionsSummary?.paidCount || 0} de {contributionsSummary?.participantsCount || 0} pagaram
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Gift Info */}
+                      {giftData?.giftName && (
+                        <div className="flex items-start gap-3 pt-2 border-t">
+                          <Gift className="w-5 h-5 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium">Presente</p>
+                            <p className="text-lg font-semibold" data-testid="text-gift-name">
+                              {giftData.giftName}
+                            </p>
+                            {giftData.giftDescription && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {giftData.giftDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {giftData?.purchaseLink && (
+                        <div className="pt-2">
+                          <a 
+                            href={giftData.purchaseLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="outline" size="sm" className="gap-2">
+                              <ExternalLink className="w-4 h-4" />
+                              Ver produto na loja
+                            </Button>
+                          </a>
+                        </div>
+                      )}
+                      
+                      {/* Initialize Button (owner only) */}
+                      {isOwner && participants && participants.length > 0 && (!contributions || contributions.length === 0) && (
+                        <div className="pt-4 border-t">
+                          <Button
+                            onClick={() => initializeContributionsMutation.mutate()}
+                            disabled={initializeContributionsMutation.isPending}
+                            className="w-full"
+                            data-testid="button-initialize-contributions"
+                          >
+                            {initializeContributionsMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <DollarSign className="w-4 h-4 mr-2" />
+                            )}
+                            Dividir valor entre participantes
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2 text-center">
+                            O valor será dividido igualmente entre {participants.length} participante(s)
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Contributions List */}
+                  {contributions && contributions.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          Contribuições
+                        </CardTitle>
+                        <CardDescription>
+                          Status de pagamento de cada participante
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {contributions.map((contribution) => {
+                            const participant = contribution.participant;
+                            const name = participant?.name || participant?.email || "Participante";
+                            const initials = name.substring(0, 2).toUpperCase();
+                            const amountDue = (contribution.amountDue / 100).toFixed(2);
+                            const amountPaid = (contribution.amountPaid / 100).toFixed(2);
+                            
+                            return (
+                              <div 
+                                key={contribution.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border ${
+                                  contribution.isPaid 
+                                    ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" 
+                                    : "bg-muted/50"
+                                }`}
+                                data-testid={`contribution-${contribution.id}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="text-sm font-medium">{name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      R$ {amountDue}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {contribution.isPaid ? (
+                                    <Badge className="bg-green-500 hover:bg-green-600">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Pago
+                                    </Badge>
+                                  ) : (
+                                    <>
+                                      <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        Pendente
+                                      </Badge>
+                                      {isOwner && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => updateContributionMutation.mutate({
+                                            contributionId: contribution.id,
+                                            updates: { isPaid: true }
+                                          })}
+                                          disabled={updateContributionMutation.isPending}
+                                          data-testid={`button-mark-paid-${contribution.id}`}
+                                        >
+                                          <Check className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              );
+            })()}
 
             {event.eventType === "secret_santa" && (() => {
               const rules = event.typeSpecificData as SecretSantaRules | null;
