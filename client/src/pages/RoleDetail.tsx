@@ -156,6 +156,10 @@ export default function RoleDetail() {
   const [minGiftValue, setMinGiftValue] = useState<string>("");
   const [maxGiftValue, setMaxGiftValue] = useState<string>("");
   const [rulesDescription, setRulesDescription] = useState<string>("");
+  
+  // Description editing states
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState<string>("");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -316,6 +320,50 @@ export default function RoleDetail() {
       rulesDescription: rulesDescription || null,
     };
     saveRulesMutation.mutate(rules);
+  };
+
+  // Mutation to save event description
+  const saveDescriptionMutation = useMutation({
+    mutationFn: async (description: string) => {
+      return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
+        description: description || null
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      setIsEditingDescription(false);
+      toast({
+        title: "Descrição salva",
+        description: "A descrição do rolê foi atualizada.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar descrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartEditDescription = () => {
+    setEditedDescription(event?.description || "");
+    setIsEditingDescription(true);
+  };
+
+  const handleCancelEditDescription = () => {
+    setIsEditingDescription(false);
+    setEditedDescription("");
+  };
+
+  const handleSaveDescription = () => {
+    // Only save if there's an actual change
+    const currentDescription = event?.description || "";
+    if (editedDescription.trim() === currentDescription.trim()) {
+      setIsEditingDescription(false);
+      return;
+    }
+    saveDescriptionMutation.mutate(editedDescription.trim());
   };
 
   const removeParticipantMutation = useMutation({
@@ -579,14 +627,64 @@ export default function RoleDetail() {
                     </div>
                   </div>
                 )}
-                {event.description && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Descrição</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-event-description">
-                      {event.description}
-                    </p>
+                {/* Editable description section */}
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium">Descrição</p>
+                      {isOwner && !isEditingDescription && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleStartEditDescription}
+                          data-testid="button-edit-description"
+                        >
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+                    {isEditingDescription ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={editedDescription}
+                          onChange={(e) => setEditedDescription(e.target.value)}
+                          placeholder="Adicione uma descrição para o rolê..."
+                          className="min-h-[80px]"
+                          data-testid="textarea-event-description"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSaveDescription}
+                            disabled={saveDescriptionMutation.isPending}
+                            data-testid="button-save-description"
+                          >
+                            {saveDescriptionMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-1" />
+                            )}
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelEditDescription}
+                            disabled={saveDescriptionMutation.isPending}
+                            data-testid="button-cancel-description"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-description">
+                        {event.description || (isOwner ? "Nenhuma descrição definida. Clique em Editar para adicionar." : "Nenhuma descrição definida.")}
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
                 {event.eventType === "themed_night" && themedCategory && (
                   <div className="flex items-start gap-3">
                     <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
