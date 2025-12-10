@@ -1137,6 +1137,35 @@ export default function RoleDetail() {
                               ? "Pendente"
                               : "Recusado"}
                           </Badge>
+                          {/* Email status indicator */}
+                          {participant.email && participant.role !== "owner" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                                    participant.emailStatus === 'sent' 
+                                      ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+                                      : participant.emailStatus === 'failed' 
+                                      ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' 
+                                      : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                                  }`}
+                                  data-testid={`badge-email-status-${participant.id}`}
+                                >
+                                  <Mail className="w-3 h-3" />
+                                  {participant.emailStatus === 'sent' ? 'Enviado' : participant.emailStatus === 'failed' ? 'Falhou' : 'Pendente'}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {participant.emailStatus === 'sent' 
+                                    ? 'Email de convite enviado com sucesso' 
+                                    : participant.emailStatus === 'failed' 
+                                    ? 'Falha ao enviar email de convite' 
+                                    : 'Email de convite ainda não enviado'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                       </div>
                       <DropdownMenu>
