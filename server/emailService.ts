@@ -475,6 +475,11 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
           <p style="margin: 0; font-size: 24px; font-weight: bold; color: #5b21b6;">
             ${eventName}${categoryBadge}
           </p>
+          ${eventDescription ? `
+            <p style="margin: 12px 0 0 0; font-size: 16px; color: #6b21a8; font-style: italic;">
+              "${eventDescription}"
+            </p>
+          ` : ''}
         </div>
 
         <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -491,14 +496,8 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
               <strong>Onde:</strong> ${eventLocation}
             </p>
           ` : ''}
-          
-          ${eventDescription ? `
-            <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
-              <strong>Sobre:</strong> ${eventDescription}
-            </p>
-          ` : ''}
 
-          ${!formattedDate && !eventLocation && !eventDescription ? `
+          ${!formattedDate && !eventLocation ? `
             <p style="color: #9ca3af; margin: 0; font-size: 14px; font-style: italic;">
               Mais detalhes em breve...
             </p>
