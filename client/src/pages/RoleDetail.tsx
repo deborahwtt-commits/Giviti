@@ -520,6 +520,7 @@ export default function RoleDetail() {
       return await apiRequest(`/api/collab-events/${id}/participants/${participantId}/resend-invite`, "POST", {});
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       toast({
         title: "Convite reenviado",
         description: "O email de convite foi reenviado com sucesso.",
