@@ -268,6 +268,7 @@ export interface IStorage {
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
   linkParticipantsByEmail(email: string, userId: string): Promise<number>;
   
@@ -1782,6 +1783,19 @@ export class DatabaseStorage implements IStorage {
       .update(collaborativeEventParticipants)
       .set({
         inviteToken,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        emailStatus,
         updatedAt: sql`now()`,
       })
       .where(eq(collaborativeEventParticipants.id, id))

@@ -342,9 +342,15 @@ export function registerCollabEventsRoutes(app: Express) {
           
           emailSent = true;
           console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email} for event ${event.name} (type: ${event.eventType})`);
+          
+          // Update email status to sent
+          await storage.updateParticipantEmailStatus(participant.id, 'sent');
         } catch (emailError) {
           // Log error but don't fail the request - participant was added successfully
           console.error("[AddParticipant] FAILED to send invite email:", emailError);
+          
+          // Update email status to failed
+          await storage.updateParticipantEmailStatus(participant.id, 'failed');
         }
       } else if (validatedData.email && !validatedData.inviteToken) {
         console.log(`[AddParticipant] No invite email sent to ${validatedData.email} - participant already accepted`);
@@ -352,7 +358,9 @@ export function registerCollabEventsRoutes(app: Express) {
         console.log(`[AddParticipant] No invite email sent - participant has no email address`);
       }
       
-      res.status(201).json({ ...participant, emailSent });
+      // Fetch updated participant with emailStatus
+      const updatedParticipant = await storage.getParticipant(participant.id);
+      res.status(201).json({ ...updatedParticipant, emailSent });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -527,9 +535,18 @@ export function registerCollabEventsRoutes(app: Express) {
       
       console.log(`[ResendInvite] SUCCESS: Invite email resent to ${participant.email} for event ${event.name} (type: ${event.eventType})`);
       
+      // Update email status to sent
+      await storage.updateParticipantEmailStatus(participantId, 'sent');
+      
       res.json({ success: true, message: "Convite reenviado com sucesso" });
     } catch (error) {
       console.error("[ResendInvite] Error resending invite:", error);
+      
+      // Update email status to failed if we have a participantId
+      if (req.params.participantId) {
+        await storage.updateParticipantEmailStatus(req.params.participantId, 'failed');
+      }
+      
       res.status(500).json({ error: "Failed to resend invite email" });
     }
   });
