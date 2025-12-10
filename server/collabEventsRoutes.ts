@@ -344,7 +344,7 @@ export function registerCollabEventsRoutes(app: Express) {
             // Include all status except 'declined' - owner/accepted/confirmed/pending all contribute
             let amountPerPerson: number | null = null;
             if (giftData?.targetAmount) {
-              const existingParticipants = await storage.getEventParticipants(eventId as string);
+              const existingParticipants = await storage.getParticipants(id);
               // Count all participants except declined ones - they all contribute
               const contributingCount = existingParticipants.filter(
                 p => p.status !== 'declined'
