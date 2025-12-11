@@ -83,6 +83,12 @@ Preferred communication style: Simple, everyday language.
   - **Schema Fields**: `userGifts` table includes `currencyCode` (default "BRL"), `externalSource`, and `purchasedAt` for comprehensive tracking.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields and optional location fields (cidade, estado, pais) with input validation and auto-capitalization.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
+  - **Password Recovery**: Token-based password reset system with 1-hour expiration.
+    - `passwordResetTokens` table stores userId, token (UUID), and expiresAt
+    - POST `/api/forgot-password`: Generates token and sends email (always returns success to prevent email enumeration)
+    - POST `/api/reset-password`: Validates token and updates password (one-time use)
+    - Frontend: "Esqueci minha senha" modal in login form, `/redefinir-senha/:token` page for new password
+    - Email sent via Resend with verified domain contato@giviti.com.br
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, gift suggestions management, and advanced statistics.
 - **Astrology Module**: Weekly horoscope messages displayed on Dashboard based on user's zodiac sign.
   - **Database Tables**: `signos` (12 zodiac signs with date ranges, emoji) and `mensagensSemanais` (624 weekly messages, 52 per sign).
