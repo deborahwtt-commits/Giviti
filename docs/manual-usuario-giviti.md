@@ -423,8 +423,18 @@ Para organizar um Presente Coletivo:
 ## Perguntas Frequentes
 
 ### Como altero minha senha?
-Use a opção **"Esqueci minha senha"** na página de login:
-1. Clique em "Esqueci minha senha"
+Existem duas formas de alterar sua senha:
+
+**Se você está logado:**
+1. Acesse **"Meu Perfil"** no menu lateral
+2. Clique no botão **"Alterar senha"** no canto superior direito
+3. Digite sua senha atual
+4. Digite a nova senha (mínimo 6 caracteres)
+5. Confirme a nova senha
+6. Clique em **"Alterar senha"**
+
+**Se você esqueceu sua senha:**
+1. Na página de login, clique em "Esqueci minha senha"
 2. Informe seu e-mail cadastrado
 3. Você receberá um link por e-mail para criar uma nova senha
 4. O link é válido por 1 hora

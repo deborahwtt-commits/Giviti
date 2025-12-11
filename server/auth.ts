@@ -282,6 +282,54 @@ export async function setupAuth(app: Express): Promise<void> {
       res.status(500).json({ message: "Erro ao redefinir senha" });
     }
   });
+
+  // Change password endpoint - for authenticated users
+  app.post("/api/auth/change-password", async (req: Request, res: Response) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Não autenticado" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || typeof currentPassword !== "string") {
+        return res.status(400).json({ message: "Senha atual é obrigatória" });
+      }
+      
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        return res.status(400).json({ message: "A nova senha deve ter pelo menos 6 caracteres" });
+      }
+
+      // Get user
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+      // Update password
+      const updated = await storage.updateUserPassword(user.id, passwordHash);
+      if (!updated) {
+        return res.status(500).json({ message: "Erro ao atualizar senha" });
+      }
+
+      console.log(`[ChangePassword] Password changed for user ${user.id}`);
+      
+      res.json({ message: "Senha alterada com sucesso!" });
+    } catch (error) {
+      console.error("Error in change-password:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
 }
 
 // Middleware to check if user is authenticated

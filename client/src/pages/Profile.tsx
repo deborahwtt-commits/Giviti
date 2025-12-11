@@ -19,7 +19,17 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, User, Sparkles, ChevronDown, X } from "lucide-react";
+import { Loader2, User, Sparkles, ChevronDown, X, KeyRound } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { handleAuthError } from "@/lib/authUtils";
 
@@ -28,6 +38,10 @@ type ProfileFormData = z.infer<typeof insertUserProfileSchema>;
 export default function Profile() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -87,6 +101,53 @@ export default function Profile() {
     saveMutation.mutate({ ...data, isCompleted: true });
   };
 
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await apiRequest("/api/auth/change-password", "POST", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Senha alterada!",
+        description: "Sua senha foi atualizada com sucesso.",
+      });
+      setChangePasswordOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      if (error?.status === 401) {
+        handleAuthError(toast, setLocation);
+      } else {
+        toast({
+          title: "Erro ao alterar senha",
+          description: error?.message || "Senha atual incorreta ou erro no servidor.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const handleChangePassword = () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "A nova senha e a confirmação devem ser iguais.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+    changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -100,18 +161,95 @@ export default function Profile() {
       
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-12">
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <User className="w-6 h-6 text-primary" />
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <User className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="font-heading font-semibold text-3xl text-foreground">
+                  Meu Perfil
+                </h1>
+                <p className="text-muted-foreground">
+                  Conte mais sobre você para receber sugestões ainda mais personalizadas
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-heading font-semibold text-3xl text-foreground">
-                Meu Perfil
-              </h1>
-              <p className="text-muted-foreground">
-                Conte mais sobre você para receber sugestões ainda mais personalizadas
-              </p>
-            </div>
+            
+            <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-change-password">
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Alterar senha
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Alterar senha</DialogTitle>
+                  <DialogDescription>
+                    Digite sua senha atual e a nova senha desejada.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Senha atual</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Digite sua senha atual"
+                      data-testid="input-current-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nova senha</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                      data-testid="input-new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme a nova senha"
+                      data-testid="input-confirm-password"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setChangePasswordOpen(false)}
+                    data-testid="button-cancel-password"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={changePasswordMutation.isPending || !currentPassword || !newPassword || !confirmPassword}
+                    data-testid="button-confirm-password"
+                  >
+                    {changePasswordMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Alterando...
+                      </>
+                    ) : (
+                      "Alterar senha"
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
