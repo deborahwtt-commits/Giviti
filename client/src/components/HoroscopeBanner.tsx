@@ -14,10 +14,30 @@ interface HoroscopeResponse {
   semana?: number;
 }
 
+const signoDisplayNames: Record<string, string> = {
+  "Aries": "Áries",
+  "Touro": "Touro",
+  "Gemeos": "Gêmeos",
+  "Cancer": "Câncer",
+  "Leao": "Leão",
+  "Virgem": "Virgem",
+  "Libra": "Libra",
+  "Escorpiao": "Escorpião",
+  "Sagitario": "Sagitário",
+  "Capricornio": "Capricórnio",
+  "Aquario": "Aquário",
+  "Peixes": "Peixes",
+};
+
 export default function HoroscopeBanner() {
   const { data: horoscope, isLoading } = useQuery<HoroscopeResponse>({
     queryKey: ["/api/horoscope"],
   });
+
+  const getSignoDisplayName = (nome: string | undefined) => {
+    if (!nome) return "";
+    return signoDisplayNames[nome] || nome;
+  };
 
   if (isLoading) {
     return (
@@ -75,10 +95,7 @@ export default function HoroscopeBanner() {
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-purple-700 dark:text-purple-300" data-testid="text-signo-nome">
-                {horoscope.signo?.nome}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                Semana {horoscope.semana}
+                {getSignoDisplayName(horoscope.signo?.nome)}
               </span>
             </div>
             <p className="text-sm text-foreground/90 leading-relaxed" data-testid="text-horoscope-mensagem">
