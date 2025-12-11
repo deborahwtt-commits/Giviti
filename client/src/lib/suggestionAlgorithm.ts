@@ -161,7 +161,13 @@ function matchesTargetAgeRange(productTargetAge: string | null | undefined, reci
   return productTargetAge.toLowerCase() === recipientAgeCategory;
 }
 
-function buildRecipientBasedQuery(recipientData: RecipientData, userKeywords?: string): string {
+type QueryLevel = "full" | "medium" | "simple" | "minimal";
+
+function buildRecipientBasedQuery(
+  recipientData: RecipientData, 
+  userKeywords?: string,
+  level: QueryLevel = "full"
+): string {
   const { recipient, profile } = recipientData;
   const parts: string[] = [];
   
@@ -169,33 +175,58 @@ function buildRecipientBasedQuery(recipientData: RecipientData, userKeywords?: s
     parts.push(userKeywords.trim());
   }
   
-  const relationship = profile?.relationship || recipient.relationship;
-  if (relationship) {
-    parts.push(getRelationshipTerm(relationship));
-  }
-  
-  const gender = profile?.gender || recipient.gender;
-  if (gender) {
-    const genderTerm = getGenderTerm(gender);
-    if (genderTerm) parts.push(genderTerm);
-  }
-  
-  if (recipient.age) {
-    parts.push(getAgeRange(recipient.age));
-  }
-  
   const interests = recipient.interests || [];
-  if (interests.length > 0) {
-    const topInterests = interests.slice(0, 3);
-    parts.push(...topInterests);
-  }
+  const gender = profile?.gender || recipient.gender;
+  const relationship = profile?.relationship || recipient.relationship;
   
-  if (profile?.cidade) {
-    parts.push(profile.cidade);
-  }
-  
-  if (profile?.interestCategory) {
-    parts.push(profile.interestCategory);
+  switch (level) {
+    case "full":
+      if (relationship) {
+        parts.push(getRelationshipTerm(relationship));
+      }
+      if (gender) {
+        const genderTerm = getGenderTerm(gender);
+        if (genderTerm) parts.push(genderTerm);
+      }
+      if (recipient.age) {
+        parts.push(getAgeRange(recipient.age));
+      }
+      if (interests.length > 0) {
+        parts.push(...interests.slice(0, 2));
+      }
+      if (profile?.interestCategory) {
+        parts.push(profile.interestCategory);
+      }
+      break;
+      
+    case "medium":
+      if (gender) {
+        const genderTerm = getGenderTerm(gender);
+        if (genderTerm) parts.push(genderTerm);
+      }
+      if (interests.length > 0) {
+        parts.push(...interests.slice(0, 2));
+      } else if (profile?.interestCategory) {
+        parts.push(profile.interestCategory);
+      }
+      parts.push("presente");
+      break;
+      
+    case "simple":
+      if (interests.length > 0) {
+        parts.push(interests[0]);
+      } else if (profile?.interestCategory) {
+        parts.push(profile.interestCategory);
+      }
+      parts.push("presente");
+      break;
+      
+    case "minimal":
+      parts.push("presentes populares");
+      if (gender) {
+        parts.push(gender === "feminino" ? "mulher" : gender === "masculino" ? "homem" : "");
+      }
+      break;
   }
   
   if (parts.length === 0) {
@@ -271,36 +302,24 @@ function buildGoogleSearchQuery(options: SuggestionAlgorithmOptions): string {
   return parts.join(" ");
 }
 
-async function fetchGoogleProducts(
+async function fetchGoogleProductsSingle(
   searchQuery: string, 
+  limit: number,
   options: SuggestionAlgorithmOptions
-): Promise<{ products: SerpApiProduct[]; filtersApplied: string[]; filtersNotAvailable: string[] }> {
-  const filtersApplied: string[] = [];
-  const filtersNotAvailable: string[] = [];
-  
+): Promise<SerpApiProduct[]> {
   try {
     const requestBody: Record<string, any> = {
       keywords: searchQuery,
-      limit: options.googleLimit || 10,
+      limit: limit,
     };
     
     if (options.minBudget !== undefined || options.maxBudget !== undefined) {
       requestBody.minPrice = options.minBudget || 0;
       requestBody.maxPrice = options.maxBudget || 10000;
-      filtersApplied.push("Orçamento (aproximado)");
     }
     
-    if (options.googleCategoryId) {
-      filtersApplied.push("Categoria");
-    }
-    
-    if (options.recipientData) {
-      filtersApplied.push("Perfil do presenteado");
-    }
-    
-    // Add timeout to prevent freezing
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     
     try {
       const response = await fetch("/api/serpapi/search", {
@@ -315,29 +334,88 @@ async function fetchGoogleProducts(
       
       if (!response.ok) {
         console.warn("SerpAPI response not ok:", response.status);
-        return { products: [], filtersApplied, filtersNotAvailable };
+        return [];
       }
       
       const data: SerpApiResponse = await response.json();
-      
-      return {
-        products: data.sucesso ? data.resultados : [],
-        filtersApplied,
-        filtersNotAvailable,
-      };
+      return data.sucesso ? data.resultados : [];
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === "AbortError") {
-        console.warn("Google products fetch timed out after 15 seconds");
-      } else {
-        console.error("Error fetching Google products:", fetchError);
+        console.warn("Google products fetch timed out");
       }
-      return { products: [], filtersApplied, filtersNotAvailable };
+      return [];
     }
   } catch (error) {
-    console.error("Error preparing Google products request:", error);
-    return { products: [], filtersApplied, filtersNotAvailable };
+    console.error("Error fetching Google products:", error);
+    return [];
   }
+}
+
+async function fetchGoogleProductsWithFallback(
+  options: SuggestionAlgorithmOptions,
+  minResults: number = 5
+): Promise<{ 
+  products: SerpApiProduct[]; 
+  filtersApplied: string[]; 
+  filtersNotAvailable: string[];
+  queryUsed: string;
+}> {
+  const filtersApplied: string[] = [];
+  const filtersNotAvailable: string[] = [];
+  const limit = options.googleLimit || 15;
+  
+  if (options.minBudget !== undefined || options.maxBudget !== undefined) {
+    filtersApplied.push("Orçamento (aproximado)");
+  }
+  
+  if (options.googleCategoryId) {
+    filtersApplied.push("Categoria");
+  }
+  
+  if (options.recipientData) {
+    filtersApplied.push("Perfil do presenteado");
+  }
+  
+  if (!options.recipientData) {
+    const query = buildGoogleSearchQuery(options);
+    const products = await fetchGoogleProductsSingle(query, limit, options);
+    return { products, filtersApplied, filtersNotAvailable, queryUsed: query };
+  }
+  
+  const queryLevels: QueryLevel[] = ["full", "medium", "simple", "minimal"];
+  let allProducts: SerpApiProduct[] = [];
+  let queryUsed = "";
+  
+  for (const level of queryLevels) {
+    const query = buildRecipientBasedQuery(options.recipientData, options.keywords, level);
+    
+    if (query === queryUsed) continue;
+    
+    console.log(`[Google Search] Trying level "${level}": "${query}"`);
+    
+    const products = await fetchGoogleProductsSingle(query, limit, options);
+    
+    const existingIds = new Set(allProducts.map(p => p.nome + p.loja));
+    const newProducts = products.filter(p => !existingIds.has(p.nome + p.loja));
+    allProducts = [...allProducts, ...newProducts];
+    
+    if (!queryUsed) queryUsed = query;
+    
+    if (allProducts.length >= minResults) {
+      console.log(`[Google Search] Found ${allProducts.length} results at level "${level}"`);
+      break;
+    }
+    
+    console.log(`[Google Search] Only ${allProducts.length} results, trying simpler query...`);
+  }
+  
+  return { 
+    products: allProducts.slice(0, limit), 
+    filtersApplied, 
+    filtersNotAvailable,
+    queryUsed 
+  };
 }
 
 function matchesKeyword(text: string, keywords: string): boolean {
@@ -734,14 +812,12 @@ export async function runSuggestionAlgorithmV1(
     (keywords.trim() || options.recipientData);
   
   if (shouldSearchGoogle) {
-    generatedQuery = buildGoogleSearchQuery(options);
-    
     const cacheKey = searchCache.generateKey({
       recipientId: options.recipientData?.recipient.id,
       googleCategoryId: options.googleCategoryId,
       minBudget: options.minBudget,
       maxBudget: options.maxBudget,
-      keywords: generatedQuery,
+      keywords: options.keywords || "",
     });
     
     const cachedProducts = searchCache.get(cacheKey);
@@ -750,11 +826,21 @@ export async function runSuggestionAlgorithmV1(
       allGoogleUnified = filterGoogleProducts(cachedProducts, options);
       googleFromCache = true;
       googleFiltersApplied.push("Resultados do cache");
-      console.log(`[Cache] Usando ${cachedProducts.length} resultados do cache para: ${generatedQuery}`);
+      generatedQuery = "cached";
+      console.log(`[Cache] Usando ${cachedProducts.length} resultados do cache`);
     } else {
-      const googleLimit = Math.min(googleNeeded + 5, MAX_RESULTS - internalCount);
-      const googleResult = await fetchGoogleProducts(generatedQuery, { ...options, googleLimit });
-      const rawGoogleUnified = googleResult.products.map((p, i) => convertGoogleToUnified(p, i));
+      const googleLimit = Math.min(googleNeeded + 10, MAX_RESULTS - internalCount);
+      const minResultsNeeded = Math.max(5, googleNeeded);
+      
+      const googleResult = await fetchGoogleProductsWithFallback(
+        { ...options, googleLimit },
+        minResultsNeeded
+      );
+      
+      generatedQuery = googleResult.queryUsed;
+      const rawGoogleUnified = googleResult.products.map((p: SerpApiProduct, i: number) => 
+        convertGoogleToUnified(p, i)
+      );
       
       if (rawGoogleUnified.length > 0) {
         searchCache.set(cacheKey, rawGoogleUnified, generatedQuery);
