@@ -64,15 +64,84 @@ export default function Dashboard() {
     }
   }, [statsError, recipientsError, eventsError, suggestionsError, rolesError, toast]);
 
-  const calculateDaysUntil = (eventDate: string) => {
+  const calculateDaysUntil = (eventDate: string | Date | null) => {
+    if (!eventDate) return 999;
     const today = new Date();
-    const event = new Date(eventDate);
+    const event = typeof eventDate === "string" ? new Date(eventDate) : eventDate;
     return differenceInDays(event, today);
   };
 
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatEventDate = (dateString: string | Date | null) => {
+    if (!dateString) return "Sem data definida";
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString;
     return format(date, "d 'de' MMM, yyyy");
+  };
+
+  const getEventsNext30Days = () => {
+    if (!upcomingEvents) return [];
+    return upcomingEvents.filter(event => {
+      const daysUntil = calculateDaysUntil(event.eventDate);
+      return daysUntil >= 0 && daysUntil <= 30;
+    });
+  };
+
+  const getDisplayedEventsIn30Days = () => {
+    return getEventsNext30Days().slice(0, 6);
+  };
+
+  const getUpcomingItemsForVemAi = () => {
+    const displayedEventIds = new Set(getDisplayedEventsIn30Days().map(e => e.id));
+    
+    type UnifiedItem = {
+      id: string;
+      type: 'event' | 'role';
+      name: string;
+      date: Date | null;
+      eventType?: string;
+      data: EventWithRecipients | CollaborativeEvent;
+    };
+    
+    const items: UnifiedItem[] = [];
+    
+    if (upcomingEvents) {
+      upcomingEvents
+        .filter(event => !displayedEventIds.has(event.id))
+        .forEach(event => {
+          items.push({
+            id: event.id,
+            type: 'event',
+            name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
+            date: event.eventDate ? new Date(event.eventDate) : null,
+            data: event,
+          });
+        });
+    }
+    
+    if (roles) {
+      roles
+        .filter(role => role.status === "active" || role.status === "draft")
+        .filter(role => {
+          if (!role.eventDate) return true;
+          const eventDate = new Date(role.eventDate);
+          return eventDate >= new Date();
+        })
+        .forEach(role => {
+          items.push({
+            id: role.id,
+            type: 'role',
+            name: role.name,
+            date: role.eventDate ? new Date(role.eventDate) : null,
+            eventType: role.eventType,
+            data: role as CollaborativeEvent,
+          });
+        });
+    }
+    
+    return items.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.getTime() - b.date.getTime();
+    });
   };
 
   const formatPrice = (price: number | string) => {
@@ -158,9 +227,9 @@ export default function Dashboard() {
           }}
           onGiftsClick={() => setLocation("/presentes")}
           onRolesClick={() => {
-            const rolesSection = document.getElementById("roles-section");
-            if (rolesSection) {
-              rolesSection.scrollIntoView({ behavior: "smooth" });
+            const vemAiSection = document.getElementById("vem-ai-section");
+            if (vemAiSection) {
+              vemAiSection.scrollIntoView({ behavior: "smooth" });
             }
           }}
         />
@@ -189,7 +258,7 @@ export default function Dashboard() {
               <h2 className="font-heading font-semibold text-3xl text-foreground">
                 Eventos Próximos
               </h2>
-              <p className="text-muted-foreground mt-1">Nunca mais perca as datas importantes!</p>
+              <p className="text-muted-foreground mt-1">Eventos nos próximos 30 dias</p>
             </div>
             <Button
               size="sm"
@@ -208,9 +277,9 @@ export default function Dashboard() {
                 <div key={i} className="h-40 bg-card rounded-lg animate-pulse" />
               ))}
             </div>
-          ) : upcomingEvents && upcomingEvents.length > 0 ? (
+          ) : getDisplayedEventsIn30Days().length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.slice(0, 6).map((event) => (
+              {getDisplayedEventsIn30Days().map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -225,7 +294,7 @@ export default function Dashboard() {
           ) : (
             <EmptyState
               image={emptyEventsImage}
-              title="Nenhum evento próximo"
+              title="Nenhum evento nos próximos 30 dias"
               description="Cadastre aniversários, formaturas e outras datas especiais para nunca esquecer de presentear."
               actionLabel="Criar Evento"
               onAction={() => setLocation("/eventos")}
@@ -233,95 +302,88 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section id="roles-section">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Rolês Planejados
-              </h2>
-              <p className="text-muted-foreground mt-1">Rolês e vibes com a galera  (Só os closes certos!)</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/roles")}
-              data-testid="button-add-role"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Rolê
-            </Button>
-          </div>
-
-          {rolesLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-card rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : getUpcomingRoles().length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getUpcomingRoles().slice(0, 6).map((role) => {
-                const typeInfo = getRoleTypeInfo(role.eventType);
-                const TypeIcon = typeInfo.icon;
-                return (
-                  <Card
-                    key={role.id}
-                    className="cursor-pointer hover-elevate transition-all"
-                    onClick={() => setLocation(`/roles/${role.id}`)}
-                    data-testid={`card-role-${role.id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate">
-                            {role.name}
-                          </h3>
-                          <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
-                            <TypeIcon className="w-3 h-3 mr-1" />
-                            {typeInfo.label}
-                          </Badge>
-                        </div>
-                        <Badge variant={role.status === "active" ? "default" : "secondary"} className="text-xs shrink-0">
-                          {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{formatRoleDate(role.eventDate)}</span>
-                        </div>
-                        {role.location && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span className="truncate">{role.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium text-foreground mb-1">Nenhum rolê planejado</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  Organize amigo secreto, noites temáticas ou presentes coletivos com amigos e família.
-                </p>
+        {getUpcomingItemsForVemAi().length > 0 && (
+          <section id="vem-ai-section">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-heading font-semibold text-3xl text-foreground">
+                  Vem aí!
+                </h2>
+                <p className="text-muted-foreground mt-1">Seus próximos eventos e rolês</p>
+              </div>
+              {getUpcomingItemsForVemAi().length > 9 && (
                 <Button
                   size="sm"
-                  onClick={() => setLocation("/roles")}
-                  data-testid="button-create-first-role"
+                  variant="outline"
+                  onClick={() => setLocation("/eventos")}
+                  data-testid="button-view-all-events"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Primeiro Rolê
+                  Ver todos os eventos
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-        </section>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {getUpcomingItemsForVemAi().slice(0, 9).map((item) => {
+                if (item.type === 'event') {
+                  const event = item.data as EventWithRecipients;
+                  return (
+                    <EventCard
+                      key={`event-${item.id}`}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => setLocation("/eventos")}
+                      onDelete={() => {}}
+                    />
+                  );
+                } else {
+                  const role = item.data as CollaborativeEvent;
+                  const typeInfo = getRoleTypeInfo(role.eventType);
+                  const TypeIcon = typeInfo.icon;
+                  return (
+                    <Card
+                      key={`role-${item.id}`}
+                      className="cursor-pointer hover-elevate transition-all"
+                      onClick={() => setLocation(`/roles/${role.id}`)}
+                      data-testid={`card-role-${role.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-foreground truncate">
+                              {role.name}
+                            </h3>
+                            <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3 mr-1" />
+                              {typeInfo.label}
+                            </Badge>
+                          </div>
+                          <Badge variant={role.status === "active" ? "default" : "secondary"} className="text-xs shrink-0">
+                            {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{formatRoleDate(role.eventDate)}</span>
+                          </div>
+                          {role.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span className="truncate">{role.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+              })}
+            </div>
+          </section>
+        )}
 
         <section>
           <div className="flex items-center justify-between mb-6">
