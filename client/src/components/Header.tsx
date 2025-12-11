@@ -50,7 +50,7 @@ export default function Header({
     { path: "/", label: "Dashboard" },
     { path: "/presenteados", label: "Presenteados" },
     { path: "/eventos", label: "Datas Comemorativas" },
-    { path: "/sugestoes", label: "Sugestões" },
+    { path: "/sugestoes", label: "Presentes" },
     { path: "/role", label: "Planeje seu rolê!" },
   ];
 
