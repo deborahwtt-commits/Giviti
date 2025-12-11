@@ -205,7 +205,7 @@ export default function EventForm({
               className="flex-1"
               data-testid="button-save-event"
             >
-              {initialEvent ? "Salvar" : "Criar Data"}
+              {initialEvent ? "Salvar" : "Criar data comemorativa"}
             </Button>
             <Button
               type="button"
