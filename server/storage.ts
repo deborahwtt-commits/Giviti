@@ -1600,11 +1600,17 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>> {
     // Optimized query using CTEs to aggregate all stats in a single round trip
+    // eventsCount includes both regular events (datas comemorativas) and collaborative events (rolês)
     const result = await db.execute(sql`
       WITH user_events AS (
         SELECT user_id, COUNT(*)::int AS events_count
         FROM events
         GROUP BY user_id
+      ),
+      user_collaborative_events AS (
+        SELECT owner_id AS user_id, COUNT(*)::int AS collaborative_count
+        FROM collaborative_events
+        GROUP BY owner_id
       ),
       user_recipients AS (
         SELECT user_id, COUNT(*)::int AS recipients_count
@@ -1619,11 +1625,12 @@ export class DatabaseStorage implements IStorage {
       )
       SELECT 
         u.*,
-        COALESCE(ue.events_count, 0) AS events_count,
+        (COALESCE(ue.events_count, 0) + COALESCE(uce.collaborative_count, 0)) AS events_count,
         COALESCE(ur.recipients_count, 0) AS recipients_count,
         COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count
       FROM users u
       LEFT JOIN user_events ue ON u.id = ue.user_id
+      LEFT JOIN user_collaborative_events uce ON u.id = uce.user_id
       LEFT JOIN user_recipients ur ON u.id = ur.user_id
       LEFT JOIN user_purchased_gifts upg ON u.id = upg.user_id
       ORDER BY u.created_at DESC
