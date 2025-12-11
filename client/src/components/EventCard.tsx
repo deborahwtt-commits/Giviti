@@ -17,6 +17,8 @@ interface EventCardProps {
   onArchive?: () => void;
   onAdvanceYear?: () => void;
   hasGiftPurchased?: boolean;
+  onClick?: () => void;
+  compact?: boolean;
 }
 
 export default function EventCard({
@@ -29,6 +31,8 @@ export default function EventCard({
   onArchive,
   onAdvanceYear,
   hasGiftPurchased = false,
+  onClick,
+  compact = false,
 }: EventCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const isPastEvent = daysUntil < 0;
@@ -56,8 +60,20 @@ export default function EventCard({
     );
   };
 
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      setShowDetails(true);
+    }
+  };
+
   return (
-    <Card className={`p-6 hover-elevate ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''}`}>
+    <Card 
+      className={`p-6 hover-elevate ${onClick ? 'cursor-pointer' : ''} ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''}`}
+      onClick={onClick ? handleCardClick : undefined}
+      data-testid={`card-event-${event.id}`}
+    >
       <div className="flex items-start gap-4">
         <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${needsAttention ? 'bg-amber-100 dark:bg-amber-950' : eventColors.bg}`}>
           {needsAttention ? (
@@ -70,7 +86,14 @@ export default function EventCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <button
-              onClick={() => setShowDetails(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onClick) {
+                  onClick();
+                } else {
+                  setShowDetails(true);
+                }
+              }}
               className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left"
               data-testid={`button-view-details-${event.id}`}
             >
@@ -99,75 +122,77 @@ export default function EventCard({
             )}
           </div>
 
-          {isPastEvent ? (
-            <div className="flex gap-2 flex-wrap">
-              {onArchive && (
+          {!compact && (
+            isPastEvent ? (
+              <div className="flex gap-2 flex-wrap">
+                {onArchive && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                    data-testid={`button-archive-${event.id}`}
+                  >
+                    <Archive className="w-3 h-3 mr-2" />
+                    Arquivar
+                  </Button>
+                )}
+                {onAdvanceYear && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onAdvanceYear(); }}
+                    data-testid={`button-advance-year-${event.id}`}
+                  >
+                    <CalendarClock className="w-3 h-3 mr-2" />
+                    Atualizar para o próximo ano
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={onArchive}
-                  data-testid={`button-archive-${event.id}`}
+                  onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+                  data-testid={`button-edit-${event.id}`}
                 >
-                  <Archive className="w-3 h-3 mr-2" />
-                  Arquivar
+                  <Pencil className="w-3 h-3" />
                 </Button>
-              )}
-              {onAdvanceYear && (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={onAdvanceYear}
-                  data-testid={`button-advance-year-${event.id}`}
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  data-testid={`button-delete-${event.id}`}
                 >
-                  <CalendarClock className="w-3 h-3 mr-2" />
-                  Atualizar para o próximo ano
+                  <Trash2 className="w-3 h-3" />
                 </Button>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(event)}
-                data-testid={`button-edit-${event.id}`}
-              >
-                <Pencil className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onDelete}
-                data-testid={`button-delete-${event.id}`}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onViewSuggestions}
-                data-testid={`button-view-suggestions-${event.id}`}
-              >
-                <Gift className="w-3 h-3 mr-2" />
-                Ver Sugestões
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(event)}
-                data-testid={`button-edit-${event.id}`}
-              >
-                <Pencil className="w-3 h-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onDelete}
-                data-testid={`button-delete-${event.id}`}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => { e.stopPropagation(); onViewSuggestions(); }}
+                  data-testid={`button-view-suggestions-${event.id}`}
+                >
+                  <Gift className="w-3 h-3 mr-2" />
+                  Ver Sugestões
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+                  data-testid={`button-edit-${event.id}`}
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  data-testid={`button-delete-${event.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            )
           )}
         </div>
       </div>
