@@ -494,18 +494,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/gifts - Create a new user gift
+  // POST /api/gifts - Create a new user gift (supports internal suggestions and external items)
   app.post("/api/gifts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user!.id;
       const validatedData = insertUserGiftSchema.parse(req.body);
       
-      // Verify that the recipient belongs to the user
-      const recipient = await storage.getRecipient(validatedData.recipientId, userId);
-      if (!recipient) {
-        return res.status(400).json({ 
-          message: "Invalid recipient ID or recipient does not belong to user" 
-        });
+      // If recipientId is provided, verify that the recipient belongs to the user
+      if (validatedData.recipientId) {
+        const recipient = await storage.getRecipient(validatedData.recipientId, userId);
+        if (!recipient) {
+          return res.status(400).json({ 
+            message: "Invalid recipient ID or recipient does not belong to user" 
+          });
+        }
       }
       
       // If eventId is provided, verify it belongs to the user
@@ -518,7 +520,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const newGift = await storage.createUserGift(userId, validatedData);
+      // If marking as purchased without purchasedAt, set it to now
+      const giftData = { ...validatedData };
+      if (giftData.isPurchased && !giftData.purchasedAt) {
+        giftData.purchasedAt = new Date();
+      }
+      
+      const newGift = await storage.createUserGift(userId, giftData);
       res.status(201).json(newGift);
     } catch (error) {
       if (error instanceof ZodError) {

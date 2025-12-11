@@ -315,7 +315,6 @@ export const userGifts = pgTable("user_gifts", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   recipientId: varchar("recipient_id")
-    .notNull()
     .references(() => recipients.id, { onDelete: "cascade" }),
   eventId: varchar("event_id").references(() => events.id, {
     onDelete: "set null",
@@ -327,7 +326,9 @@ export const userGifts = pgTable("user_gifts", {
   description: text("description"),
   imageUrl: text("image_url"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  currencyCode: varchar("currency_code").default("BRL"),
   purchaseUrl: text("purchase_url"),
+  externalSource: varchar("external_source"),
   isFavorite: boolean("is_favorite").default(false),
   isPurchased: boolean("is_purchased").default(false),
   purchasedAt: timestamp("purchased_at"),

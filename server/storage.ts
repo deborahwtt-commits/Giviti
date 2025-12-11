@@ -133,7 +133,7 @@ export interface IStorage {
   deleteUserGift(id: string, userId: string): Promise<boolean>;
 
   // Stats
-  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number }>;
+  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
   
   // Admin stats
   getAdminStats(): Promise<{ 
@@ -643,6 +643,7 @@ export class DatabaseStorage implements IStorage {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    totalSpent: number;
   }> {
     // Total recipients
     const recipientCount = await db
@@ -662,9 +663,12 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Gifts purchased
-    const purchasedGiftCount = await db
-      .select({ count: sql<number>`count(*)::int` })
+    // Gifts purchased and total spent
+    const purchasedGiftsData = await db
+      .select({ 
+        count: sql<number>`count(*)::int`,
+        totalSpent: sql<number>`COALESCE(SUM(${userGifts.price}::numeric), 0)::numeric`
+      })
       .from(userGifts)
       .where(
         and(
@@ -676,7 +680,8 @@ export class DatabaseStorage implements IStorage {
     return {
       totalRecipients: recipientCount[0]?.count || 0,
       upcomingEvents: upcomingEventCount[0]?.count || 0,
-      giftsPurchased: purchasedGiftCount[0]?.count || 0,
+      giftsPurchased: purchasedGiftsData[0]?.count || 0,
+      totalSpent: parseFloat(String(purchasedGiftsData[0]?.totalSpent || 0)),
     };
   }
 

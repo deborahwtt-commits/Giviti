@@ -76,6 +76,11 @@ Preferred communication style: Simple, everyday language.
 - **Event Tracking**: Manage important dates, including archiving and advancing past events.
   - **Date Validation**: Events and rolês can only be created with dates from today onwards. Both frontend and backend validate that dates are not in the past.
 - **Gift Management**: Save/track purchased and favorited gifts.
+  - **Universal Purchase Tracking**: Any suggestion (internal or from Google Shopping) can be marked as purchased via the "Comprei" button, which opens a modal to confirm details.
+  - **Purchase Modal**: Allows editing the price paid, selecting a purchase date, and optionally associating with a recipient.
+  - **External Source Tracking**: `userGifts` table includes `externalSource` field (e.g., "google_shopping") to identify gifts from external sources.
+  - **Spending Statistics**: Dashboard displays total amount spent on gifts alongside the count of gifts purchased. The `/api/stats` endpoint returns `totalSpent` aggregating prices of all purchased gifts.
+  - **Schema Fields**: `userGifts` table includes `currencyCode` (default "BRL"), `externalSource`, and `purchasedAt` for comprehensive tracking.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields and optional location fields (cidade, estado, pais) with input validation and auto-capitalization.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, gift suggestions management, and advanced statistics.

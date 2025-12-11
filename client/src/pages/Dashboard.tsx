@@ -30,6 +30,7 @@ export default function Dashboard() {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    totalSpent: number;
   }>({
     queryKey: ["/api/stats"],
   });
@@ -214,6 +215,7 @@ export default function Dashboard() {
             totalRecipients: stats?.totalRecipients || 0,
             upcomingEvents: stats?.upcomingEvents || 0,
             giftsPurchased: stats?.giftsPurchased || 0,
+            totalSpent: stats?.totalSpent || 0,
             upcomingRoles: getUpcomingRoles().length,
           }}
           onCreateRecipient={() => setLocation("/presenteados")}

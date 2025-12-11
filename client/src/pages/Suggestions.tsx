@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,11 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles } from "lucide-react";
-import { parseISO, isBefore, startOfDay } from "date-fns";
+import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles, ShoppingBag, Calendar } from "lucide-react";
+import { parseISO, isBefore, startOfDay, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import type { GiftSuggestion, Recipient, RecipientProfile, UserGift, GiftCategory, GoogleProductCategory } from "@shared/schema";
@@ -24,6 +33,187 @@ import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_sugge
 import EmptyState from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData, type PaginationMeta } from "@/lib/suggestionAlgorithm";
+
+// Modal for marking a product as purchased
+interface PurchaseModalProps {
+  open: boolean;
+  onClose: () => void;
+  product: UnifiedProduct;
+  recipients: Recipient[];
+  selectedRecipientId?: string;
+  onSuccess: () => void;
+}
+
+function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId, onSuccess }: PurchaseModalProps) {
+  const { toast } = useToast();
+  const [recipientId, setRecipientId] = useState(selectedRecipientId || "");
+  const [price, setPrice] = useState(product.price.toString());
+  const [purchaseDate, setPurchaseDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setRecipientId(selectedRecipientId || "");
+      setPrice(product.price.toString());
+      setPurchaseDate(format(new Date(), "yyyy-MM-dd"));
+    }
+  }, [open, selectedRecipientId, product.price]);
+
+  const handleSubmit = async () => {
+    if (!price || parseFloat(price) <= 0) {
+      toast({
+        title: "Valor inválido",
+        description: "Informe o valor pago pelo presente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
+      
+      await apiRequest("/api/gifts", "POST", {
+        recipientId: recipientId || null,
+        suggestionId: internalId,
+        name: product.name,
+        description: product.description || product.store || "",
+        imageUrl: product.imageUrl,
+        price: price,
+        purchaseUrl: product.productUrl || "",
+        externalSource: product.source === "google" ? "google_shopping" : null,
+        currencyCode: "BRL",
+        isFavorite: false,
+        isPurchased: true,
+        purchasedAt: new Date(purchaseDate),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      
+      toast({
+        title: "Presente registrado!",
+        description: `${product.name} foi marcado como comprado por R$ ${parseFloat(price).toFixed(2)}.`,
+      });
+      
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Error saving purchase:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a compra. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-md" data-testid="dialog-purchase-modal">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-primary" />
+            Marcar como Comprado
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="w-16 h-16 object-cover rounded"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://via.placeholder.com/64?text=Sem+Imagem";
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-sm line-clamp-2">{product.name}</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                {product.source === "google" ? product.store : "Sugestão Giviti"}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="purchase-price" className="text-sm font-medium">
+                Valor pago (R$)
+              </Label>
+              <Input
+                id="purchase-price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0.00"
+                className="mt-1"
+                data-testid="input-purchase-price"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="purchase-date" className="text-sm font-medium flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Data da compra
+              </Label>
+              <Input
+                id="purchase-date"
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                className="mt-1"
+                data-testid="input-purchase-date"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="purchase-recipient" className="text-sm font-medium">
+                Para quem é o presente? (opcional)
+              </Label>
+              <Select value={recipientId} onValueChange={setRecipientId}>
+                <SelectTrigger id="purchase-recipient" className="mt-1" data-testid="select-purchase-recipient">
+                  <SelectValue placeholder="Selecione um presenteado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não especificar</SelectItem>
+                  {recipients.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting} data-testid="button-confirm-purchase">
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Confirmar Compra
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // Compact Coupon Badge for Suggestions page
 interface CouponBadgeCompactProps {
@@ -62,11 +252,12 @@ function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
 interface UnifiedProductCardProps {
   product: UnifiedProduct;
   recipientId?: string;
+  recipients: Recipient[];
   toast: any;
   userGifts?: UserGift[];
 }
 
-function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedProductCardProps) {
+function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts }: UnifiedProductCardProps) {
   const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
   
   const existingGift = recipientId && internalId
@@ -75,6 +266,7 @@ function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedP
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
   const [purchased, setPurchased] = useState(existingGift?.isPurchased ?? false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     setFavorite(existingGift?.isFavorite ?? false);
@@ -272,32 +464,55 @@ function UnifiedProductCard({ product, recipientId, toast, userGifts }: UnifiedP
           <CouponBadgeCompact cupom={product.cupom} validadeCupom={product.validadeCupom} />
         )}
         
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-xs mt-2"
-          onClick={async () => {
-            if (product.productUrl) {
-              try {
-                await apiRequest("/api/clicks", "POST", { link: product.productUrl });
-              } catch (error) {
-                console.error("Error recording click:", error);
+        <div className="flex gap-2 mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={async () => {
+              if (product.productUrl) {
+                try {
+                  await apiRequest("/api/clicks", "POST", { link: product.productUrl });
+                } catch (error) {
+                  console.error("Error recording click:", error);
+                }
+                window.open(product.productUrl, "_blank", "noopener,noreferrer");
+              } else {
+                toast({
+                  title: product.name,
+                  description: "Link do produto não disponível.",
+                  variant: "destructive",
+                });
               }
-              window.open(product.productUrl, "_blank", "noopener,noreferrer");
-            } else {
-              toast({
-                title: product.name,
-                description: "Link do produto não disponível.",
-                variant: "destructive",
-              });
-            }
-          }}
-          data-testid={`button-view-product-${product.id}`}
-        >
-          <ExternalLink className="w-3 h-3 mr-1" />
-          Ver Produto
-        </Button>
+            }}
+            data-testid={`button-view-product-${product.id}`}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            Ver
+          </Button>
+          
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={() => setShowPurchaseModal(true)}
+            disabled={purchased}
+            data-testid={`button-mark-purchased-${product.id}`}
+          >
+            <ShoppingBag className="w-3 h-3 mr-1" />
+            {purchased ? "Comprado" : "Comprei"}
+          </Button>
+        </div>
       </div>
+
+      <PurchaseModal
+        open={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        product={product}
+        recipients={recipients}
+        selectedRecipientId={recipientId}
+        onSuccess={() => setPurchased(true)}
+      />
     </Card>
   );
 }
@@ -853,6 +1068,7 @@ export default function Suggestions() {
                       key={product.id}
                       product={product}
                       recipientId={selectedRecipientData?.id}
+                      recipients={recipients || []}
                       toast={toast}
                       userGifts={userGifts}
                     />

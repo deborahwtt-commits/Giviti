@@ -8,6 +8,7 @@ interface DashboardHeroProps {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    totalSpent: number;
     upcomingRoles: number;
   };
   onCreateRecipient: () => void;
@@ -133,6 +134,11 @@ export default function DashboardHero({
               <div className="text-xs text-muted-foreground">
                 Presentes dados
               </div>
+              {stats.totalSpent > 0 && (
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium" data-testid="stat-total-spent">
+                  R$ {stats.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
             </div>
           </div>
 
