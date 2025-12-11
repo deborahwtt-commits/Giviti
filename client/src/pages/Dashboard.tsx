@@ -211,9 +211,7 @@ export default function Dashboard() {
               <h2 className="font-heading font-semibold text-3xl text-foreground">
                 Rolês Planejados
               </h2>
-              <p className="text-muted-foreground mt-1">
-                Seus encontros e celebrações em grupo
-              </p>
+              <p className="text-muted-foreground mt-1">Rolês e vibes com a galera  (Só os closes certos!)</p>
             </div>
             <Button
               size="sm"
