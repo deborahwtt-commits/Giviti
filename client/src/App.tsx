@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,9 +22,11 @@ import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
 import SerpApiTest from "@/pages/SerpApiTest";
+import ResetPassword from "@/pages/ResetPassword";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("theme");
@@ -42,6 +44,15 @@ function AuthenticatedApp() {
       localStorage.setItem("theme", "light");
     }
   }, [isDark]);
+
+  // Allow password reset page without authentication
+  if (location.startsWith("/redefinir-senha/")) {
+    return (
+      <Switch>
+        <Route path="/redefinir-senha/:token" component={ResetPassword} />
+      </Switch>
+    );
+  }
 
   if (isLoading || !isAuthenticated) {
     return <Landing />;

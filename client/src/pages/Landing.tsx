@@ -337,8 +337,8 @@ export default function Landing() {
                         </div>
                         <Button
                           type="button"
-                          variant="link"
-                          className="p-0 h-auto text-sm text-muted-foreground hover:text-primary"
+                          variant="ghost"
+                          className="p-0 h-auto text-sm text-muted-foreground hover:text-primary hover:bg-transparent"
                           onClick={() => {
                             forgotPasswordForm.setValue("email", loginForm.getValues("email"));
                             setShowForgotPasswordModal(true);
