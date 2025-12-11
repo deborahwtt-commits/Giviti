@@ -753,3 +753,40 @@ export const insertCollaborativeEventTaskSchema = createInsertSchema(collaborati
 
 export type InsertCollaborativeEventTask = z.infer<typeof insertCollaborativeEventTaskSchema>;
 export type CollaborativeEventTask = typeof collaborativeEventTasks.$inferSelect;
+
+// ========== Astrology Module ==========
+
+// Zodiac signs table
+export const signos = pgTable("signos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: varchar("nome").notNull().unique(),
+  diaInicio: integer("dia_inicio").notNull(),
+  mesInicio: integer("mes_inicio").notNull(),
+  diaFim: integer("dia_fim").notNull(),
+  mesFim: integer("mes_fim").notNull(),
+  emoji: varchar("emoji"),
+});
+
+export const insertSignoSchema = createInsertSchema(signos).omit({
+  id: true,
+});
+
+export type InsertSigno = z.infer<typeof insertSignoSchema>;
+export type Signo = typeof signos.$inferSelect;
+
+// Weekly messages for each zodiac sign
+export const mensagensSemanais = pgTable("mensagens_semanais", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signoId: varchar("signo_id")
+    .notNull()
+    .references(() => signos.id, { onDelete: "cascade" }),
+  numeroSemana: integer("numero_semana").notNull(),
+  mensagem: text("mensagem").notNull(),
+});
+
+export const insertMensagemSemanalSchema = createInsertSchema(mensagensSemanais).omit({
+  id: true,
+});
+
+export type InsertMensagemSemanal = z.infer<typeof insertMensagemSemanalSchema>;
+export type MensagemSemanal = typeof mensagensSemanais.$inferSelect;
