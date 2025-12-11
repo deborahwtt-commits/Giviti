@@ -91,7 +91,7 @@ export default function EventForm({
       if (selectedDate < today) {
         toast({
           title: "Data inválida",
-          description: "A data do evento deve ser hoje ou no futuro",
+          description: "A data deve ser hoje ou no futuro",
           variant: "destructive",
         });
         return;
@@ -119,13 +119,13 @@ export default function EventForm({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl">
-            {initialEvent ? "Editar Evento" : "Criar Novo Evento"}
+            {initialEvent ? "Editar Data Comemorativa" : "Nova Data Comemorativa"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="eventType">Tipo de evento</Label>
+            <Label htmlFor="eventType">Tipo de data</Label>
             <Select value={eventType} onValueChange={setEventType} required>
               <SelectTrigger id="eventType" data-testid="select-event-type">
                 <SelectValue placeholder="Selecione o tipo" />
@@ -141,7 +141,7 @@ export default function EventForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="eventName">Nome do evento (opcional)</Label>
+            <Label htmlFor="eventName">Nome da data (opcional)</Label>
             <Input
               id="eventName"
               value={eventName}
@@ -152,7 +152,7 @@ export default function EventForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="eventDate">Data do evento</Label>
+            <Label htmlFor="eventDate">Data</Label>
             <Input
               id="eventDate"
               type="date"
@@ -205,7 +205,7 @@ export default function EventForm({
               className="flex-1"
               data-testid="button-save-event"
             >
-              {initialEvent ? "Salvar" : "Criar Evento"}
+              {initialEvent ? "Salvar" : "Criar Data"}
             </Button>
             <Button
               type="button"
