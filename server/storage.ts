@@ -263,6 +263,7 @@ export interface IStorage {
   getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]>;
   getCollaborativeEvent(id: string, userId?: string): Promise<CollaborativeEvent | undefined>;
   updateCollaborativeEvent(id: string, userId: string, updates: Partial<InsertCollaborativeEvent>): Promise<CollaborativeEvent | undefined>;
+  rescheduleCollaborativeEvent(id: string, userId: string, newDate: Date): Promise<CollaborativeEvent | undefined>;
   deleteCollaborativeEvent(id: string, userId: string): Promise<boolean>;
   
   // Participant Operations
@@ -1596,6 +1597,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]> {
+    // Auto-complete events that are past their date (1 day after event date)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(23, 59, 59, 999);
+    
+    await db
+      .update(collaborativeEvents)
+      .set({ status: "completed", updatedAt: new Date() })
+      .where(
+        and(
+          eq(collaborativeEvents.status, "active"),
+          sql`${collaborativeEvents.eventDate} IS NOT NULL`,
+          sql`${collaborativeEvents.eventDate} < ${yesterday}`
+        )
+      );
+
     // Get user email for email-only participant matching
     const [user] = await db
       .select({ email: users.email })
@@ -1701,6 +1718,25 @@ export class DatabaseStorage implements IStorage {
       .update(collaborativeEvents)
       .set({
         ...updates,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(collaborativeEvents.id, id),
+          eq(collaborativeEvents.ownerId, userId)
+        )
+      )
+      .returning();
+
+    return updatedEvent;
+  }
+
+  async rescheduleCollaborativeEvent(id: string, userId: string, newDate: Date): Promise<CollaborativeEvent | undefined> {
+    const [updatedEvent] = await db
+      .update(collaborativeEvents)
+      .set({
+        eventDate: newDate,
+        status: "active",
         updatedAt: sql`now()`,
       })
       .where(

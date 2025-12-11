@@ -176,6 +176,47 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // POST /api/collab-events/:id/reschedule - Reschedule a collaborative event
+  app.post("/api/collab-events/:id/reschedule", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      const { eventDate } = req.body;
+      
+      if (!eventDate) {
+        return res.status(400).json({ error: "Nova data é obrigatória" });
+      }
+      
+      const newDate = new Date(eventDate);
+      
+      // Check if date is valid
+      if (isNaN(newDate.getTime())) {
+        return res.status(400).json({ error: "Data inválida" });
+      }
+      
+      // Check if date is in the future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newDateNormalized = new Date(newDate);
+      newDateNormalized.setHours(0, 0, 0, 0);
+      
+      if (newDateNormalized < today) {
+        return res.status(400).json({ error: "A nova data deve ser hoje ou no futuro" });
+      }
+      
+      const event = await storage.rescheduleCollaborativeEvent(id, userId, newDate);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Rolê não encontrado ou acesso negado" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Error rescheduling collaborative event:", error);
+      res.status(500).json({ error: "Falha ao reagendar o rolê" });
+    }
+  });
+
   // DELETE /api/collab-events/:id - Delete a collaborative event
   app.delete("/api/collab-events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
