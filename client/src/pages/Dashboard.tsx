@@ -288,8 +288,6 @@ export default function Dashboard() {
                   onViewSuggestions={() => setLocation("/sugestoes")}
                   onEdit={() => setLocation("/eventos")}
                   onDelete={() => {}}
-                  onClick={() => setLocation("/eventos")}
-                  compact
                 />
               ))}
             </div>
@@ -338,8 +336,6 @@ export default function Dashboard() {
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onEdit={() => setLocation("/eventos")}
                       onDelete={() => {}}
-                      onClick={() => setLocation("/eventos")}
-                      compact
                     />
                   );
                 } else {
