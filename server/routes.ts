@@ -607,6 +607,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/horoscope - Get user's weekly horoscope message based on zodiac sign
+  app.get("/api/horoscope", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const horoscope = await storage.getHoroscope(userId);
+      
+      if (!horoscope) {
+        return res.json({ 
+          available: false, 
+          message: "Complete seu perfil com seu signo para receber sua mensagem semanal." 
+        });
+      }
+      
+      res.json({
+        available: true,
+        signo: {
+          nome: horoscope.signo.nome,
+          emoji: horoscope.signo.emoji,
+        },
+        mensagem: horoscope.mensagem.mensagem,
+        semana: horoscope.mensagem.numeroSemana,
+      });
+    } catch (error) {
+      console.error("Error fetching horoscope:", error);
+      res.status(500).json({ message: "Failed to fetch horoscope" });
+    }
+  });
+
   // ========== Gift Suggestions Routes ==========
 
   // GET /api/suggestions - Get gift suggestions with optional filters

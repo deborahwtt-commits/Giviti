@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import DashboardHero from "@/components/DashboardHero";
+import HoroscopeBanner from "@/components/HoroscopeBanner";
 import UpcomingAlert from "@/components/UpcomingAlert";
 import GettingStartedWizard from "@/components/GettingStartedWizard";
 import EventCard from "@/components/EventCard";
@@ -235,6 +236,8 @@ export default function Dashboard() {
             }
           }}
         />
+
+        <HoroscopeBanner />
 
         {(upcomingEvents && upcomingEvents.length > 0) || (roles && getUpcomingRoles().length > 0) ? (
           <UpcomingAlert 

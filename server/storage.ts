@@ -77,6 +77,10 @@ import {
   type InsertCollaborativeEventTask,
   type Click,
   type GoogleProductCategory,
+  signos,
+  mensagensSemanais,
+  type Signo,
+  type MensagemSemanal,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -293,6 +297,11 @@ export interface IStorage {
   updateContribution(id: string, updates: Partial<InsertCollectiveGiftContribution>): Promise<CollectiveGiftContribution | undefined>;
   deleteContribution(id: string): Promise<boolean>;
   getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }>;
+  
+  // Horoscope Operations
+  getSignoByDate(dia: number, mes: number): Promise<Signo | undefined>;
+  getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined>;
+  getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2009,6 +2018,97 @@ export class DatabaseStorage implements IStorage {
     const paidCount = contributions.filter(c => c.isPaid).length;
     
     return { totalDue, totalPaid, participantsCount, paidCount };
+  }
+
+  // ========== Horoscope Operations ==========
+
+  async getSignoByDate(dia: number, mes: number): Promise<Signo | undefined> {
+    const allSignos = await db.select().from(signos);
+    
+    for (const signo of allSignos) {
+      const { diaInicio, mesInicio, diaFim, mesFim } = signo;
+      
+      if (mesInicio === mesFim) {
+        if (mes === mesInicio && dia >= diaInicio && dia <= diaFim) {
+          return signo;
+        }
+      } else if (mesInicio > mesFim) {
+        if ((mes === mesInicio && dia >= diaInicio) || (mes === mesFim && dia <= diaFim)) {
+          return signo;
+        }
+      } else {
+        if ((mes === mesInicio && dia >= diaInicio) || (mes === mesFim && dia <= diaFim)) {
+          return signo;
+        }
+      }
+    }
+    
+    const [capricornio] = await db
+      .select()
+      .from(signos)
+      .where(eq(signos.nome, "Capricornio"));
+    return capricornio;
+  }
+
+  async getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined> {
+    const [mensagem] = await db
+      .select()
+      .from(mensagensSemanais)
+      .where(
+        and(
+          eq(mensagensSemanais.signoId, signoId),
+          eq(mensagensSemanais.numeroSemana, numeroSemana)
+        )
+      );
+    return mensagem;
+  }
+
+  async getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null> {
+    const profile = await this.getUserProfile(userId);
+    
+    if (!profile || !profile.zodiacSign) {
+      return null;
+    }
+    
+    const signoNameMap: Record<string, string> = {
+      "aries": "Aries",
+      "touro": "Touro",
+      "gemeos": "Gemeos",
+      "cancer": "Cancer",
+      "leao": "Leao",
+      "virgem": "Virgem",
+      "libra": "Libra",
+      "escorpiao": "Escorpiao",
+      "sagitario": "Sagitario",
+      "capricornio": "Capricornio",
+      "aquario": "Aquario",
+      "peixes": "Peixes",
+    };
+    
+    const signoNome = signoNameMap[profile.zodiacSign.toLowerCase()] || profile.zodiacSign;
+    
+    const [signo] = await db
+      .select()
+      .from(signos)
+      .where(eq(signos.nome, signoNome));
+    
+    if (!signo) {
+      return null;
+    }
+    
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    const numeroSemana = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+    const semanaAjustada = Math.min(Math.max(numeroSemana, 1), 52);
+    
+    const mensagem = await this.getMensagemSemanal(signo.id, semanaAjustada);
+    
+    if (!mensagem) {
+      return null;
+    }
+    
+    return { signo, mensagem };
   }
 }
 
