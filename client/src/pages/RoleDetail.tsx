@@ -61,6 +61,7 @@ import {
   Lightbulb,
   ShoppingBag,
   ExternalLink,
+  CalendarPlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -311,6 +312,10 @@ export default function RoleDetail() {
 
   // State for confirming redraw
   const [confirmRedrawOpen, setConfirmRedrawOpen] = useState(false);
+  
+  // State for reschedule dialog
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -588,6 +593,42 @@ export default function RoleDetail() {
     },
   });
 
+  // Reschedule mutation
+  const rescheduleMutation = useMutation({
+    mutationFn: async (newDate: string) => {
+      return await apiRequest(`/api/collab-events/${id}/reschedule`, "POST", { eventDate: newDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events"] });
+      toast({
+        title: "Rolê reagendado!",
+        description: "O rolê foi reagendado e está ativo novamente.",
+      });
+      setRescheduleDialogOpen(false);
+      setRescheduleDate("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao reagendar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleReschedule = () => {
+    if (!rescheduleDate) {
+      toast({
+        title: "Data obrigatória",
+        description: "Por favor, selecione uma nova data para o rolê.",
+        variant: "destructive",
+      });
+      return;
+    }
+    rescheduleMutation.mutate(rescheduleDate);
+  };
+
   if (eventLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -681,6 +722,17 @@ export default function RoleDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isOwner && event.status === "completed" && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => setRescheduleDialogOpen(true)}
+              data-testid="button-reschedule-role"
+            >
+              <CalendarPlus className="w-4 h-4 mr-2" />
+              Reagendar
+            </Button>
+          )}
           <Button variant="outline" size="sm" data-testid="button-share-role">
             <Share2 className="w-4 h-4 mr-2" />
             Compartilhar
@@ -1756,6 +1808,48 @@ export default function RoleDetail() {
         participantName={selectedParticipantForProfile?.name || "Participante"}
         userProfile={selectedParticipantForProfile?.userProfile || null}
       />
+
+      <AlertDialog
+        open={rescheduleDialogOpen}
+        onOpenChange={(open) => {
+          setRescheduleDialogOpen(open);
+          if (!open) setRescheduleDate("");
+        }}
+      >
+        <AlertDialogContent data-testid="dialog-reschedule-role">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reagendar Rolê</AlertDialogTitle>
+            <AlertDialogDescription>
+              Escolha uma nova data para o rolê. O status será alterado para "Ativo" automaticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="reschedule-date">Nova data</Label>
+            <Input
+              id="reschedule-date"
+              type="datetime-local"
+              value={rescheduleDate}
+              onChange={(e) => setRescheduleDate(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="mt-2"
+              data-testid="input-reschedule-date"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-reschedule">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReschedule}
+              disabled={rescheduleMutation.isPending || !rescheduleDate}
+              data-testid="button-confirm-reschedule"
+            >
+              {rescheduleMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Reagendar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
