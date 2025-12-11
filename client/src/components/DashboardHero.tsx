@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Gift, Sparkles } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
+import HoroscopeBanner from "@/components/HoroscopeBanner";
 
 interface DashboardHeroProps {
   userName: string;
@@ -55,10 +56,14 @@ export default function DashboardHero({
             Olá, {userName}!
           </h1>
 
-          <p className="text-lg text-muted-foreground mb-8">
+          <p className="text-lg text-muted-foreground mb-6">
             Encontre o presente perfeito para quem você ama. Sugestões
             personalizadas prontas para você.
           </p>
+
+          <div className="mb-6">
+            <HoroscopeBanner />
+          </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div 
