@@ -83,9 +83,26 @@ export default function Landing() {
       setLocation("/dashboard");
     },
     onError: (error: any) => {
+      let errorMessage = "E-mail ou senha incorretos";
+      
+      if (error.message) {
+        // Try to parse JSON error message from backend
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Erro ao fazer login",
-        description: error.message || "E-mail ou senha incorretos",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -118,9 +135,26 @@ export default function Landing() {
       setLocation("/perfil");
     },
     onError: (error: any) => {
+      let errorMessage = "Não foi possível criar sua conta";
+      
+      if (error.message) {
+        // Try to parse JSON error message from backend
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Erro ao criar conta",
-        description: error.message || "Não foi possível criar sua conta",
+        description: errorMessage,
         variant: "destructive",
       });
     },
