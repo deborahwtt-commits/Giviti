@@ -360,7 +360,14 @@ export default function Dashboard() {
                               {typeInfo.label}
                             </Badge>
                           </div>
-                          <Badge variant={role.status === "active" ? "default" : "secondary"} className="text-xs shrink-0">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs shrink-0 ${
+                              role.status === "active" 
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" 
+                                : "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700"
+                            }`}
+                          >
                             {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
                           </Badge>
                         </div>
