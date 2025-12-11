@@ -258,6 +258,7 @@ export interface IStorage {
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+    totalEvents: number;
   }>;
   
   // User statistics for detailed user list
@@ -1432,6 +1433,7 @@ export class DatabaseStorage implements IStorage {
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+    totalEvents: number;
   }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1491,10 +1493,17 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(gte(users.createdAt, today));
     
-    const newEventsToday = await db
+    // Count regular events created today
+    const newRegularEventsToday = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(events)
       .where(gte(events.createdAt, today));
+    
+    // Count collaborative events (rolês) created today
+    const newCollaborativeEventsToday = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEvents)
+      .where(gte(collaborativeEvents.createdAt, today));
     
     const giftsMarkedTodayAsPurchased = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -1503,6 +1512,15 @@ export class DatabaseStorage implements IStorage {
         eq(userGifts.isPurchased, true),
         gte(userGifts.purchasedAt, today)
       ));
+    
+    // Total events = regular events + collaborative events
+    const totalRegularEvents = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events);
+    
+    const totalCollaborativeEvents = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEvents);
     
     return {
       userStats: {
@@ -1521,9 +1539,10 @@ export class DatabaseStorage implements IStorage {
       })),
       recentActivity: {
         newUsersToday: newUsersToday[0]?.count || 0,
-        newEventsToday: newEventsToday[0]?.count || 0,
+        newEventsToday: (newRegularEventsToday[0]?.count || 0) + (newCollaborativeEventsToday[0]?.count || 0),
         giftsMarkedTodayAsPurchased: giftsMarkedTodayAsPurchased[0]?.count || 0,
       },
+      totalEvents: (totalRegularEvents[0]?.count || 0) + (totalCollaborativeEvents[0]?.count || 0),
     };
   }
 
