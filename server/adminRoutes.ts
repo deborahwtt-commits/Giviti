@@ -162,7 +162,7 @@ export function registerAdminRoutes(app: Express) {
   });
 
   // POST /api/admin/users/:id/reset-password - Admin triggers password reset email
-  app.post("/api/admin/users/:id/reset-password", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+  app.post("/api/admin/users/:id/reset-password", isAuthenticated, hasRole("admin"), async (req: any, res) => {
     try {
       const { id } = req.params;
       
@@ -186,11 +186,15 @@ export function registerAdminRoutes(app: Express) {
       
       await storage.createPasswordResetToken(id, token, expiresAt);
       
-      // Build reset link
-      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
-                      process.env.REPLIT_DEV_DOMAIN 
-                        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-                        : 'http://localhost:5000';
+      // Build reset link - prefer deployment URL, then dev domain, then localhost
+      let baseUrl: string;
+      if (process.env.REPLIT_DEPLOYMENT_URL) {
+        baseUrl = process.env.REPLIT_DEPLOYMENT_URL;
+      } else if (process.env.REPLIT_DEV_DOMAIN) {
+        baseUrl = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+      } else {
+        baseUrl = 'http://localhost:5000';
+      }
       const resetLink = `${baseUrl}/redefinir-senha/${token}`;
       
       // Send password reset email
