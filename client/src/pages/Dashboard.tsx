@@ -5,6 +5,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import DashboardHero from "@/components/DashboardHero";
+import UpcomingAlert from "@/components/UpcomingAlert";
+import GettingStartedWizard from "@/components/GettingStartedWizard";
 import EventCard from "@/components/EventCard";
 import GiftCard from "@/components/GiftCard";
 import EmptyState from "@/components/EmptyState";
@@ -147,6 +149,14 @@ export default function Dashboard() {
           }}
           onCreateRecipient={() => setLocation("/presenteados")}
           onExploreSuggestions={() => setLocation("/sugestoes")}
+          onRecipientsClick={() => setLocation("/presenteados")}
+          onEventsClick={() => {
+            const eventsSection = document.getElementById("events-section");
+            if (eventsSection) {
+              eventsSection.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+          onGiftsClick={() => setLocation("/presentes")}
           onRolesClick={() => {
             const rolesSection = document.getElementById("roles-section");
             if (rolesSection) {
@@ -155,7 +165,25 @@ export default function Dashboard() {
           }}
         />
 
-        <section>
+        {(upcomingEvents && upcomingEvents.length > 0) || (roles && getUpcomingRoles().length > 0) ? (
+          <UpcomingAlert 
+            events={upcomingEvents || []} 
+            roles={roles || []} 
+          />
+        ) : null}
+
+        {(!recipients || recipients.length === 0) || (!upcomingEvents || upcomingEvents.length === 0) ? (
+          <GettingStartedWizard
+            hasRecipients={Boolean(recipients && recipients.length > 0)}
+            hasEvents={Boolean(upcomingEvents && upcomingEvents.length > 0)}
+            hasPurchasedGifts={Boolean(stats && stats.giftsPurchased > 0)}
+            onAddRecipient={() => setLocation("/presenteados")}
+            onAddEvent={() => setLocation("/eventos")}
+            onExploreSuggestions={() => setLocation("/sugestoes")}
+          />
+        ) : null}
+
+        <section id="events-section">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading font-semibold text-3xl text-foreground">

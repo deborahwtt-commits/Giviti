@@ -12,6 +12,9 @@ interface DashboardHeroProps {
   };
   onCreateRecipient: () => void;
   onExploreSuggestions: () => void;
+  onRecipientsClick?: () => void;
+  onEventsClick?: () => void;
+  onGiftsClick?: () => void;
   onRolesClick?: () => void;
 }
 
@@ -20,6 +23,9 @@ export default function DashboardHero({
   stats,
   onCreateRecipient,
   onExploreSuggestions,
+  onRecipientsClick,
+  onEventsClick,
+  onGiftsClick,
   onRolesClick,
 }: DashboardHeroProps) {
   return (
@@ -54,13 +60,35 @@ export default function DashboardHero({
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border">
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onRecipientsClick}
+              data-testid="stat-recipients"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onRecipientsClick?.();
+                }
+              }}
+            >
               <div className="text-2xl font-bold text-foreground">
                 {stats.totalRecipients}
               </div>
               <div className="text-xs text-muted-foreground">Presenteados</div>
             </div>
-            <div className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border">
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onEventsClick}
+              data-testid="stat-events"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onEventsClick?.();
+                }
+              }}
+            >
               <div className="text-2xl font-bold text-primary">
                 {stats.upcomingEvents}
               </div>
@@ -87,7 +115,18 @@ export default function DashboardHero({
                 Rolês próximos
               </div>
             </div>
-            <div className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border">
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onGiftsClick}
+              data-testid="stat-gifts"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onGiftsClick?.();
+                }
+              }}
+            >
               <div className="text-2xl font-bold text-foreground">
                 {stats.giftsPurchased}
               </div>

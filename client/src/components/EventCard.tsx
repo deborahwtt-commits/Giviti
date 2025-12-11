@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock } from "lucide-react";
+import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import EventDetailsDialog from "./EventDetailsDialog";
 import type { EventWithRecipients } from "@shared/schema";
@@ -15,6 +15,7 @@ interface EventCardProps {
   onDelete: () => void;
   onArchive?: () => void;
   onAdvanceYear?: () => void;
+  hasGiftPurchased?: boolean;
 }
 
 export default function EventCard({
@@ -26,11 +27,15 @@ export default function EventCard({
   onDelete,
   onArchive,
   onAdvanceYear,
+  hasGiftPurchased = false,
 }: EventCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const isPastEvent = daysUntil < 0;
+  const needsAttention = !isPastEvent && daysUntil <= 7 && !hasGiftPurchased;
 
-  const eventName = event.eventName || event.eventType;
+  const eventDisplayName = event.eventName 
+    ? `${event.eventType} ${event.eventName}` 
+    : event.eventType;
   const recipientNames = event.recipients.map(r => r.name);
   const displayRecipients = () => {
     if (recipientNames.length === 0) {
@@ -50,20 +55,31 @@ export default function EventCard({
   };
 
   return (
-    <Card className="p-6 hover-elevate">
+    <Card className={`p-6 hover-elevate ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''}`}>
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
-          <Calendar className="w-6 h-6 text-primary" />
+        <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${needsAttention ? 'bg-amber-100 dark:bg-amber-950' : 'bg-primary/10'}`}>
+          {needsAttention ? (
+            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          ) : (
+            <Calendar className="w-6 h-6 text-primary" />
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <button
-            onClick={() => setShowDetails(true)}
-            className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left w-full mb-1"
-            data-testid={`button-view-details-${event.id}`}
-          >
-            {eventName}
-          </button>
+          <div className="flex items-center gap-2 mb-1">
+            <button
+              onClick={() => setShowDetails(true)}
+              className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left"
+              data-testid={`button-view-details-${event.id}`}
+            >
+              {eventDisplayName}
+            </button>
+            {needsAttention && (
+              <Badge className="bg-amber-500 text-white text-xs shrink-0">
+                Sem presente!
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mb-2">
             {displayRecipients()}
           </p>
