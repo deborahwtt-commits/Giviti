@@ -49,7 +49,7 @@ export default function Header({
   const navItems = [
     { path: "/", label: "Dashboard" },
     { path: "/presenteados", label: "Presenteados" },
-    { path: "/eventos", label: "Eventos" },
+    { path: "/eventos", label: "Datas Comemorativas" },
     { path: "/sugestoes", label: "Sugestões" },
     { path: "/role", label: "Planeje seu rolê!" },
   ];

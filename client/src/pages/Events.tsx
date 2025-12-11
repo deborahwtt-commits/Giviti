@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import UnifiedEventCard from "@/components/UnifiedEventCard";
+import EventCard from "@/components/EventCard";
 import EventForm from "@/components/EventForm";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import type { EventWithRecipients, Recipient, CollaborativeEvent } from "@shared/schema";
+import type { EventWithRecipients, Recipient } from "@shared/schema";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
-
-type UnifiedEvent = (EventWithRecipients & { type: 'event' }) | (CollaborativeEvent & { type: 'role' });
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -44,12 +42,8 @@ export default function Events() {
     queryKey: ["/api/events"],
   });
 
-  const { data: allRoles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
-    queryKey: ["/api/collab-events"],
-  });
-
   useEffect(() => {
-    const error = recipientsError || eventsError || rolesError;
+    const error = recipientsError || eventsError;
     if (error && isUnauthorizedError(error as Error)) {
       toast({
         title: "Sessão Expirada",
@@ -60,7 +54,7 @@ export default function Events() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [recipientsError, eventsError, rolesError, toast]);
+  }, [recipientsError, eventsError, toast]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -218,39 +212,21 @@ export default function Events() {
   const threeMonthsFromNow = new Date(today);
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
-  // Combine events and roles into unified list
-  const eventsWithType: UnifiedEvent[] = (allEvents || []).map(e => ({ ...e, type: 'event' as const }));
-  const rolesWithType: UnifiedEvent[] = (allRoles || []).map(r => ({ ...r, type: 'role' as const }));
+  // Filter active (non-archived) events
+  const activeEvents = (allEvents || []).filter((event) => !event.archived);
   
-  const allItems: UnifiedEvent[] = [...eventsWithType, ...rolesWithType];
+  // Filter archived events
+  const archivedEvents = (allEvents || []).filter((event) => event.archived);
 
-  // Filter active (non-archived) items
-  const activeItems = allItems.filter((item) => {
-    if (item.type === 'event') {
-      return !item.archived;
-    }
-    // Roles don't have archived status yet, so include all active roles
-    return item.status === 'active';
-  });
-  
-  // Filter archived items
-  const archivedItems = allItems.filter((item) => {
-    if (item.type === 'event') {
-      return item.archived;
-    }
-    // For roles, consider completed/cancelled as "archived"
-    return item.status === 'completed' || item.status === 'cancelled';
-  });
-
-  const thisMonthItems = activeItems.filter((item) => {
-    if (!item.eventDate) return false;
-    const eventDate = startOfDay(typeof item.eventDate === 'string' ? parseISO(item.eventDate) : item.eventDate);
+  const thisMonthEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return false;
+    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
     return eventDate >= today && eventDate <= oneMonthFromNow;
   });
 
-  const nextThreeMonthsItems = activeItems.filter((item) => {
-    if (!item.eventDate) return false;
-    const eventDate = startOfDay(typeof item.eventDate === 'string' ? parseISO(item.eventDate) : item.eventDate);
+  const nextThreeMonthsEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return false;
+    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
     return eventDate >= today && eventDate <= threeMonthsFromNow;
   });
 
@@ -298,7 +274,7 @@ export default function Events() {
     setEditingEvent(null);
   };
 
-  if (eventsLoading || rolesLoading) {
+  if (eventsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -315,10 +291,10 @@ export default function Events() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="font-heading font-bold text-4xl text-foreground">
-              Eventos
+              Datas Comemorativas
             </h1>
             <p className="text-muted-foreground mt-2">
-              Nunca perca uma data importante
+              Nunca perca uma data importante para presentear
             </p>
           </div>
           <Button
@@ -327,122 +303,122 @@ export default function Events() {
             data-testid="button-create-event"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Novo Evento
+            Nova Data
           </Button>
         </div>
 
-        {allItems && allItems.length > 0 ? (
+        {allEvents && allEvents.length > 0 ? (
           <Tabs defaultValue="all" className="space-y-6">
             <TabsList>
               <TabsTrigger value="all" data-testid="tab-all-events">
-                Todos ({activeItems.length})
+                Todos ({activeEvents.length})
               </TabsTrigger>
               <TabsTrigger
                 value="thisMonth"
                 data-testid="tab-this-month-events"
               >
-                Este Mês ({thisMonthItems.length})
+                Este Mês ({thisMonthEvents.length})
               </TabsTrigger>
               <TabsTrigger
                 value="nextThreeMonths"
                 data-testid="tab-next-three-months-events"
               >
-                Próximos 3 Meses ({nextThreeMonthsItems.length})
+                Próximos 3 Meses ({nextThreeMonthsEvents.length})
               </TabsTrigger>
               <TabsTrigger value="archived" data-testid="tab-archived-events">
-                Arquivados ({archivedItems.length})
+                Arquivados ({archivedEvents.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeItems.map((item) => (
-                  <UnifiedEventCard
-                    key={item.id}
-                    item={item}
-                    daysUntil={calculateDaysUntil(item.eventDate)}
-                    date={formatEventDate(item.eventDate)}
-                    onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
-                    onEdit={item.type === 'event' ? handleEdit : undefined}
-                    onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
-                    onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
-                    onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
+                {activeEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    daysUntil={calculateDaysUntil(event.eventDate)}
+                    date={formatEventDate(event.eventDate)}
+                    onViewSuggestions={() => setLocation("/sugestoes")}
+                    onEdit={() => handleEdit(event)}
+                    onDelete={() => handleDelete(event.id)}
+                    onArchive={() => handleArchive(event.id)}
+                    onAdvanceYear={() => handleAdvanceYear(event.id)}
                   />
                 ))}
               </div>
             </TabsContent>
 
             <TabsContent value="thisMonth">
-              {thisMonthItems.length > 0 ? (
+              {thisMonthEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {thisMonthItems.map((item) => (
-                    <UnifiedEventCard
-                      key={item.id}
-                      item={item}
-                      daysUntil={calculateDaysUntil(item.eventDate)}
-                      date={formatEventDate(item.eventDate)}
-                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
-                      onEdit={item.type === 'event' ? handleEdit : undefined}
-                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
-                      onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
-                      onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
+                  {thisMonthEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(event)}
+                      onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento ou rolê neste mês
+                    Nenhuma data comemorativa neste mês
                   </p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="nextThreeMonths">
-              {nextThreeMonthsItems.length > 0 ? (
+              {nextThreeMonthsEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {nextThreeMonthsItems.map((item) => (
-                    <UnifiedEventCard
-                      key={item.id}
-                      item={item}
-                      daysUntil={calculateDaysUntil(item.eventDate)}
-                      date={formatEventDate(item.eventDate)}
-                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
-                      onEdit={item.type === 'event' ? handleEdit : undefined}
-                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
-                      onArchive={item.type === 'event' ? () => handleArchive(item.id) : undefined}
-                      onAdvanceYear={item.type === 'event' ? () => handleAdvanceYear(item.id) : undefined}
+                  {nextThreeMonthsEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(event)}
+                      onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento ou rolê nos próximos 3 meses
+                    Nenhuma data comemorativa nos próximos 3 meses
                   </p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="archived">
-              {archivedItems.length > 0 ? (
+              {archivedEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {archivedItems.map((item) => (
-                    <UnifiedEventCard
-                      key={item.id}
-                      item={item}
-                      daysUntil={calculateDaysUntil(item.eventDate)}
-                      date={formatEventDate(item.eventDate)}
-                      onViewSuggestions={item.type === 'event' ? () => setLocation("/sugestoes") : undefined}
-                      onEdit={item.type === 'event' ? handleEdit : undefined}
-                      onDelete={item.type === 'event' ? () => handleDelete(item.id) : undefined}
+                  {archivedEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(event)}
+                      onDelete={() => handleDelete(event.id)}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    Nenhum evento ou rolê arquivado
+                    Nenhuma data comemorativa arquivada
                   </p>
                 </div>
               )}
@@ -451,9 +427,9 @@ export default function Events() {
         ) : (
           <EmptyState
             image={emptyEventsImage}
-            title="Nenhum evento cadastrado"
+            title="Nenhuma data comemorativa cadastrada"
             description="Cadastre aniversários, formaturas e outras datas especiais para nunca esquecer de presentear."
-            actionLabel="Criar Evento"
+            actionLabel="Criar Data"
             onAction={() => setShowEventForm(true)}
           />
         )}
