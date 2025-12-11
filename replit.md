@@ -84,6 +84,13 @@ Preferred communication style: Simple, everyday language.
 - **User/Recipient Profiles**: Detailed personality questionnaires, including "Gifts to Avoid" fields and optional location fields (cidade, estado, pais) with input validation and auto-capitalization.
 - **Authentication**: Email/password registration and login with session persistence and bcrypt hashing.
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, gift suggestions management, and advanced statistics.
+- **Astrology Module**: Weekly horoscope messages displayed on Dashboard based on user's zodiac sign.
+  - **Database Tables**: `signos` (12 zodiac signs with date ranges, emoji) and `mensagensSemanais` (624 weekly messages, 52 per sign).
+  - **API Endpoint**: GET `/api/horoscope` returns sign info and weekly message based on user's `zodiacSign` from profile.
+  - **Weekly Selection**: Messages selected based on current week number (1-52) of the year.
+  - **Frontend Component**: HoroscopeBanner displays on Dashboard with gradient styling, sign emoji, and personalized message.
+  - **Fallback**: Users without zodiacSign see prompt to complete profile.
+  - **Sign Name Mapping**: Handles both accented (Áries, Aquário) and unaccented (Aries, Aquario) sign names for database lookup.
 - **Collaborative Events**: Support for Secret Santa, themed nights, and collective gifts with participant management, draw algorithms (for Secret Santa), and shareable links.
   - **Themed Night Categories**: Dynamic "Qual é a boa?" subcategory system for themed nights. Admins can create/manage categories (name, description, activity suggestions). When creating a "Noite Temática" rolê, users select from active categories. Category details displayed on event detail page.
   - **Note**: Creative challenges (Desafio Criativo) are temporarily hidden from the creation UI but remain supported in the backend for existing data.

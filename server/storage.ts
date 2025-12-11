@@ -2072,16 +2072,24 @@ export class DatabaseStorage implements IStorage {
     
     const signoNameMap: Record<string, string> = {
       "aries": "Aries",
+      "áries": "Aries",
       "touro": "Touro",
       "gemeos": "Gemeos",
+      "gêmeos": "Gemeos",
       "cancer": "Cancer",
+      "câncer": "Cancer",
       "leao": "Leao",
+      "leão": "Leao",
       "virgem": "Virgem",
       "libra": "Libra",
       "escorpiao": "Escorpiao",
+      "escorpião": "Escorpiao",
       "sagitario": "Sagitario",
+      "sagitário": "Sagitario",
       "capricornio": "Capricornio",
+      "capricórnio": "Capricornio",
       "aquario": "Aquario",
+      "aquário": "Aquario",
       "peixes": "Peixes",
     };
     
