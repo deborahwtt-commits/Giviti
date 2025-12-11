@@ -89,6 +89,11 @@ Preferred communication style: Simple, everyday language.
     - POST `/api/reset-password`: Validates token and updates password (one-time use)
     - Frontend: "Esqueci minha senha" modal in login form, `/redefinir-senha/:token` page for new password
     - Email sent via Resend with verified domain contato@giviti.com.br
+  - **Admin Password Reset**: Administrators can trigger password reset emails for users from the admin panel.
+    - POST `/api/admin/users/:id/reset-password`: Admin-only endpoint to send reset link to user
+    - Invalidates existing tokens before generating new one
+    - Audit logged with action "RESET_PASSWORD"
+    - UI: Key icon button in user list (disabled for inactive users), confirmation dialog before sending
 - **Admin Panel**: Comprehensive administrative module with role-based access control (admin, manager, support, readonly) for user management, categories, occasions, price ranges, relationship types, system settings, audit logs, gift suggestions management, and advanced statistics.
 - **Astrology Module**: Weekly horoscope messages displayed on Dashboard based on user's zodiac sign.
   - **Database Tables**: `signos` (12 zodiac signs with date ranges, emoji) and `mensagensSemanais` (624 weekly messages, 52 per sign).
