@@ -346,7 +346,7 @@ export default function Dashboard() {
                     <Card
                       key={`role-${item.id}`}
                       className="cursor-pointer hover-elevate transition-all"
-                      onClick={() => setLocation(`/roles/${role.id}`)}
+                      onClick={() => setLocation(`/role/${role.id}`)}
                       data-testid={`card-role-${role.id}`}
                     >
                       <CardContent className="p-4">
