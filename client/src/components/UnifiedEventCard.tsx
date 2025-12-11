@@ -136,7 +136,10 @@ export default function UnifiedEventCard({
 
   // Event card (original logic)
   const event = item as EventWithRecipients & { type: 'event' };
-  const eventName = event.eventName || event.eventType;
+  // Combine event type + name (e.g., "Aniversário Mãe", "Natal família Silva")
+  const eventDisplayName = event.eventName 
+    ? `${event.eventType} ${event.eventName}` 
+    : event.eventType;
   const recipientNames = event.recipients.map(r => r.name);
   const displayRecipients = () => {
     if (recipientNames.length === 0) {
@@ -165,7 +168,7 @@ export default function UnifiedEventCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-lg text-foreground truncate">
-              {eventName}
+              {eventDisplayName}
             </h3>
             <Badge variant="outline" className="shrink-0 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
               Evento
