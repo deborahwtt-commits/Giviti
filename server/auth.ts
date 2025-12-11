@@ -2,11 +2,13 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { registerUserSchema, loginUserSchema, type User } from "@shared/schema";
 import { ZodError } from "zod";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { sendPasswordResetEmail } from "./emailService";
 
 const PgSession = connectPgSimple(session);
 
@@ -174,6 +176,111 @@ export async function setupAuth(app: Express): Promise<void> {
       res.clearCookie("giviti.sid");
       res.json({ message: "Logout realizado com sucesso" });
     });
+  });
+
+  // Forgot password endpoint - request password reset
+  app.post("/api/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "E-mail é obrigatório" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await storage.getUserByEmail(normalizedEmail);
+      
+      // Always return success to prevent email enumeration attacks
+      const successMessage = "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.";
+      
+      if (!user) {
+        return res.json({ message: successMessage });
+      }
+
+      // Clean up expired tokens
+      await storage.deleteExpiredPasswordResetTokens();
+
+      // Generate a secure random token
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      // Save the token
+      await storage.createPasswordResetToken(user.id, token, expiresAt);
+
+      // Build reset URL - use REPLIT_DEPLOYMENT_URL if available for production
+      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL 
+        ? `https://${process.env.REPLIT_DEPLOYMENT_URL}`
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "http://localhost:5000";
+      const resetLink = `${baseUrl}/redefinir-senha/${token}`;
+
+      // Send email
+      try {
+        await sendPasswordResetEmail(normalizedEmail, resetLink, user.firstName || undefined);
+        console.log(`[ForgotPassword] Reset email sent to ${normalizedEmail}`);
+      } catch (emailError) {
+        console.error("[ForgotPassword] Failed to send email:", emailError);
+        // Still return success to prevent enumeration
+      }
+
+      res.json({ message: successMessage });
+    } catch (error) {
+      console.error("Error in forgot-password:", error);
+      res.status(500).json({ message: "Erro ao processar solicitação" });
+    }
+  });
+
+  // Reset password endpoint - set new password using token
+  app.post("/api/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ message: "Token inválido" });
+      }
+      
+      if (!password || typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres" });
+      }
+
+      // Find the token
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
+
+      // Check if token is expired
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: "Token expirado. Solicite uma nova redefinição de senha." });
+      }
+
+      // Check if token was already used
+      if (resetToken.usedAt) {
+        return res.status(400).json({ message: "Este link já foi utilizado. Solicite uma nova redefinição de senha." });
+      }
+
+      // Hash the new password
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+      // Update the user's password
+      const updated = await storage.updateUserPassword(resetToken.userId, passwordHash);
+      
+      if (!updated) {
+        return res.status(500).json({ message: "Erro ao atualizar senha" });
+      }
+
+      // Mark the token as used
+      await storage.markPasswordResetTokenUsed(resetToken.id);
+
+      console.log(`[ResetPassword] Password reset successful for user ${resetToken.userId}`);
+      
+      res.json({ message: "Senha redefinida com sucesso! Você já pode fazer login." });
+    } catch (error) {
+      console.error("Error in reset-password:", error);
+      res.status(500).json({ message: "Erro ao redefinir senha" });
+    }
   });
 }
 
