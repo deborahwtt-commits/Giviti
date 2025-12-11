@@ -100,11 +100,11 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
   const getUrgencyStyles = () => {
     if (nextItem.daysUntil <= 3) {
       return {
-        bg: "bg-gradient-to-r from-destructive/10 to-destructive/5 border-destructive/30",
-        iconBg: "bg-destructive/20 animate-pulse",
-        icon: "text-destructive",
-        badge: "bg-destructive text-destructive-foreground",
-        text: "text-destructive font-bold",
+        bg: "bg-gradient-to-r from-amber-100/80 to-yellow-50/60 border-amber-200/50 dark:from-amber-950/30 dark:to-yellow-950/20 dark:border-amber-800/30",
+        iconBg: "bg-amber-100 dark:bg-amber-900/50",
+        icon: "text-amber-600 dark:text-amber-400",
+        badge: "bg-amber-500 text-white dark:bg-amber-600",
+        text: "text-amber-700 dark:text-amber-300 font-bold",
         showAlert: true
       };
     }
