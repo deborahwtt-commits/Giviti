@@ -2,7 +2,7 @@
 
 ## Presentes Perfeitos, Sempre
 
-Versão 1.0 | Dezembro 2024
+Versão 1.1 | Dezembro 2024
 
 ---
 
@@ -12,6 +12,7 @@ Versão 1.0 | Dezembro 2024
 2. [Primeiros Passos](#primeiros-passos)
    - [Criando sua Conta](#criando-sua-conta)
    - [Fazendo Login](#fazendo-login)
+   - [Esqueci Minha Senha](#esqueci-minha-senha)
    - [Conhecendo o Dashboard](#conhecendo-o-dashboard)
 3. [Gerenciando Presenteados](#gerenciando-presenteados)
    - [Adicionando um Novo Presenteado](#adicionando-um-novo-presenteado)
@@ -74,6 +75,21 @@ Após criar sua conta, você será redirecionado automaticamente para o Dashboar
 2. Digite seu **e-mail** e **senha**
 3. Opcionalmente, marque "Manter-me logado neste navegador"
 4. Clique em **"Entrar"**
+
+### Esqueci Minha Senha
+
+Se você esqueceu sua senha, pode recuperá-la facilmente:
+
+1. Na página de login, clique em **"Esqueci minha senha"**
+2. Digite seu **e-mail** cadastrado
+3. Clique em **"Enviar link de recuperação"**
+4. Verifique sua caixa de entrada (e a pasta de spam)
+5. Clique no link recebido no e-mail
+6. Digite sua **nova senha** (mínimo 6 caracteres)
+7. Confirme a nova senha
+8. Clique em **"Redefinir Senha"**
+
+> **Importante**: O link de recuperação expira em **1 hora**. Se expirar, solicite um novo link.
 
 ### Conhecendo o Dashboard
 
@@ -407,7 +423,11 @@ Para organizar um Presente Coletivo:
 ## Perguntas Frequentes
 
 ### Como altero minha senha?
-Atualmente, para alterar sua senha, entre em contato com o suporte.
+Use a opção **"Esqueci minha senha"** na página de login:
+1. Clique em "Esqueci minha senha"
+2. Informe seu e-mail cadastrado
+3. Você receberá um link por e-mail para criar uma nova senha
+4. O link é válido por 1 hora
 
 ### Posso usar o Giviti no celular?
 Sim! O Giviti é totalmente responsivo e funciona em smartphones e tablets.
