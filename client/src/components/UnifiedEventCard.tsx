@@ -5,6 +5,7 @@ import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock, Users, PartyPop
 import { useLocation } from "wouter";
 import type { EventWithRecipients, CollaborativeEvent } from "@shared/schema";
 import type { LucideIcon } from "lucide-react";
+import { getEventColors } from "@/lib/eventColors";
 
 type UnifiedEvent = (EventWithRecipients & { type: 'event' }) | (CollaborativeEvent & { type: 'role' });
 
@@ -32,25 +33,21 @@ export default function UnifiedEventCard({
   const [, setLocation] = useLocation();
   const isPastEvent = daysUntil < 0;
 
-  const roleTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
+  const roleTypeInfo: Record<string, { label: string; Icon: LucideIcon }> = {
     secret_santa: { 
       label: "Amigo Secreto", 
-      className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
       Icon: Gift 
     },
     themed_night: { 
       label: "Noite Temática", 
-      className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
       Icon: PartyPopper 
     },
     collective_gift: { 
       label: "Presente Coletivo", 
-      className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
       Icon: Heart 
     },
     creative_challenge: { 
       label: "Desafio Criativo", 
-      className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
       Icon: Sparkles 
     },
   };
@@ -59,10 +56,10 @@ export default function UnifiedEventCard({
     const role = item as CollaborativeEvent & { type: 'role' };
     const typeInfo = roleTypeInfo[role.eventType] || {
       label: role.eventType,
-      className: "",
       Icon: Calendar,
     };
     const IconComponent = typeInfo.Icon;
+    const colors = getEventColors(role.eventType);
 
     return (
       <Card
@@ -78,8 +75,8 @@ export default function UnifiedEventCard({
         role="button"
       >
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
-            <IconComponent className="w-6 h-6 text-primary" />
+          <div className={`flex-shrink-0 w-12 h-12 rounded-md ${colors.bg} flex items-center justify-center`}>
+            <IconComponent className={`w-6 h-6 ${colors.icon}`} />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -87,7 +84,7 @@ export default function UnifiedEventCard({
               <h3 className="font-semibold text-lg text-foreground truncate" data-testid={`text-role-name-${role.id}`}>
                 {role.name}
               </h3>
-              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
+              <Badge className={`shrink-0 ${colors.badge}`}>
                 Rolê
               </Badge>
             </div>
@@ -120,7 +117,7 @@ export default function UnifiedEventCard({
             )}
 
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={typeInfo.className}>
+              <Badge variant="outline" className={`${colors.bg} ${colors.icon} ${colors.border}`}>
                 {typeInfo.label}
               </Badge>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -136,6 +133,7 @@ export default function UnifiedEventCard({
 
   // Event card (original logic)
   const event = item as EventWithRecipients & { type: 'event' };
+  const eventColors = getEventColors('regular');
   // Combine event type + name (e.g., "Aniversário Mãe", "Natal família Silva")
   const eventDisplayName = event.eventName 
     ? `${event.eventType} ${event.eventName}` 
@@ -161,8 +159,8 @@ export default function UnifiedEventCard({
   return (
     <Card className="p-6 hover-elevate">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
-          <Calendar className="w-6 h-6 text-primary" />
+        <div className={`flex-shrink-0 w-12 h-12 rounded-md ${eventColors.bg} flex items-center justify-center`}>
+          <Calendar className={`w-6 h-6 ${eventColors.icon}`} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -170,7 +168,7 @@ export default function UnifiedEventCard({
             <h3 className="font-semibold text-lg text-foreground truncate">
               {eventDisplayName}
             </h3>
-            <Badge variant="outline" className="shrink-0 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
+            <Badge className={`shrink-0 ${eventColors.badge}`}>
               Evento
             </Badge>
           </div>

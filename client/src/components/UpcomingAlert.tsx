@@ -14,6 +14,7 @@ import {
 import { useLocation } from "wouter";
 import type { EventWithRecipients, CollaborativeEvent } from "@shared/schema";
 import { differenceInDays } from "date-fns";
+import { getEventColors, getRoleTypeLabel } from "@/lib/eventColors";
 
 interface UpcomingAlertProps {
   events: EventWithRecipients[];
@@ -94,28 +95,36 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
     return Calendar;
   };
 
+  const eventColors = getEventColors(nextItem.type === 'role' ? nextItem.eventType : 'regular');
+
   const getUrgencyStyles = () => {
     if (nextItem.daysUntil <= 3) {
       return {
         bg: "bg-gradient-to-r from-destructive/10 to-destructive/5 border-destructive/30",
+        iconBg: "bg-destructive/20 animate-pulse",
         icon: "text-destructive",
         badge: "bg-destructive text-destructive-foreground",
-        text: "text-destructive font-bold"
+        text: "text-destructive font-bold",
+        showAlert: true
       };
     }
     if (nextItem.daysUntil <= 7) {
       return {
-        bg: "bg-gradient-to-r from-amber-500/10 to-amber-500/5 border-amber-500/30",
-        icon: "text-amber-600 dark:text-amber-400",
-        badge: "bg-amber-500 text-white",
-        text: "text-amber-600 dark:text-amber-400 font-semibold"
+        bg: `bg-gradient-to-r ${eventColors.gradient}`,
+        iconBg: eventColors.bg,
+        icon: eventColors.icon,
+        badge: eventColors.badge,
+        text: `${eventColors.icon} font-semibold`,
+        showAlert: false
       };
     }
     return {
-      bg: "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/30",
-      icon: "text-primary",
-      badge: "bg-primary text-primary-foreground",
-      text: "text-primary font-medium"
+      bg: `bg-gradient-to-r ${eventColors.gradient}`,
+      iconBg: eventColors.bg,
+      icon: eventColors.icon,
+      badge: eventColors.badge,
+      text: `${eventColors.icon} font-medium`,
+      showAlert: false
     };
   };
 
@@ -135,8 +144,8 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
       data-testid="upcoming-alert"
     >
       <div className="flex items-center gap-4">
-        <div className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center ${nextItem.daysUntil <= 3 ? 'bg-destructive/20 animate-pulse' : 'bg-card'}`}>
-          {nextItem.daysUntil <= 3 ? (
+        <div className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center ${styles.iconBg}`}>
+          {styles.showAlert ? (
             <AlertTriangle className={`w-7 h-7 ${styles.icon}`} />
           ) : (
             <Icon className={`w-7 h-7 ${styles.icon}`} />

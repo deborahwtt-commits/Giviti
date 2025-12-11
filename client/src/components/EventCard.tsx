@@ -5,6 +5,7 @@ import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock, AlertTriangle }
 import { Badge } from "@/components/ui/badge";
 import EventDetailsDialog from "./EventDetailsDialog";
 import type { EventWithRecipients } from "@shared/schema";
+import { getEventColors } from "@/lib/eventColors";
 
 interface EventCardProps {
   event: EventWithRecipients;
@@ -32,6 +33,7 @@ export default function EventCard({
   const [showDetails, setShowDetails] = useState(false);
   const isPastEvent = daysUntil < 0;
   const needsAttention = !isPastEvent && daysUntil <= 7 && !hasGiftPurchased;
+  const eventColors = getEventColors('regular');
 
   const eventDisplayName = event.eventName 
     ? `${event.eventType} ${event.eventName}` 
@@ -57,11 +59,11 @@ export default function EventCard({
   return (
     <Card className={`p-6 hover-elevate ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''}`}>
       <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${needsAttention ? 'bg-amber-100 dark:bg-amber-950' : 'bg-primary/10'}`}>
+        <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${needsAttention ? 'bg-amber-100 dark:bg-amber-950' : eventColors.bg}`}>
           {needsAttention ? (
             <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
           ) : (
-            <Calendar className="w-6 h-6 text-primary" />
+            <Calendar className={`w-6 h-6 ${eventColors.icon}`} />
           )}
         </div>
 
