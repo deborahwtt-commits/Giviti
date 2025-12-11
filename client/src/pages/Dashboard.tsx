@@ -161,9 +161,7 @@ export default function Dashboard() {
               <h2 className="font-heading font-semibold text-3xl text-foreground">
                 Eventos Próximos
               </h2>
-              <p className="text-muted-foreground mt-1">
-                Não perca as datas importantes
-              </p>
+              <p className="text-muted-foreground mt-1">Nunca mais perca as datas importantes!</p>
             </div>
             <Button
               size="sm"
