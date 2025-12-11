@@ -53,6 +53,7 @@ interface AdvancedStats {
     newEventsToday: number;
     giftsMarkedTodayAsPurchased: number;
   };
+  totalEvents: number;
 }
 
 interface TopClickedLink {
@@ -150,7 +151,7 @@ export default function Admin() {
             <TrendingUp className="w-5 h-5" />
             Atividade de Hoje
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <AdminStatsCard
               title="Novos Usuários Hoje"
               value={advancedStats?.recentActivity.newUsersToday || 0}
@@ -160,11 +161,18 @@ export default function Admin() {
               title="Novos Eventos Hoje"
               value={advancedStats?.recentActivity.newEventsToday || 0}
               icon={CalendarPlus}
+              description="Datas Comemorativas + Rolês"
             />
             <AdminStatsCard
               title="Presentes Comprados Hoje"
               value={advancedStats?.recentActivity.giftsMarkedTodayAsPurchased || 0}
               icon={ShoppingCart}
+            />
+            <AdminStatsCard
+              title="Total de Eventos"
+              value={advancedStats?.totalEvents || 0}
+              icon={Calendar}
+              description="Datas Comemorativas + Rolês"
             />
           </div>
         </div>
