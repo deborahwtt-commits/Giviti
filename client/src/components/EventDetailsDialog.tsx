@@ -13,7 +13,7 @@ interface EventDetailsDialogProps {
   event: EventWithRecipients | null;
   open: boolean;
   onClose: () => void;
-  onEdit: (event: EventWithRecipients) => void;
+  onEdit?: (event: EventWithRecipients) => void;
   formattedDate: string;
   daysUntil: number;
 }
@@ -92,15 +92,17 @@ export default function EventDetailsDialog({
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t">
-            <Button
-              onClick={() => {
-                onEdit(event);
-                onClose();
-              }}
-              data-testid="button-edit-from-details"
-            >
-              Editar
-            </Button>
+            {onEdit && (
+              <Button
+                onClick={() => {
+                  onEdit(event);
+                  onClose();
+                }}
+                data-testid="button-edit-from-details"
+              >
+                Editar
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={onClose}

@@ -286,7 +286,6 @@ export default function Dashboard() {
                   daysUntil={calculateDaysUntil(event.eventDate)}
                   date={formatEventDate(event.eventDate)}
                   onViewSuggestions={() => setLocation("/sugestoes")}
-                  onEdit={() => setLocation("/eventos")}
                   onDelete={() => {}}
                 />
               ))}
@@ -334,7 +333,6 @@ export default function Dashboard() {
                       daysUntil={calculateDaysUntil(event.eventDate)}
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
-                      onEdit={() => setLocation("/eventos")}
                       onDelete={() => {}}
                     />
                   );

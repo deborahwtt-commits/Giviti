@@ -12,7 +12,7 @@ interface EventCardProps {
   daysUntil: number;
   date: string;
   onViewSuggestions: () => void;
-  onEdit: (event: EventWithRecipients) => void;
+  onEdit?: (event: EventWithRecipients) => void;
   onDelete: () => void;
   onArchive?: () => void;
   onAdvanceYear?: () => void;
@@ -147,14 +147,16 @@ export default function EventCard({
                     Atualizar para o próximo ano
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-                  data-testid={`button-edit-${event.id}`}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
+                {onEdit && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+                    data-testid={`button-edit-${event.id}`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -175,14 +177,16 @@ export default function EventCard({
                   <Gift className="w-3 h-3 mr-2" />
                   Ver Sugestões
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-                  data-testid={`button-edit-${event.id}`}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
+                {onEdit && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+                    data-testid={`button-edit-${event.id}`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
