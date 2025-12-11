@@ -699,3 +699,52 @@ export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInvit
     `
   });
 }
+
+export async function sendPasswordResetEmail(to: string, resetLink: string, userName?: string) {
+  return sendEmail({
+    to,
+    subject: 'Redefinir sua senha - Giviti',
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #e11d48; margin-bottom: 10px;">Redefinir Senha</h1>
+        </div>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Olá${userName ? ` ${userName}` : ''},
+        </p>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Recebemos uma solicitação para redefinir a senha da sua conta no Giviti.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" 
+             style="display: inline-block; background-color: #e11d48; color: white; padding: 14px 28px; 
+                    text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            Redefinir Minha Senha
+          </a>
+        </div>
+
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>Importante:</strong> Este link expira em 1 hora. Se você não solicitou esta redefinição, 
+            pode ignorar este email com segurança.
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+          Se o botão não funcionar, copie e cole o link abaixo no seu navegador:
+        </p>
+        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">
+          ${resetLink}
+        </p>
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Este email foi enviado automaticamente pelo Giviti.
+        </p>
+      </div>
+    `
+  });
+}

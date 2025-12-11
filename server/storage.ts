@@ -81,6 +81,8 @@ import {
   mensagensSemanais,
   type Signo,
   type MensagemSemanal,
+  passwordResetTokens,
+  type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -111,6 +113,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User>;
+  updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean>;
+
+  // Password reset tokens
+  createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(id: string): Promise<boolean>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
 
   // Recipient operations
   createRecipient(userId: string, recipient: InsertRecipient): Promise<Recipient>;
@@ -329,6 +338,52 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  // ========== Password Reset Token Operations ==========
+
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        userId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken;
+  }
+
+  async markPasswordResetTokenUsed(id: string): Promise<boolean> {
+    const result = await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    await db
+      .delete(passwordResetTokens)
+      .where(sql`${passwordResetTokens.expiresAt} < NOW()`);
   }
 
   // ========== Recipient Operations ==========
