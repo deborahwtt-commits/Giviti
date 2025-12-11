@@ -78,20 +78,67 @@ export default function Dashboard() {
     return format(date, "d 'de' MMM, yyyy");
   };
 
-  const getEventsNext30Days = () => {
-    if (!upcomingEvents) return [];
-    return upcomingEvents.filter(event => {
-      const daysUntil = calculateDaysUntil(event.eventDate);
-      return daysUntil >= 0 && daysUntil <= 30;
+  type UnifiedUpcomingItem = {
+    id: string;
+    type: 'event' | 'role';
+    name: string;
+    date: Date | null;
+    daysUntil: number;
+    eventType?: string;
+    data: EventWithRecipients | CollaborativeEvent;
+  };
+
+  const getItemsNext30Days = (): UnifiedUpcomingItem[] => {
+    const items: UnifiedUpcomingItem[] = [];
+    
+    if (upcomingEvents) {
+      upcomingEvents.forEach(event => {
+        const daysUntil = calculateDaysUntil(event.eventDate);
+        if (daysUntil >= 0 && daysUntil <= 30) {
+          items.push({
+            id: event.id,
+            type: 'event',
+            name: event.eventName ? `${event.eventType} - ${event.eventName}` : event.eventType,
+            date: event.eventDate ? new Date(event.eventDate) : null,
+            daysUntil,
+            data: event,
+          });
+        }
+      });
+    }
+    
+    if (roles) {
+      roles
+        .filter(role => role.status === "active" || role.status === "draft")
+        .forEach(role => {
+          const daysUntil = calculateDaysUntil(role.eventDate);
+          if (daysUntil >= 0 && daysUntil <= 30) {
+            items.push({
+              id: role.id,
+              type: 'role',
+              name: role.name,
+              date: role.eventDate ? new Date(role.eventDate) : null,
+              daysUntil,
+              eventType: role.eventType,
+              data: role as CollaborativeEvent,
+            });
+          }
+        });
+    }
+    
+    return items.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.getTime() - b.date.getTime();
     });
   };
 
-  const getDisplayedEventsIn30Days = () => {
-    return getEventsNext30Days().slice(0, 6);
+  const getDisplayedItemsIn30Days = () => {
+    return getItemsNext30Days().slice(0, 6);
   };
 
   const getUpcomingItemsForVemAi = () => {
-    const displayedEventIds = new Set(getDisplayedEventsIn30Days().map(e => e.id));
+    const displayedItemIds = new Set(getDisplayedItemsIn30Days().map(e => e.id));
     
     type UnifiedItem = {
       id: string;
@@ -106,7 +153,7 @@ export default function Dashboard() {
     
     if (upcomingEvents) {
       upcomingEvents
-        .filter(event => !displayedEventIds.has(event.id))
+        .filter(event => !displayedItemIds.has(event.id))
         .forEach(event => {
           items.push({
             id: event.id,
@@ -121,6 +168,7 @@ export default function Dashboard() {
     if (roles) {
       roles
         .filter(role => role.status === "active" || role.status === "draft")
+        .filter(role => !displayedItemIds.has(role.id))
         .filter(role => {
           if (!role.eventDate) return true;
           const eventDate = new Date(role.eventDate);
@@ -273,24 +321,65 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {eventsLoading ? (
+          {eventsLoading || rolesLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-40 bg-card rounded-lg animate-pulse" />
               ))}
             </div>
-          ) : getDisplayedEventsIn30Days().length > 0 ? (
+          ) : getDisplayedItemsIn30Days().length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getDisplayedEventsIn30Days().map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  daysUntil={calculateDaysUntil(event.eventDate)}
-                  date={formatEventDate(event.eventDate)}
-                  onViewSuggestions={() => setLocation("/sugestoes")}
-                  onDelete={() => {}}
-                />
-              ))}
+              {getDisplayedItemsIn30Days().map((item) => {
+                if (item.type === 'event') {
+                  const event = item.data as EventWithRecipients;
+                  return (
+                    <EventCard
+                      key={`event-${item.id}`}
+                      event={event}
+                      daysUntil={item.daysUntil}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onDelete={() => {}}
+                    />
+                  );
+                } else {
+                  const role = item.data as CollaborativeEvent;
+                  const typeInfo = getRoleTypeInfo(role.eventType);
+                  const TypeIcon = typeInfo.icon;
+                  return (
+                    <Card
+                      key={`role-${item.id}`}
+                      className="cursor-pointer hover-elevate transition-all"
+                      onClick={() => setLocation(`/role/${role.id}`)}
+                      data-testid={`card-role-${role.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-foreground truncate">
+                              {role.name}
+                            </h3>
+                            <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3 mr-1" />
+                              {typeInfo.label}
+                            </Badge>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`shrink-0 ${item.daysUntil <= 7 ? 'bg-destructive/10 text-destructive border-destructive/20' : ''}`}
+                          >
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {item.daysUntil === 0 ? 'Hoje' : item.daysUntil === 1 ? 'Amanhã' : `${item.daysUntil} dias`}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {formatRoleDate(role.eventDate)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+              })}
             </div>
           ) : (
             <EmptyState
