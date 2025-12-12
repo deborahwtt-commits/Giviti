@@ -199,7 +199,7 @@ export default function Events() {
   const formatEventDate = (dateString: string | Date | null) => {
     if (!dateString) return 'Sem data definida';
     try {
-      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
       return format(date, "d 'de' MMM, yyyy");
     } catch {
       return 'Data inválida';
