@@ -83,6 +83,12 @@ import {
   type MensagemSemanal,
   passwordResetTokens,
   type PasswordResetToken,
+  birthdayGuests,
+  birthdayWishlistItems,
+  type BirthdayGuest,
+  type InsertBirthdayGuest,
+  type BirthdayWishlistItem,
+  type InsertBirthdayWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -314,6 +320,29 @@ export interface IStorage {
   getSignoByDate(dia: number, mes: number): Promise<Signo | undefined>;
   getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined>;
   getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null>;
+  
+  // ========== BIRTHDAY SPECIAL FEATURE ==========
+  
+  // Birthday Guest Operations
+  getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]>;
+  getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined>;
+  createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest>;
+  updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined>;
+  updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined>;
+  deleteBirthdayGuest(id: string): Promise<boolean>;
+  
+  // Birthday Wishlist Operations
+  getBirthdayWishlistItems(eventId: string): Promise<BirthdayWishlistItem[]>;
+  getBirthdayWishlistItem(id: string): Promise<BirthdayWishlistItem | undefined>;
+  createBirthdayWishlistItem(item: InsertBirthdayWishlistItem): Promise<BirthdayWishlistItem>;
+  updateBirthdayWishlistItem(id: string, updates: Partial<InsertBirthdayWishlistItem>): Promise<BirthdayWishlistItem | undefined>;
+  markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined>;
+  deleteBirthdayWishlistItem(id: string): Promise<boolean>;
+  countBirthdayWishlistItems(eventId: string): Promise<number>;
+  
+  // Birthday Event public access
+  getEventByShareToken(token: string): Promise<Event | undefined>;
+  generateBirthdayShareToken(eventId: string): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2241,6 +2270,131 @@ export class DatabaseStorage implements IStorage {
     }
     
     return { signo, mensagem };
+  }
+
+  // ========== BIRTHDAY SPECIAL FEATURE ==========
+
+  async getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]> {
+    return await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.eventId, eventId));
+  }
+
+  async getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.id, id));
+    return guest;
+  }
+
+  async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
+    const [newGuest] = await db
+      .insert(birthdayGuests)
+      .values(guest)
+      .returning();
+    return newGuest;
+  }
+
+  async updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ rsvpStatus, respondedAt: new Date() })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ emailStatus })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBirthdayGuest(id: string): Promise<boolean> {
+    const result = await db
+      .delete(birthdayGuests)
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getBirthdayWishlistItems(eventId: string): Promise<BirthdayWishlistItem[]> {
+    return await db
+      .select()
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.eventId, eventId));
+  }
+
+  async getBirthdayWishlistItem(id: string): Promise<BirthdayWishlistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.id, id));
+    return item;
+  }
+
+  async createBirthdayWishlistItem(item: InsertBirthdayWishlistItem): Promise<BirthdayWishlistItem> {
+    const [newItem] = await db
+      .insert(birthdayWishlistItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async updateBirthdayWishlistItem(id: string, updates: Partial<InsertBirthdayWishlistItem>): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ isReceived: true, receivedFrom, updatedAt: new Date() })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBirthdayWishlistItem(id: string): Promise<boolean> {
+    const result = await db
+      .delete(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async countBirthdayWishlistItems(eventId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.eventId, eventId));
+    return result[0]?.count || 0;
+  }
+
+  async getEventByShareToken(token: string): Promise<Event | undefined> {
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.birthdayShareToken, token));
+    return event;
+  }
+
+  async generateBirthdayShareToken(eventId: string): Promise<string> {
+    const token = crypto.randomUUID();
+    await db
+      .update(events)
+      .set({ birthdayShareToken: token })
+      .where(eq(events.id, eventId));
+    return token;
   }
 }
 

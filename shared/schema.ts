@@ -123,6 +123,10 @@ export const events = pgTable("events", {
   eventName: varchar("event_name"),
   eventDate: date("event_date").notNull(),
   archived: boolean("archived").default(false).notNull(),
+  isBirthday: boolean("is_birthday").default(false).notNull(),
+  birthdayShareToken: varchar("birthday_share_token"),
+  eventLocation: varchar("event_location"),
+  eventDescription: text("event_description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -804,3 +808,61 @@ export const insertMensagemSemanalSchema = createInsertSchema(mensagensSemanais)
 
 export type InsertMensagemSemanal = z.infer<typeof insertMensagemSemanalSchema>;
 export type MensagemSemanal = typeof mensagensSemanais.$inferSelect;
+
+// ========== Birthday Special Feature ==========
+
+// Birthday guests table - for "Meu Aniversário" events
+export const birthdayGuests = pgTable("birthday_guests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  rsvpStatus: varchar("rsvp_status").default("pending"), // pending, yes, no, maybe
+  emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
+  invitedAt: timestamp("invited_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBirthdayGuestSchema = createInsertSchema(birthdayGuests).omit({
+  id: true,
+  invitedAt: true,
+  respondedAt: true,
+  createdAt: true,
+});
+
+export type InsertBirthdayGuest = z.infer<typeof insertBirthdayGuestSchema>;
+export type BirthdayGuest = typeof birthdayGuests.$inferSelect;
+
+// Birthday wishlist items table
+export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  purchaseUrl: varchar("purchase_url"),
+  price: varchar("price"),
+  priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  isReceived: boolean("is_received").default(false).notNull(),
+  receivedFrom: varchar("received_from"),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBirthdayWishlistItemSchema = createInsertSchema(birthdayWishlistItems).omit({
+  id: true,
+  isReceived: true,
+  receivedFrom: true,
+  displayOrder: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBirthdayWishlistItem = z.infer<typeof insertBirthdayWishlistItemSchema>;
+export type BirthdayWishlistItem = typeof birthdayWishlistItems.$inferSelect;

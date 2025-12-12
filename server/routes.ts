@@ -1400,6 +1400,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Birthday Special Feature Routes ==========
+
+  // GET /api/events/:eventId/guests - Get all guests for a birthday event
+  app.get("/api/events/:eventId/guests", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const guests = await storage.getBirthdayGuests(eventId);
+      res.json(guests);
+    } catch (error) {
+      console.error("Error fetching birthday guests:", error);
+      res.status(500).json({ message: "Failed to fetch guests" });
+    }
+  });
+
+  // POST /api/events/:eventId/guests - Add a guest to birthday event
+  app.post("/api/events/:eventId/guests", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      const { name, email } = req.body;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: "Name and email are required" });
+      }
+      
+      const guest = await storage.createBirthdayGuest({
+        eventId,
+        name,
+        email: email.toLowerCase(),
+      });
+      
+      res.status(201).json(guest);
+    } catch (error) {
+      console.error("Error creating birthday guest:", error);
+      res.status(500).json({ message: "Failed to add guest" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/guests/:guestId/rsvp - Update guest RSVP
+  app.patch("/api/events/:eventId/guests/:guestId/rsvp", async (req: any, res) => {
+    try {
+      const { guestId } = req.params;
+      const { rsvpStatus } = req.body;
+      
+      if (!["yes", "no", "maybe"].includes(rsvpStatus)) {
+        return res.status(400).json({ message: "Invalid RSVP status" });
+      }
+      
+      const updated = await storage.updateBirthdayGuestRsvp(guestId, rsvpStatus);
+      if (!updated) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating RSVP:", error);
+      res.status(500).json({ message: "Failed to update RSVP" });
+    }
+  });
+
+  // DELETE /api/events/:eventId/guests/:guestId - Remove a guest
+  app.delete("/api/events/:eventId/guests/:guestId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, guestId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const deleted = await storage.deleteBirthdayGuest(guestId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      res.json({ message: "Guest removed successfully" });
+    } catch (error) {
+      console.error("Error deleting guest:", error);
+      res.status(500).json({ message: "Failed to remove guest" });
+    }
+  });
+
+  // GET /api/events/:eventId/wishlist - Get wishlist items for a birthday event
+  app.get("/api/events/:eventId/wishlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const items = await storage.getBirthdayWishlistItems(eventId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      res.status(500).json({ message: "Failed to fetch wishlist" });
+    }
+  });
+
+  // POST /api/events/:eventId/wishlist - Add item to wishlist
+  app.post("/api/events/:eventId/wishlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      const { title, description, imageUrl, purchaseUrl, price, priority } = req.body;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Check limit of 15 items
+      const count = await storage.countBirthdayWishlistItems(eventId);
+      if (count >= 15) {
+        return res.status(400).json({ message: "Maximum of 15 wishlist items reached" });
+      }
+      
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      
+      const item = await storage.createBirthdayWishlistItem({
+        eventId,
+        title,
+        description,
+        imageUrl,
+        purchaseUrl,
+        price,
+        priority: priority || 0,
+      });
+      
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating wishlist item:", error);
+      res.status(500).json({ message: "Failed to add wishlist item" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/wishlist/:itemId - Update wishlist item
+  app.patch("/api/events/:eventId/wishlist/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const { title, description, imageUrl, purchaseUrl, price, priority } = req.body;
+      const updated = await storage.updateBirthdayWishlistItem(itemId, {
+        title,
+        description,
+        imageUrl,
+        purchaseUrl,
+        price,
+        priority,
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating wishlist item:", error);
+      res.status(500).json({ message: "Failed to update item" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/wishlist/:itemId/received - Mark item as received
+  app.patch("/api/events/:eventId/wishlist/:itemId/received", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const { receivedFrom } = req.body;
+      const updated = await storage.markWishlistItemReceived(itemId, receivedFrom);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking item received:", error);
+      res.status(500).json({ message: "Failed to update item" });
+    }
+  });
+
+  // DELETE /api/events/:eventId/wishlist/:itemId - Delete wishlist item
+  app.delete("/api/events/:eventId/wishlist/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const deleted = await storage.deleteBirthdayWishlistItem(itemId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json({ message: "Item removed successfully" });
+    } catch (error) {
+      console.error("Error deleting wishlist item:", error);
+      res.status(500).json({ message: "Failed to remove item" });
+    }
+  });
+
+  // POST /api/events/:eventId/share-link - Generate share link for birthday event
+  app.post("/api/events/:eventId/share-link", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const token = await storage.generateBirthdayShareToken(eventId);
+      res.json({ token, shareUrl: `/aniversario/${token}` });
+    } catch (error) {
+      console.error("Error generating share link:", error);
+      res.status(500).json({ message: "Failed to generate share link" });
+    }
+  });
+
+  // GET /api/birthday/:token - Public endpoint to view birthday event
+  app.get("/api/birthday/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Birthday event not found" });
+      }
+      
+      // Get user profile for "about me" section
+      const userProfile = await storage.getUserProfile(event.userId);
+      const user = await storage.getUser(event.userId);
+      
+      // Get wishlist items
+      const wishlistItems = await storage.getBirthdayWishlistItems(event.id);
+      
+      // Return public data (no sensitive info)
+      res.json({
+        event: {
+          id: event.id,
+          eventName: event.eventName,
+          eventDate: event.eventDate,
+          eventLocation: event.eventLocation,
+          eventDescription: event.eventDescription,
+        },
+        owner: {
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+        },
+        profile: userProfile ? {
+          zodiacSign: userProfile.zodiacSign,
+          giftPreference: userProfile.giftPreference,
+          freeTimeActivity: userProfile.freeTimeActivity,
+          musicalStyle: userProfile.musicalStyle,
+          specialTalent: userProfile.specialTalent,
+          giftsToAvoid: userProfile.giftsToAvoid,
+          interests: userProfile.interests,
+        } : null,
+        wishlist: wishlistItems.filter(item => !item.isReceived).map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          imageUrl: item.imageUrl,
+          purchaseUrl: item.purchaseUrl,
+          price: item.price,
+          priority: item.priority,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching public birthday:", error);
+      res.status(500).json({ message: "Failed to fetch birthday event" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
