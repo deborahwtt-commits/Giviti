@@ -28,6 +28,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -239,17 +244,52 @@ export default function BirthdayManage() {
     }
   };
 
-  const getEmailStatusIcon = (status: string) => {
-    switch (status) {
-      case "sent":
-        return <Check className="h-3 w-3 text-green-500" />;
-      case "pending":
-        return <Loader2 className="h-3 w-3 animate-spin text-amber-500" />;
-      case "failed":
-        return <Mail className="h-3 w-3 text-red-500" />;
-      default:
-        return null;
-    }
+  const getEmailStatusBadge = (status: string) => {
+    const statusConfig = {
+      sent: {
+        label: "Enviado",
+        className: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20",
+        tooltip: "Email de convite enviado com sucesso",
+        icon: <Check className="w-3 h-3" />,
+      },
+      failed: {
+        label: "Falhou",
+        className: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20",
+        tooltip: "Falha ao enviar email de convite",
+        icon: <Mail className="w-3 h-3" />,
+      },
+      pending: {
+        label: "Pendente",
+        className: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20",
+        tooltip: "Email de convite será enviado em breve",
+        icon: <Loader2 className="w-3 h-3 animate-spin" />,
+      },
+      not_sent: {
+        label: "Aguardando",
+        className: "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20",
+        tooltip: "Email de convite ainda não enviado",
+        icon: <Mail className="w-3 h-3" />,
+      },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.not_sent;
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${config.className}`}
+            data-testid={`badge-email-status`}
+          >
+            {config.icon}
+            {config.label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
   };
 
   if (isLoadingEvent) {
@@ -605,7 +645,6 @@ export default function BirthdayManage() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{guest.name}</span>
-                                {getEmailStatusIcon(guest.emailStatus)}
                               </div>
                               <span className="text-sm text-muted-foreground">
                                 {guest.email}
@@ -613,6 +652,7 @@ export default function BirthdayManage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            {getEmailStatusBadge(guest.emailStatus)}
                             {getRsvpBadge(guest.rsvpStatus)}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
