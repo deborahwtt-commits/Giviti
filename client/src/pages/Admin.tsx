@@ -226,6 +226,13 @@ export default function Admin() {
               description="Configurar categorias de Noite Temática"
               onClick={() => setLocation("/admin/cadastro-roles")}
             />
+            <AdminStatsCard
+              title="Cadastro de Datas Comemorativas"
+              value="Gerenciar"
+              icon={Calendar}
+              description="Configurar tipos de datas especiais"
+              onClick={() => setLocation("/admin/datas-comemorativas")}
+            />
           </div>
         </div>
 
