@@ -829,7 +829,7 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
           <a href="${wishlistLink}" 
              style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
                     text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);">
-            Ver Lista de Desejos
+            Ver detalhes e dicas de presentes
           </a>
         </div>
 
