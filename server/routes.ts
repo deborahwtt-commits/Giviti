@@ -1775,6 +1775,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/birthday/:token/rsvp - Public endpoint to update guest RSVP
+  app.post("/api/birthday/:token/rsvp", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const { email, rsvpStatus } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      if (!["yes", "no", "maybe"].includes(rsvpStatus)) {
+        return res.status(400).json({ message: "Status de presença inválido" });
+      }
+      
+      // Find event by token
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Find guest by email
+      const guest = await storage.getBirthdayGuestByEmail(event.id, email);
+      if (!guest) {
+        return res.status(404).json({ message: "Você não está na lista de convidados deste evento" });
+      }
+      
+      // Update RSVP status
+      const updated = await storage.updateBirthdayGuestRsvp(guest.id, rsvpStatus);
+      if (!updated) {
+        return res.status(500).json({ message: "Erro ao atualizar presença" });
+      }
+      
+      res.json({ 
+        message: "Presença confirmada com sucesso!",
+        rsvpStatus: updated.rsvpStatus
+      });
+    } catch (error) {
+      console.error("Error updating public RSVP:", error);
+      res.status(500).json({ message: "Erro ao atualizar presença" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

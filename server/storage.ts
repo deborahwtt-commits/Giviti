@@ -342,6 +342,7 @@ export interface IStorage {
   // Birthday Guest Operations
   getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]>;
   getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined>;
+  getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined>;
   createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest>;
   updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined>;
   updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined>;
@@ -2415,6 +2416,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(birthdayGuests)
       .where(eq(birthdayGuests.id, id));
+    return guest;
+  }
+
+  async getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(
+        and(
+          eq(birthdayGuests.eventId, eventId),
+          sql`LOWER(${birthdayGuests.email}) = LOWER(${email})`
+        )
+      );
     return guest;
   }
 

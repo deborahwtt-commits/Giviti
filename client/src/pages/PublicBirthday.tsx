@@ -1,8 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams } from "wouter";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -16,6 +21,10 @@ import {
   Heart,
   Loader2,
   AlertCircle,
+  Check,
+  X,
+  HelpCircle,
+  PartyPopper,
 } from "lucide-react";
 
 interface PublicBirthdayData {
@@ -52,10 +61,41 @@ interface PublicBirthdayData {
 
 export default function PublicBirthday() {
   const { token } = useParams<{ token: string }>();
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<PublicBirthdayData>({
     queryKey: ["/api/birthday", token],
     enabled: !!token,
+  });
+
+  const rsvpMutation = useMutation({
+    mutationFn: async ({ rsvpStatus }: { rsvpStatus: string }) => {
+      const response = await apiRequest(`/api/birthday/${token}/rsvp`, "POST", {
+        email: email.trim().toLowerCase(),
+        rsvpStatus,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setConfirmedStatus(data.rsvpStatus);
+      toast({
+        title: "Presença confirmada!",
+        description: data.rsvpStatus === "yes" 
+          ? "Obrigado por confirmar! Nos vemos lá!" 
+          : data.rsvpStatus === "no"
+          ? "Que pena! Sentiremos sua falta."
+          : "Entendemos! Esperamos que possa vir.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível confirmar sua presença",
+        variant: "destructive",
+      });
+    },
   });
 
   const formatEventDate = (date: string | null) => {
@@ -294,6 +334,104 @@ export default function PublicBirthday() {
                       </div>
                     </div>
                   ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-primary" />
+              Confirme sua presença!
+            </CardTitle>
+            <CardDescription>
+              Informe seu email para confirmar se você irá ao evento
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {confirmedStatus ? (
+              <div className="text-center py-6">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  confirmedStatus === "yes" 
+                    ? "bg-green-100 dark:bg-green-900" 
+                    : confirmedStatus === "no"
+                    ? "bg-red-100 dark:bg-red-900"
+                    : "bg-amber-100 dark:bg-amber-900"
+                }`}>
+                  {confirmedStatus === "yes" && <Check className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                  {confirmedStatus === "no" && <X className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                  {confirmedStatus === "maybe" && <HelpCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />}
+                </div>
+                <p className="font-medium text-lg">
+                  {confirmedStatus === "yes" && "Você confirmou presença!"}
+                  {confirmedStatus === "no" && "Você não poderá comparecer"}
+                  {confirmedStatus === "maybe" && "Talvez você compareça"}
+                </p>
+                <p className="text-muted-foreground mt-2">
+                  {owner.firstName || "O aniversariante"} foi notificado(a) da sua resposta.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setConfirmedStatus(null)}
+                  data-testid="button-change-rsvp"
+                >
+                  Alterar resposta
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="guest-email">Seu email</Label>
+                  <Input
+                    id="guest-email"
+                    type="email"
+                    placeholder="Digite o email que recebeu o convite"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    data-testid="input-rsvp-email"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use o mesmo email que recebeu o convite
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={() => rsvpMutation.mutate({ rsvpStatus: "yes" })}
+                    disabled={!email.trim() || rsvpMutation.isPending}
+                    data-testid="button-rsvp-yes"
+                  >
+                    {rsvpMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Sim, estarei lá!
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => rsvpMutation.mutate({ rsvpStatus: "maybe" })}
+                    disabled={!email.trim() || rsvpMutation.isPending}
+                    data-testid="button-rsvp-maybe"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Talvez
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-muted-foreground"
+                    onClick={() => rsvpMutation.mutate({ rsvpStatus: "no" })}
+                    disabled={!email.trim() || rsvpMutation.isPending}
+                    data-testid="button-rsvp-no"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Não poderei ir
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
