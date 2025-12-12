@@ -642,6 +642,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/user/invitations - Get list of invitations received by user
+  app.get("/api/user/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user?.email;
+      if (!userEmail) {
+        return res.json([]);
+      }
+      const invitations = await storage.getReceivedInvitations(userEmail);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
   // GET /api/horoscope - Get user's weekly horoscope message based on zodiac sign
   app.get("/api/horoscope", isAuthenticated, async (req: any, res) => {
     try {
