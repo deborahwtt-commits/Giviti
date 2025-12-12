@@ -53,6 +53,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Occasion Types Routes (Public) ==========
+  
+  // GET /api/occasions - Get all active occasion types for event creation
+  app.get("/api/occasions", isAuthenticated, async (req: any, res) => {
+    try {
+      const occasions = await storage.getOccasions(false); // Only active ones
+      res.json(occasions);
+    } catch (error) {
+      console.error("Error fetching occasions:", error);
+      res.status(500).json({ message: "Failed to fetch occasions" });
+    }
+  });
+
   // ========== Themed Night Categories Routes (Public) ==========
   
   // GET /api/themed-night-categories - Get all themed night categories (public)

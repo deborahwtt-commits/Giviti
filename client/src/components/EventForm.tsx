@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { startOfDay } from "date-fns";
+import { Loader2 } from "lucide-react";
+import type { Occasion } from "@shared/schema";
 
 interface EventFormProps {
   isOpen: boolean;
@@ -34,17 +37,6 @@ interface EventFormProps {
   };
 }
 
-const eventTypes = [
-  "Aniversário",
-  "Casamento",
-  "Formatura",
-  "Aniversário de Namoro",
-  "Dia das Mães",
-  "Dia dos Pais",
-  "Natal",
-  "Outro",
-];
-
 export default function EventForm({
   isOpen,
   onClose,
@@ -57,6 +49,10 @@ export default function EventForm({
   const [eventType, setEventType] = useState(initialEvent?.eventType || "");
   const [eventDate, setEventDate] = useState(initialEvent?.eventDate || "");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>(initialEvent?.recipientIds || []);
+
+  const { data: occasions, isLoading: isLoadingOccasions } = useQuery<Occasion[]>({
+    queryKey: ["/api/occasions"],
+  });
 
   useEffect(() => {
     if (initialEvent) {
@@ -131,11 +127,22 @@ export default function EventForm({
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                {eventTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
+                {isLoadingOccasions ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : occasions && occasions.length > 0 ? (
+                  occasions.map((occasion) => (
+                    <SelectItem key={occasion.id} value={occasion.name}>
+                      {occasion.icon && <span className="mr-2">{occasion.icon}</span>}
+                      {occasion.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">
+                    Nenhum tipo cadastrado
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>

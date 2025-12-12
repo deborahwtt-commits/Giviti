@@ -227,10 +227,10 @@ export default function Admin() {
               onClick={() => setLocation("/admin/cadastro-roles")}
             />
             <AdminStatsCard
-              title="Cadastro de Datas Comemorativas"
+              title="Tipos de Datas Comemorativas"
               value="Gerenciar"
               icon={Calendar}
-              description="Configurar tipos de datas especiais"
+              description="Cadastrar tipos (Aniversário, Natal, etc.)"
               onClick={() => setLocation("/admin/datas-comemorativas")}
             />
           </div>

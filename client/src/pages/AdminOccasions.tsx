@@ -75,17 +75,18 @@ function CreateOccasionDialog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occasions"] });
       toast({
-        title: "Data criada",
-        description: "A data comemorativa foi criada com sucesso.",
+        title: "Tipo criado",
+        description: "O tipo de data comemorativa foi criado com sucesso.",
       });
       setOpen(false);
       form.reset();
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao criar data",
-        description: error.message || "Não foi possível criar a data comemorativa.",
+        title: "Erro ao criar tipo",
+        description: error.message || "Não foi possível criar o tipo.",
         variant: "destructive",
       });
     },
@@ -96,14 +97,14 @@ function CreateOccasionDialog() {
       <DialogTrigger asChild>
         <Button data-testid="button-create-occasion">
           <Plus className="w-4 h-4 mr-2" />
-          Nova Data
+          Novo Tipo
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-create-occasion">
         <DialogHeader>
-          <DialogTitle>Nova Data Comemorativa</DialogTitle>
+          <DialogTitle>Novo Tipo de Data Comemorativa</DialogTitle>
           <DialogDescription>
-            Adicione um novo tipo de data especial para eventos
+            Adicione um novo tipo (ex: Aniversário, Natal, Dia das Mães)
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -275,16 +276,17 @@ function EditOccasionDialog({ occasion }: { occasion: Occasion }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occasions"] });
       toast({
-        title: "Data atualizada",
-        description: "A data comemorativa foi atualizada com sucesso.",
+        title: "Tipo atualizado",
+        description: "O tipo de data comemorativa foi atualizado com sucesso.",
       });
       setOpen(false);
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Não foi possível atualizar a data.",
+        title: "Erro ao atualizar tipo",
+        description: error.message || "Não foi possível atualizar o tipo.",
         variant: "destructive",
       });
     },
@@ -299,9 +301,9 @@ function EditOccasionDialog({ occasion }: { occasion: Occasion }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-edit-occasion">
         <DialogHeader>
-          <DialogTitle>Editar Data Comemorativa</DialogTitle>
+          <DialogTitle>Editar Tipo de Data Comemorativa</DialogTitle>
           <DialogDescription>
-            Atualize as informações da data comemorativa
+            Atualize as informações do tipo de data
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -434,16 +436,17 @@ function DeleteOccasionDialog({ occasion }: { occasion: Occasion }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occasions"] });
       toast({
-        title: "Data excluída",
-        description: "A data comemorativa foi excluída com sucesso.",
+        title: "Tipo excluído",
+        description: "O tipo de data comemorativa foi excluído com sucesso.",
       });
       setOpen(false);
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao excluir",
-        description: error.message || "Não foi possível excluir a data.",
+        title: "Erro ao excluir tipo",
+        description: error.message || "Não foi possível excluir o tipo.",
         variant: "destructive",
       });
     },
@@ -461,9 +464,9 @@ function DeleteOccasionDialog({ occasion }: { occasion: Occasion }) {
       </Button>
       <AlertDialogContent data-testid="dialog-delete-occasion">
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir Data Comemorativa</AlertDialogTitle>
+          <AlertDialogTitle>Excluir Tipo de Data</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir "{occasion.name}"? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir o tipo "{occasion.name}"? Esta ação não pode ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -519,10 +522,10 @@ export default function AdminOccasions() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
                 <Calendar className="w-8 h-8 text-primary" />
-                Datas Comemorativas
+                Tipos de Datas Comemorativas
               </h1>
               <p className="text-muted-foreground mt-1">
-                Gerencie os tipos de datas especiais disponíveis no sistema
+                Cadastre os tipos de datas especiais (Aniversário, Natal, etc.)
               </p>
             </div>
           </div>
@@ -538,11 +541,11 @@ export default function AdminOccasions() {
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <CalendarDays className="w-5 h-5" />
-                Datas Ativas ({activeOccasions.length})
+                Tipos Ativos ({activeOccasions.length})
               </h2>
               {activeOccasions.length === 0 ? (
                 <Card className="p-8 text-center text-muted-foreground">
-                  Nenhuma data comemorativa cadastrada
+                  Nenhum tipo cadastrado
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -591,7 +594,7 @@ export default function AdminOccasions() {
             {inactiveOccasions.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold mb-4 text-muted-foreground">
-                  Datas Inativas ({inactiveOccasions.length})
+                  Tipos Inativos ({inactiveOccasions.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {inactiveOccasions.map((occasion) => (
