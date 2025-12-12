@@ -117,7 +117,7 @@ export default function BirthdayManage() {
 
   const addWishlistItemMutation = useMutation({
     mutationFn: async (data: typeof newItem) => {
-      return apiRequest("POST", `/api/events/${id}/wishlist`, data);
+      return apiRequest(`/api/events/${id}/wishlist`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
@@ -136,7 +136,7 @@ export default function BirthdayManage() {
 
   const deleteWishlistItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      return apiRequest("DELETE", `/api/events/${id}/wishlist/${itemId}`);
+      return apiRequest(`/api/events/${id}/wishlist/${itemId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
@@ -146,7 +146,7 @@ export default function BirthdayManage() {
 
   const addGuestMutation = useMutation({
     mutationFn: async (data: typeof newGuest) => {
-      return apiRequest("POST", `/api/events/${id}/guests`, data);
+      return apiRequest(`/api/events/${id}/guests`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "guests"] });
@@ -165,7 +165,7 @@ export default function BirthdayManage() {
 
   const deleteGuestMutation = useMutation({
     mutationFn: async (guestId: string) => {
-      return apiRequest("DELETE", `/api/events/${id}/guests/${guestId}`);
+      return apiRequest(`/api/events/${id}/guests/${guestId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "guests"] });
@@ -175,7 +175,7 @@ export default function BirthdayManage() {
 
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/events/${id}/share-link`);
+      const response = await apiRequest(`/api/events/${id}/share-link`, "POST");
       return response.json();
     },
     onSuccess: (data) => {
