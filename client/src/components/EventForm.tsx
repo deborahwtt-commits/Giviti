@@ -20,7 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { startOfDay } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Cake, Gift, Users } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Occasion } from "@shared/schema";
 
 interface EventFormProps {
@@ -53,6 +54,8 @@ export default function EventForm({
   const { data: occasions, isLoading: isLoadingOccasions } = useQuery<Occasion[]>({
     queryKey: ["/api/occasions"],
   });
+
+  const isBirthdayEvent = eventType === "Meu Aniversário";
 
   useEffect(() => {
     if (initialEvent) {
@@ -171,40 +174,59 @@ export default function EventForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Presenteados (opcional)</Label>
-            {recipients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum presenteado cadastrado
-              </p>
-            ) : (
-              <ScrollArea className="h-40 rounded-md border p-3">
-                <div className="space-y-3">
-                  {recipients.map((recipient) => (
-                    <div key={recipient.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`recipient-${recipient.id}`}
-                        checked={selectedRecipients.includes(recipient.id)}
-                        onCheckedChange={() => toggleRecipient(recipient.id)}
-                        data-testid={`checkbox-recipient-${recipient.id}`}
-                      />
-                      <label
-                        htmlFor={`recipient-${recipient.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {recipient.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-            {selectedRecipients.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {selectedRecipients.length} presenteado{selectedRecipients.length > 1 ? 's' : ''} selecionado{selectedRecipients.length > 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
+          {isBirthdayEvent ? (
+            <Alert className="border-primary/20 bg-primary/5">
+              <Cake className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <strong>Seu aniversário especial!</strong>
+                <br />
+                Após criar, você poderá:
+                <ul className="mt-2 space-y-1 text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Gift className="h-3 w-3" /> Criar sua lista de desejos (até 15 itens)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Users className="h-3 w-3" /> Convidar amigos e familiares
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-2">
+              <Label>Presenteados (opcional)</Label>
+              {recipients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum presenteado cadastrado
+                </p>
+              ) : (
+                <ScrollArea className="h-40 rounded-md border p-3">
+                  <div className="space-y-3">
+                    {recipients.map((recipient) => (
+                      <div key={recipient.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`recipient-${recipient.id}`}
+                          checked={selectedRecipients.includes(recipient.id)}
+                          onCheckedChange={() => toggleRecipient(recipient.id)}
+                          data-testid={`checkbox-recipient-${recipient.id}`}
+                        />
+                        <label
+                          htmlFor={`recipient-${recipient.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {recipient.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              {selectedRecipients.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedRecipients.length} presenteado{selectedRecipients.length > 1 ? 's' : ''} selecionado{selectedRecipients.length > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button

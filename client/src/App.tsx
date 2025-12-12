@@ -24,6 +24,8 @@ import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
 import SerpApiTest from "@/pages/SerpApiTest";
 import ResetPassword from "@/pages/ResetPassword";
+import BirthdayManage from "@/pages/BirthdayManage";
+import PublicBirthday from "@/pages/PublicBirthday";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +57,15 @@ function AuthenticatedApp() {
     );
   }
 
+  // Allow public birthday page without authentication
+  if (location.startsWith("/aniversario/")) {
+    return (
+      <Switch>
+        <Route path="/aniversario/:token" component={PublicBirthday} />
+      </Switch>
+    );
+  }
+
   if (isLoading || !isAuthenticated) {
     return <Landing />;
   }
@@ -75,6 +86,7 @@ function AuthenticatedApp() {
         <Route path="/perfil" component={Profile} />
         <Route path="/role" component={CollaborativeEvents} />
         <Route path="/role/:id" component={RoleDetail} />
+        <Route path="/eventos/:id/aniversario" component={BirthdayManage} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />

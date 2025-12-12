@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock, AlertTriangle } from "lucide-react";
+import { Calendar, Gift, Pencil, Trash2, Archive, CalendarClock, AlertTriangle, Cake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import EventDetailsDialog from "./EventDetailsDialog";
 import type { EventWithRecipients } from "@shared/schema";
@@ -38,6 +39,7 @@ export default function EventCard({
   const isPastEvent = daysUntil < 0;
   const needsAttention = !isPastEvent && daysUntil <= 7 && !hasGiftPurchased;
   const eventColors = getEventColors('regular');
+  const isBirthdayEvent = event.eventType === "Meu Aniversário";
 
   const eventDisplayName = event.eventName 
     ? `${event.eventType} ${event.eventName}` 
@@ -168,15 +170,29 @@ export default function EventCard({
               </div>
             ) : (
               <div className="flex gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => { e.stopPropagation(); onViewSuggestions(); }}
-                  data-testid={`button-view-suggestions-${event.id}`}
-                >
-                  <Gift className="w-3 h-3 mr-2" />
-                  Ver Sugestões
-                </Button>
+                {isBirthdayEvent ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    data-testid={`button-manage-birthday-${event.id}`}
+                  >
+                    <Link href={`/eventos/${event.id}/aniversario`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <Cake className="w-3 h-3 mr-2" />
+                      Gerenciar Aniversário
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onViewSuggestions(); }}
+                    data-testid={`button-view-suggestions-${event.id}`}
+                  >
+                    <Gift className="w-3 h-3 mr-2" />
+                    Ver Sugestões
+                  </Button>
+                )}
                 {onEdit && (
                   <Button
                     size="sm"
