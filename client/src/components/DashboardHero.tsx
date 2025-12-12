@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles } from "lucide-react";
+import { Gift, Sparkles, Mail } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -11,6 +11,7 @@ interface DashboardHeroProps {
     giftsPurchased: number;
     totalSpent: number;
     upcomingRoles: number;
+    invitationsReceived: number;
   };
   onCreateRecipient: () => void;
   onExploreSuggestions: () => void;
@@ -18,6 +19,7 @@ interface DashboardHeroProps {
   onEventsClick?: () => void;
   onGiftsClick?: () => void;
   onRolesClick?: () => void;
+  onInvitationsClick?: () => void;
 }
 
 export default function DashboardHero({
@@ -29,6 +31,7 @@ export default function DashboardHero({
   onEventsClick,
   onGiftsClick,
   onRolesClick,
+  onInvitationsClick,
 }: DashboardHeroProps) {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-accent/10 to-background rounded-lg">
@@ -65,7 +68,7 @@ export default function DashboardHero({
             <HoroscopeBanner />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div 
               className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
               onClick={onRecipientsClick}
@@ -119,6 +122,26 @@ export default function DashboardHero({
               </div>
               <div className="text-xs text-muted-foreground">
                 Rolês próximos
+              </div>
+            </div>
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onInvitationsClick}
+              data-testid="stat-invitations"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onInvitationsClick?.();
+                }
+              }}
+            >
+              <div className="text-2xl font-bold text-sky-600 dark:text-sky-400 flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                {stats.invitationsReceived}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Convites recebidos
               </div>
             </div>
             <div 

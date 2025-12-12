@@ -45,6 +45,10 @@ export default function Dashboard() {
     queryKey: ["/api/collab-events"],
   });
 
+  const { data: invitationsData } = useQuery<{ count: number }>({
+    queryKey: ["/api/user/invitations-count"],
+  });
+
   useEffect(() => {
     const error = statsError || recipientsError || eventsError || rolesError;
     if (error && isUnauthorizedError(error as Error)) {
@@ -250,6 +254,7 @@ export default function Dashboard() {
             giftsPurchased: stats?.giftsPurchased || 0,
             totalSpent: stats?.totalSpent || 0,
             upcomingRoles: getUpcomingRoles().length,
+            invitationsReceived: invitationsData?.count || 0,
           }}
           onCreateRecipient={() => setLocation("/presenteados")}
           onExploreSuggestions={() => setLocation("/sugestoes")}
@@ -267,6 +272,7 @@ export default function Dashboard() {
               vemAiSection.scrollIntoView({ behavior: "smooth" });
             }
           }}
+          onInvitationsClick={() => setLocation("/roles")}
         />
 
         {(upcomingEvents && upcomingEvents.length > 0) || (roles && getUpcomingRoles().length > 0) ? (
