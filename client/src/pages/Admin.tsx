@@ -212,11 +212,11 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Gestão de Rolês */}
+        {/* Gestão de Eventos */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
-            Gestão de Rolês Temáticos
+            Gestão de Eventos
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AdminStatsCard
