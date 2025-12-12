@@ -79,13 +79,13 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
         name: product.name,
         description: product.description || product.store || "",
         imageUrl: product.imageUrl,
-        price: price,
+        price: parseFloat(price).toFixed(2),
         purchaseUrl: product.productUrl || "",
         externalSource: product.source === "google" ? "google_shopping" : null,
         currencyCode: "BRL",
         isFavorite: false,
         isPurchased: true,
-        purchasedAt: new Date(purchaseDate),
+        purchasedAt: new Date(purchaseDate).toISOString(),
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });

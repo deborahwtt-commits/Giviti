@@ -498,7 +498,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/gifts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user!.id;
-      const validatedData = insertUserGiftSchema.parse(req.body);
+      
+      // Pre-process date strings to Date objects
+      const bodyWithDates = { ...req.body };
+      if (typeof bodyWithDates.purchasedAt === "string") {
+        bodyWithDates.purchasedAt = new Date(bodyWithDates.purchasedAt);
+      }
+      
+      const validatedData = insertUserGiftSchema.parse(bodyWithDates);
       
       // If recipientId is provided, verify that the recipient belongs to the user
       if (validatedData.recipientId) {
