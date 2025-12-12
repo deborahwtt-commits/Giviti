@@ -65,30 +65,32 @@ export default function EventDetailsDialog({
             </p>
           </div>
 
-          {/* Recipients */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Presenteados
-            </h3>
-            {event.recipients.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {event.recipients.map((recipient) => (
-                  <Badge
-                    key={recipient.id}
-                    variant="outline"
-                    data-testid={`badge-recipient-${recipient.id}`}
-                  >
-                    {recipient.name}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground italic">
-                Nenhum presenteado associado
-              </p>
-            )}
-          </div>
+          {/* Recipients - hidden for birthday events since user is the recipient */}
+          {event.eventType !== "Meu Aniversário" && (
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Presenteados
+              </h3>
+              {event.recipients.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {event.recipients.map((recipient) => (
+                    <Badge
+                      key={recipient.id}
+                      variant="outline"
+                      data-testid={`badge-recipient-${recipient.id}`}
+                    >
+                      {recipient.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">
+                  Nenhum presenteado associado
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t">
