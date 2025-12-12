@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Cake,
@@ -61,7 +61,7 @@ export default function PublicBirthday() {
   const formatEventDate = (date: string | null) => {
     if (!date) return "Sem data definida";
     try {
-      return format(new Date(date), "d 'de' MMMM", { locale: ptBR });
+      return format(parseISO(date), "d 'de' MMMM", { locale: ptBR });
     } catch {
       return "Data inválida";
     }

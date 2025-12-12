@@ -19,7 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { startOfDay } from "date-fns";
+import { startOfDay, parseISO } from "date-fns";
 import { Loader2, Cake, Gift, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Occasion } from "@shared/schema";
@@ -84,7 +84,7 @@ export default function EventForm({
     
     // Validate date is not in the past
     if (eventDate) {
-      const selectedDate = startOfDay(new Date(eventDate));
+      const selectedDate = startOfDay(parseISO(eventDate));
       const today = startOfDay(new Date());
       
       if (selectedDate < today) {

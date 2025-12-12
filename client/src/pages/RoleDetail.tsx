@@ -63,7 +63,7 @@ import {
   ExternalLink,
   CalendarPlus,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
 import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/schema";
@@ -769,7 +769,7 @@ export default function RoleDetail() {
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
                       <p className="text-sm text-muted-foreground" data-testid="text-event-date">
-                        {format(new Date(event.eventDate), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                        {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   </div>

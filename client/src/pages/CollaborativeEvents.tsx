@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import type { CollaborativeEvent } from "@shared/schema";
 import type { LucideIcon } from "lucide-react";
@@ -83,7 +83,9 @@ export default function CollaborativeEvents() {
   const sortedEvents = events ? [...events].sort((a, b) => {
     if (!a.eventDate) return 1;
     if (!b.eventDate) return -1;
-    return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+    const dateA = typeof a.eventDate === 'string' ? parseISO(a.eventDate) : a.eventDate;
+    const dateB = typeof b.eventDate === 'string' ? parseISO(b.eventDate) : b.eventDate;
+    return dateA.getTime() - dateB.getTime();
   }) : [];
 
   return (
@@ -182,7 +184,7 @@ export default function CollaborativeEvents() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
                       <span data-testid="text-event-date">
-                        {format(new Date(event.eventDate), "dd/MM/yyyy 'às' HH:mm")}
+                        {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy 'às' HH:mm")}
                       </span>
                     </div>
                   )}
