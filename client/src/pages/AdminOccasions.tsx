@@ -74,7 +74,7 @@ function CreateOccasionDialog() {
       return await apiRequest("/api/admin/occasions", "POST", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
       toast({
         title: "Data criada",
         description: "A data comemorativa foi criada com sucesso.",
@@ -274,7 +274,7 @@ function EditOccasionDialog({ occasion }: { occasion: Occasion }) {
       return await apiRequest(`/api/admin/occasions/${occasion.id}`, "PUT", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
       toast({
         title: "Data atualizada",
         description: "A data comemorativa foi atualizada com sucesso.",
@@ -433,7 +433,7 @@ function DeleteOccasionDialog({ occasion }: { occasion: Occasion }) {
       return await apiRequest(`/api/admin/occasions/${occasion.id}`, "DELETE");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/occasions?includeInactive=true"] });
       toast({
         title: "Data excluída",
         description: "A data comemorativa foi excluída com sucesso.",
@@ -493,7 +493,7 @@ export default function AdminOccasions() {
   });
 
   const { data: occasions, isLoading, error } = useQuery<Occasion[]>({
-    queryKey: ["/api/admin/occasions"],
+    queryKey: ["/api/admin/occasions?includeInactive=true"],
   });
 
   if (error) {
