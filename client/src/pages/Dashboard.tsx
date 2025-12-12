@@ -272,7 +272,7 @@ export default function Dashboard() {
               vemAiSection.scrollIntoView({ behavior: "smooth" });
             }
           }}
-          onInvitationsClick={() => setLocation("/roles")}
+          onInvitationsClick={() => setLocation("/convites")}
         />
 
         {(upcomingEvents && upcomingEvents.length > 0) || (roles && getUpcomingRoles().length > 0) ? (

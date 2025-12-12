@@ -26,6 +26,7 @@ import SerpApiTest from "@/pages/SerpApiTest";
 import ResetPassword from "@/pages/ResetPassword";
 import BirthdayManage from "@/pages/BirthdayManage";
 import PublicBirthday from "@/pages/PublicBirthday";
+import ReceivedInvitations from "@/pages/ReceivedInvitations";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -87,6 +88,7 @@ function AuthenticatedApp() {
         <Route path="/role" component={CollaborativeEvents} />
         <Route path="/role/:id" component={RoleDetail} />
         <Route path="/eventos/:id/aniversario" component={BirthdayManage} />
+        <Route path="/convites" component={ReceivedInvitations} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />
