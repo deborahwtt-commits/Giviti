@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { startOfDay, parseISO } from "date-fns";
-import { Loader2, Cake, Gift, Users } from "lucide-react";
+import { Loader2, Cake, Gift, Users, MapPin } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Occasion } from "@shared/schema";
 
@@ -35,6 +35,7 @@ interface EventFormProps {
     eventType: string;
     eventDate: string;
     recipientIds: string[];
+    eventLocation?: string | null;
   };
 }
 
@@ -49,6 +50,7 @@ export default function EventForm({
   const [eventName, setEventName] = useState(initialEvent?.eventName || "");
   const [eventType, setEventType] = useState(initialEvent?.eventType || "");
   const [eventDate, setEventDate] = useState(initialEvent?.eventDate || "");
+  const [eventLocation, setEventLocation] = useState(initialEvent?.eventLocation || "");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>(initialEvent?.recipientIds || []);
 
   const { data: occasions, isLoading: isLoadingOccasions } = useQuery<Occasion[]>({
@@ -62,11 +64,13 @@ export default function EventForm({
       setEventName(initialEvent.eventName || "");
       setEventType(initialEvent.eventType);
       setEventDate(initialEvent.eventDate);
+      setEventLocation(initialEvent.eventLocation || "");
       setSelectedRecipients(initialEvent.recipientIds);
     } else {
       setEventName("");
       setEventType("");
       setEventDate("");
+      setEventLocation("");
       setSelectedRecipients([]);
     }
   }, [initialEvent]);
@@ -102,6 +106,7 @@ export default function EventForm({
       eventName,
       eventType,
       eventDate,
+      eventLocation: isBirthdayEvent ? eventLocation : undefined,
       recipientIds: selectedRecipients,
     };
     onSubmit(data);
@@ -109,6 +114,7 @@ export default function EventForm({
       setEventName("");
       setEventType("");
       setEventDate("");
+      setEventLocation("");
       setSelectedRecipients([]);
     }
   };
@@ -173,6 +179,23 @@ export default function EventForm({
               data-testid="input-event-date"
             />
           </div>
+
+          {isBirthdayEvent && (
+            <div className="space-y-2">
+              <Label htmlFor="eventLocation">Local (opcional)</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="eventLocation"
+                  value={eventLocation}
+                  onChange={(e) => setEventLocation(e.target.value)}
+                  placeholder="Ex: Salão de festas, Restaurante..."
+                  className="pl-9"
+                  data-testid="input-event-location"
+                />
+              </div>
+            </div>
+          )}
 
           {isBirthdayEvent ? (
             <Alert className="border-primary/20 bg-primary/5">
