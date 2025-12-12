@@ -93,6 +93,19 @@ import {
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
 
+// Received invitation type for user's invitation list
+export type ReceivedInvitation = {
+  id: string;
+  type: 'birthday' | 'collaborative';
+  eventName: string;
+  eventType: string;
+  eventDate: Date | null;
+  ownerName: string;
+  status: string;
+  invitedAt: Date | null;
+  eventId: string;
+};
+
 // Enriched participant type with profile data
 export type ParticipantWithProfile = CollaborativeEventParticipant & {
   hasFilledProfile: boolean;
@@ -155,6 +168,7 @@ export interface IStorage {
   // Stats
   getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
   getReceivedInvitationsCount(email: string): Promise<number>;
+  getReceivedInvitations(email: string): Promise<ReceivedInvitation[]>;
   
   // Admin stats
   getAdminStats(): Promise<{ 
@@ -809,6 +823,94 @@ export class DatabaseStorage implements IStorage {
       );
     
     return (birthdayInvites[0]?.count || 0) + (collaborativeInvites[0]?.count || 0);
+  }
+
+  async getReceivedInvitations(email: string): Promise<ReceivedInvitation[]> {
+    const normalizedEmail = email.toLowerCase();
+    const invitations: ReceivedInvitation[] = [];
+    
+    // Get birthday guest invitations with event and owner info
+    const birthdayInvites = await db
+      .select({
+        id: birthdayGuests.id,
+        eventId: birthdayGuests.eventId,
+        rsvpStatus: birthdayGuests.rsvpStatus,
+        invitedAt: birthdayGuests.invitedAt,
+        eventName: events.eventName,
+        eventType: events.eventType,
+        eventDate: events.eventDate,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+      })
+      .from(birthdayGuests)
+      .innerJoin(events, eq(birthdayGuests.eventId, events.id))
+      .innerJoin(users, eq(events.userId, users.id))
+      .where(sql`LOWER(${birthdayGuests.email}) = ${normalizedEmail}`);
+    
+    for (const invite of birthdayInvites) {
+      invitations.push({
+        id: invite.id,
+        type: 'birthday',
+        eventName: invite.eventName || invite.eventType,
+        eventType: invite.eventType,
+        eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
+        status: invite.rsvpStatus || 'pending',
+        invitedAt: invite.invitedAt,
+        eventId: invite.eventId,
+      });
+    }
+    
+    // Get collaborative event invitations with event and owner info
+    const collabInvites = await db
+      .select({
+        id: collaborativeEventParticipants.id,
+        eventId: collaborativeEventParticipants.eventId,
+        status: collaborativeEventParticipants.status,
+        createdAt: collaborativeEventParticipants.createdAt,
+        eventName: collaborativeEvents.name,
+        eventType: collaborativeEvents.eventType,
+        eventDate: collaborativeEvents.eventDate,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+      })
+      .from(collaborativeEventParticipants)
+      .innerJoin(collaborativeEvents, eq(collaborativeEventParticipants.eventId, collaborativeEvents.id))
+      .innerJoin(users, eq(collaborativeEvents.ownerId, users.id))
+      .where(
+        and(
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
+          sql`${collaborativeEventParticipants.role} != 'owner'`
+        )
+      );
+    
+    for (const invite of collabInvites) {
+      const eventTypeLabel = {
+        'secret_santa': 'Amigo Secreto',
+        'themed_night': 'Noite Temática',
+        'collective_gift': 'Presente Coletivo',
+        'creative_challenge': 'Desafio Criativo',
+      }[invite.eventType] || 'Rolê';
+      
+      invitations.push({
+        id: invite.id,
+        type: 'collaborative',
+        eventName: invite.eventName,
+        eventType: eventTypeLabel,
+        eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
+        status: invite.status || 'invited',
+        invitedAt: invite.createdAt,
+        eventId: invite.eventId,
+      });
+    }
+    
+    // Sort by date (most recent first)
+    return invitations.sort((a, b) => {
+      if (!a.invitedAt) return 1;
+      if (!b.invitedAt) return -1;
+      return new Date(b.invitedAt).getTime() - new Date(a.invitedAt).getTime();
+    });
   }
 
   // ========== Gift Suggestions ==========
