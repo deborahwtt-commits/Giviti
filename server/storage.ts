@@ -154,6 +154,7 @@ export interface IStorage {
 
   // Stats
   getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
+  getReceivedInvitationsCount(email: string): Promise<number>;
   
   // Admin stats
   getAdminStats(): Promise<{ 
@@ -785,6 +786,29 @@ export class DatabaseStorage implements IStorage {
       giftsPurchased: purchasedGiftsData[0]?.count || 0,
       totalSpent: parseFloat(String(purchasedGiftsData[0]?.totalSpent || 0)),
     };
+  }
+
+  async getReceivedInvitationsCount(email: string): Promise<number> {
+    const normalizedEmail = email.toLowerCase();
+    
+    // Count invitations from birthday guests
+    const birthdayInvites = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayGuests)
+      .where(sql`LOWER(${birthdayGuests.email}) = ${normalizedEmail}`);
+    
+    // Count invitations from collaborative events (rolês, amigo secreto, etc.)
+    const collaborativeInvites = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEventParticipants)
+      .where(
+        and(
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
+          sql`${collaborativeEventParticipants.role} != 'owner'`
+        )
+      );
+    
+    return (birthdayInvites[0]?.count || 0) + (collaborativeInvites[0]?.count || 0);
   }
 
   // ========== Gift Suggestions ==========
