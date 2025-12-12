@@ -748,3 +748,110 @@ export async function sendPasswordResetEmail(to: string, resetLink: string, user
     `
   });
 }
+
+export interface BirthdayInviteEmailOptions {
+  to: string;
+  guestName: string;
+  ownerName: string;
+  eventName: string;
+  eventDate?: string | null;
+  eventLocation?: string | null;
+  wishlistLink: string;
+}
+
+export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOptions) {
+  const {
+    to,
+    guestName,
+    ownerName,
+    eventName,
+    eventDate,
+    eventLocation,
+    wishlistLink
+  } = options;
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formattedDate = formatDate(eventDate);
+
+  return sendEmail({
+    to,
+    subject: `${ownerName} te convidou para o aniversário!`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%); padding: 30px 20px; border-radius: 16px; margin-bottom: 20px;">
+            <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você está convidado(a)!</p>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">${eventName}</h1>
+          </div>
+        </div>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Olá <strong>${guestName}</strong>!
+        </p>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          <strong>${ownerName}</strong> te convidou para comemorar seu aniversário! 
+          E o melhor: preparou uma lista de desejos para facilitar sua vida na hora de escolher um presente.
+        </p>
+
+        ${formattedDate || eventLocation ? `
+          <div style="background-color: #fdf2f8; border: 1px solid #fbcfe8; padding: 20px; border-radius: 12px; margin: 24px 0;">
+            <h3 style="color: #be185d; margin: 0 0 12px 0; font-size: 16px;">Detalhes do Evento</h3>
+            ${formattedDate ? `
+              <p style="color: #9d174d; margin: 8px 0; font-size: 14px;">
+                <strong>Quando:</strong> ${formattedDate}
+              </p>
+            ` : ''}
+            ${eventLocation ? `
+              <p style="color: #9d174d; margin: 8px 0; font-size: 14px;">
+                <strong>Onde:</strong> ${eventLocation}
+              </p>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${wishlistLink}" 
+             style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
+                    text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);">
+            Ver Lista de Desejos
+          </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0;">
+          Clique no botão acima para ver o que ${ownerName} gostaria de ganhar!
+        </p>
+
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>Dica:</strong> Na lista de desejos você encontrará sugestões com links diretos para compra. 
+            Escolha o que combina mais com você e surpreenda!
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">
+          Se você não conhece ${ownerName}, pode ignorar este email.
+        </p>
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Este email foi enviado automaticamente pelo Giviti.
+        </p>
+      </div>
+    `
+  });
+}

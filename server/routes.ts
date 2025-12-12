@@ -1445,6 +1445,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: email.toLowerCase(),
       });
       
+      // Send invite email
+      try {
+        const user = await storage.getUser(userId);
+        const ownerName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Um amigo' : 'Um amigo';
+        
+        // Generate or get existing share token
+        const token = await storage.generateBirthdayShareToken(eventId);
+        const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+        const wishlistLink = `${baseUrl}/aniversario/${token}`;
+        
+        const { sendBirthdayInviteEmail } = await import("./emailService");
+        await sendBirthdayInviteEmail({
+          to: email.toLowerCase(),
+          guestName: name,
+          ownerName,
+          eventName: event.eventName || event.eventType,
+          eventDate: event.eventDate ? event.eventDate.toString() : null,
+          eventLocation: event.eventLocation,
+          wishlistLink,
+        });
+        
+        // Update email status to sent
+        await storage.updateBirthdayGuestEmailStatus(guest.id, "sent");
+      } catch (emailError) {
+        console.error("Error sending birthday invite email:", emailError);
+        // Update email status to failed
+        await storage.updateBirthdayGuestEmailStatus(guest.id, "failed");
+      }
+      
       res.status(201).json(guest);
     } catch (error) {
       console.error("Error creating birthday guest:", error);
