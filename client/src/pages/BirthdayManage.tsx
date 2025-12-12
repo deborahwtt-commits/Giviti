@@ -49,6 +49,23 @@ import {
   MapPin,
 } from "lucide-react";
 
+// Função para formatar valor como moeda brasileira
+function formatCurrency(value: string): string {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '');
+  
+  if (!numbers) return '';
+  
+  // Converte para número e divide por 100 para considerar centavos
+  const amount = parseInt(numbers, 10) / 100;
+  
+  // Formata como moeda brasileira
+  return amount.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
 interface WishlistItem {
   id: string;
   title: string;
@@ -384,8 +401,8 @@ export default function BirthdayManage() {
                         <Input
                           id="price"
                           value={newItem.price}
-                          onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
-                          placeholder="R$ 150,00"
+                          onChange={(e) => setNewItem({ ...newItem, price: formatCurrency(e.target.value) })}
+                          placeholder="R$ 0,00"
                           data-testid="input-wishlist-price"
                         />
                       </div>
