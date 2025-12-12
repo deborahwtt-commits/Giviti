@@ -386,11 +386,15 @@ async function fetchGoogleProductsWithFallback(
   const queryLevels: QueryLevel[] = ["full", "medium", "simple", "minimal"];
   let allProducts: SerpApiProduct[] = [];
   let queryUsed = "";
+  const triedQueries = new Set<string>();
   
   for (const level of queryLevels) {
     const query = buildRecipientBasedQuery(options.recipientData, options.keywords, level);
     
-    if (query === queryUsed) continue;
+    if (triedQueries.has(query)) continue;
+    triedQueries.add(query);
+    
+    queryUsed = query;
     
     console.log(`[Google Search] Trying level "${level}": "${query}"`);
     
@@ -400,14 +404,16 @@ async function fetchGoogleProductsWithFallback(
     const newProducts = products.filter(p => !existingIds.has(p.nome + p.loja));
     allProducts = [...allProducts, ...newProducts];
     
-    if (!queryUsed) queryUsed = query;
-    
     if (allProducts.length >= minResults) {
       console.log(`[Google Search] Found ${allProducts.length} results at level "${level}"`);
       break;
     }
     
     console.log(`[Google Search] Only ${allProducts.length} results, trying simpler query...`);
+  }
+  
+  if (!queryUsed && options.recipientData) {
+    queryUsed = buildRecipientBasedQuery(options.recipientData, options.keywords, "minimal");
   }
   
   return { 

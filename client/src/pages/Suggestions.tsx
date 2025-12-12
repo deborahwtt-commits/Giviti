@@ -493,14 +493,14 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
           
           <Button
             variant="default"
-            size="sm"
-            className="flex-1 text-xs"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => setShowPurchaseModal(true)}
             disabled={purchased}
+            title={purchased ? "Já comprado" : "Marcar como comprado"}
             data-testid={`button-mark-purchased-${product.id}`}
           >
-            <ShoppingBag className="w-3 h-3 mr-1" />
-            {purchased ? "Comprado" : "Comprei"}
+            <ShoppingBag className="w-4 h-4" />
           </Button>
         </div>
       </div>
