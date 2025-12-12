@@ -104,6 +104,7 @@ export type ReceivedInvitation = {
   status: string;
   invitedAt: Date | null;
   eventId: string;
+  shareToken?: string | null;
 };
 
 // Enriched participant type with profile data
@@ -839,6 +840,7 @@ export class DatabaseStorage implements IStorage {
         eventName: events.eventName,
         eventType: events.eventType,
         eventDate: events.eventDate,
+        shareToken: events.birthdayShareToken,
         ownerFirstName: users.firstName,
         ownerLastName: users.lastName,
       })
@@ -858,6 +860,7 @@ export class DatabaseStorage implements IStorage {
         status: invite.rsvpStatus || 'pending',
         invitedAt: invite.invitedAt,
         eventId: invite.eventId,
+        shareToken: invite.shareToken,
       });
     }
     

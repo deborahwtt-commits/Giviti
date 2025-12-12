@@ -17,6 +17,7 @@ type ReceivedInvitation = {
   status: string;
   invitedAt: string | null;
   eventId: string;
+  shareToken?: string | null;
 };
 
 function getStatusLabel(status: string): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } {
@@ -156,6 +157,16 @@ export default function ReceivedInvitations() {
                       <Link href={`/role/${invitation.eventId}`}>
                         <Button variant="outline" size="sm" data-testid={`button-view-role-${invitation.id}`}>
                           Ver Detalhes do Rolê
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                  
+                  {invitation.type === 'birthday' && invitation.shareToken && (
+                    <div className="mt-4">
+                      <Link href={`/aniversario/${invitation.shareToken}`}>
+                        <Button variant="outline" size="sm" data-testid={`button-view-birthday-${invitation.id}`}>
+                          Ver Detalhes do Convite
                         </Button>
                       </Link>
                     </div>
