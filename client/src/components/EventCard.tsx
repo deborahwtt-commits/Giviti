@@ -47,6 +47,9 @@ export default function EventCard({
   const recipientNames = event.recipients.map(r => r.name);
   const displayRecipients = () => {
     if (recipientNames.length === 0) {
+      if (isBirthdayEvent) {
+        return null;
+      }
       return <span className="text-muted-foreground italic">Sem presenteados</span>;
     }
     if (recipientNames.length === 1) {
