@@ -8,7 +8,6 @@ import DashboardHero from "@/components/DashboardHero";
 import UpcomingAlert from "@/components/UpcomingAlert";
 import GettingStartedWizard from "@/components/GettingStartedWizard";
 import EventCard from "@/components/EventCard";
-import GiftCard from "@/components/GiftCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Gift, Palette, MapPin, Calendar } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
-import type { EventWithRecipients, Recipient, GiftSuggestion, CollaborativeEvent } from "@shared/schema";
+import type { EventWithRecipients, Recipient, CollaborativeEvent } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -43,16 +41,12 @@ export default function Dashboard() {
     queryKey: ["/api/events?upcoming=true"],
   });
 
-  const { data: suggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
-    queryKey: ["/api/suggestions"],
-  });
-
   const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
   });
 
   useEffect(() => {
-    const error = statsError || recipientsError || eventsError || suggestionsError || rolesError;
+    const error = statsError || recipientsError || eventsError || rolesError;
     if (error && isUnauthorizedError(error as Error)) {
       toast({
         title: "Sessão Expirada",
@@ -63,7 +57,7 @@ export default function Dashboard() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [statsError, recipientsError, eventsError, suggestionsError, rolesError, toast]);
+  }, [statsError, recipientsError, eventsError, rolesError, toast]);
 
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 999;
@@ -191,15 +185,6 @@ export default function Dashboard() {
       if (!b.date) return -1;
       return a.date.getTime() - b.date.getTime();
     });
-  };
-
-  const formatPrice = (price: number | string) => {
-    const numValue = typeof price === "string" ? parseFloat(price) : price;
-    if (isNaN(numValue)) return "R$ 0,00";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(numValue);
   };
 
   const getRoleTypeInfo = (eventType: string) => {
@@ -481,54 +466,6 @@ export default function Dashboard() {
           </section>
         )}
 
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Sugestões Recentes
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Ideias personalizadas para você
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/sugestoes")}
-              data-testid="button-view-all-suggestions"
-            >
-              Ver Todas
-            </Button>
-          </div>
-
-          {suggestionsLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-64 bg-card rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : suggestions && suggestions.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {suggestions.slice(0, 8).map((gift) => (
-                <GiftCard
-                  key={gift.id}
-                  id={gift.id}
-                  name={gift.name}
-                  description={gift.description}
-                  imageUrl={gift.imageUrl}
-                  priceRange={formatPrice(gift.price)}
-                  onViewDetails={() => setLocation("/sugestoes")}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              image={emptySuggestionsImage}
-              title="Nenhuma sugestão ainda"
-              description="Adicione presenteados e eventos para receber sugestões personalizadas."
-            />
-          )}
-        </section>
       </div>
     </div>
   );
