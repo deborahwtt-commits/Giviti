@@ -627,6 +627,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/user/invitations-count - Get count of invitations received by user
+  app.get("/api/user/invitations-count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user!.email;
+      const count = await storage.getReceivedInvitationsCount(userEmail);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching invitations count:", error);
+      res.status(500).json({ message: "Failed to fetch invitations count" });
+    }
+  });
+
   // GET /api/horoscope - Get user's weekly horoscope message based on zodiac sign
   app.get("/api/horoscope", isAuthenticated, async (req: any, res) => {
     try {
