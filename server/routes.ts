@@ -630,7 +630,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/user/invitations-count - Get count of invitations received by user
   app.get("/api/user/invitations-count", isAuthenticated, async (req: any, res) => {
     try {
-      const userEmail = req.user!.email;
+      const userEmail = req.user?.email;
+      if (!userEmail) {
+        return res.json({ count: 0 });
+      }
       const count = await storage.getReceivedInvitationsCount(userEmail);
       res.json({ count });
     } catch (error) {
