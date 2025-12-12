@@ -31,6 +31,8 @@ export default function Events() {
   const [eventToArchive, setEventToArchive] = useState<string | null>(null);
   const [advanceYearDialogOpen, setAdvanceYearDialogOpen] = useState(false);
   const [eventToAdvance, setEventToAdvance] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -238,9 +240,16 @@ export default function Events() {
   };
 
   const handleDelete = (eventId: string) => {
-    if (window.confirm("Tem certeza que deseja deletar este evento?")) {
-      deleteMutation.mutate(eventId);
+    setEventToDelete(eventId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (eventToDelete) {
+      deleteMutation.mutate(eventToDelete);
     }
+    setDeleteDialogOpen(false);
+    setEventToDelete(null);
   };
 
   const handleArchive = (eventId: string) => {
@@ -447,6 +456,23 @@ export default function Events() {
             recipientIds: editingEvent.recipients.map(r => r.id),
           } : undefined}
         />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent data-testid="dialog-delete-event">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir evento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} data-testid="button-confirm-delete">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
           <AlertDialogContent data-testid="dialog-archive-event">
