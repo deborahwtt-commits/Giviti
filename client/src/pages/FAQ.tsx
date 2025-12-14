@@ -88,6 +88,7 @@ export default function FAQ() {
                       <li><strong>Complete seu perfil</strong> - Assim a gente te conhece melhor</li>
                       <li><strong>Cadastre seus presenteados</strong> - Quem são as pessoas especiais da sua vida</li>
                       <li><strong>Adicione as datas importantes</strong> - Aniversários, Natal, Dia das Mães...</li>
+                      <li><strong>Organize um rolê</strong> - Amigo Secreto, Noite Temática ou Presente Coletivo</li>
                       <li><strong>Explore as sugestões</strong> - E deixe a mágica acontecer!</li>
                     </ol>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
