@@ -1776,4 +1776,49 @@ export function registerCollabEventsRoutes(app: Express) {
       res.status(500).json({ error: "Failed to delete wishlist item" });
     }
   });
+
+  // GET /api/collab-events/:id/receiver-wishlist - Get wishlist of the person you drew in Secret Santa
+  app.get("/api/collab-events/:id/receiver-wishlist", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "This endpoint is only for Secret Santa events" });
+      }
+      
+      // Find current user's participant record
+      const participants = await storage.getParticipants(id);
+      const myParticipant = participants.find(p => p.userId === userId);
+      
+      if (!myParticipant) {
+        return res.status(403).json({ error: "You are not a participant in this event" });
+      }
+      
+      // Find the pair where current user is the giver
+      const pairs = await storage.getSecretSantaPairs(id);
+      const myPair = pairs.find(p => p.giverParticipantId === myParticipant.id);
+      
+      if (!myPair) {
+        return res.status(404).json({ error: "Draw not performed yet or you are not assigned" });
+      }
+      
+      // Get the receiver's wishlist
+      const wishlistItems = await storage.getSecretSantaWishlistItems(myPair.receiverParticipantId);
+      
+      res.json(wishlistItems);
+    } catch (error) {
+      console.error("Error fetching receiver wishlist:", error);
+      res.status(500).json({ error: "Failed to fetch receiver wishlist" });
+    }
+  });
 }
