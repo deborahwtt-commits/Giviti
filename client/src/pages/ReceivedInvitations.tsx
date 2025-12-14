@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Mail, Calendar, User, Gift, Users, PartyPopper, Sparkles, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, Gift, Users, PartyPopper, Sparkles, Loader2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,9 +117,14 @@ export default function ReceivedInvitations() {
                     <div className="flex items-center gap-3">
                       {typeIcon}
                       <div>
-                        <CardTitle className="text-lg" data-testid={`text-invitation-name-${invitation.id}`}>
-                          {invitation.eventName}
-                        </CardTitle>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-lg" data-testid={`text-invitation-name-${invitation.id}`}>
+                            {invitation.eventName}
+                          </CardTitle>
+                          <span className="text-sm text-muted-foreground">
+                            por <strong className="text-foreground">{invitation.ownerName}</strong>
+                          </span>
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {invitation.eventType}
                         </p>
@@ -131,44 +136,39 @@ export default function ReceivedInvitations() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <User className="w-4 h-4 flex-shrink-0" />
-                      <span>Organizado por <strong className="text-foreground">{invitation.ownerName}</strong></span>
+                  <div className="text-sm">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+                      {invitation.eventDate && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                          <span>Evento: {format(parseISO(invitation.eventDate), "d/MM/yyyy", { locale: ptBR })}</span>
+                        </div>
+                      )}
+                      
+                      {invitation.confirmationDeadline && (
+                        <div className={`flex items-center gap-1.5 ${
+                          isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline))
+                            ? 'text-destructive' 
+                            : isToday(parseISO(invitation.confirmationDeadline))
+                              ? 'text-orange-600 dark:text-orange-400'
+                              : ''
+                        }`}>
+                          <Clock className="w-4 h-4 flex-shrink-0" />
+                          <span>
+                            Responder até {format(parseISO(invitation.confirmationDeadline), "d/MM/yyyy", { locale: ptBR })}
+                            {isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline)) && (
+                              <span className="ml-1 text-xs">(expirado)</span>
+                            )}
+                            {isToday(parseISO(invitation.confirmationDeadline)) && (
+                              <span className="ml-1 text-xs">(hoje)</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
-                    {invitation.eventDate && (
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Calendar className="w-4 h-4 flex-shrink-0" />
-                        <span>
-                          Data do evento: <strong className="text-foreground">{format(parseISO(invitation.eventDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong>
-                        </span>
-                      </div>
-                    )}
-                    
-                    {invitation.confirmationDeadline && (
-                      <div className={`flex items-center gap-1.5 ${
-                        isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline))
-                          ? 'text-destructive' 
-                          : isToday(parseISO(invitation.confirmationDeadline))
-                            ? 'text-orange-600 dark:text-orange-400'
-                            : 'text-muted-foreground'
-                      }`}>
-                        <Clock className="w-4 h-4 flex-shrink-0" />
-                        <span>
-                          Responder até: <strong>{format(parseISO(invitation.confirmationDeadline), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong>
-                          {isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline)) && (
-                            <span className="ml-1.5 text-xs">(prazo expirado)</span>
-                          )}
-                          {isToday(parseISO(invitation.confirmationDeadline)) && (
-                            <span className="ml-1.5 text-xs">(hoje)</span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    
                     {invitation.invitedAt && (
-                      <div className="text-xs text-muted-foreground/70 pt-1">
+                      <div className="text-xs text-muted-foreground/70 mt-2">
                         Convidado em {format(parseISO(invitation.invitedAt), "d/MM/yyyy", { locale: ptBR })}
                       </div>
                     )}
