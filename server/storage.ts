@@ -71,6 +71,9 @@ import {
   type InsertCollaborativeEventLink,
   type SecretSantaPair,
   type InsertSecretSantaPair,
+  type SecretSantaRestriction,
+  type InsertSecretSantaRestriction,
+  secretSantaRestrictions,
   type CollectiveGiftContribution,
   type InsertCollectiveGiftContribution,
   type CollaborativeEventTask,
@@ -322,6 +325,12 @@ export interface IStorage {
   getPairsByEvent(eventId: string): Promise<SecretSantaPair[]>;
   getPairForParticipant(eventId: string, participantId: string): Promise<SecretSantaPair | undefined>;
   deletePairsByEvent(eventId: string): Promise<boolean>;
+  
+  // Secret Santa Restrictions (forbidden pairs)
+  getRestrictionsByEvent(eventId: string): Promise<SecretSantaRestriction[]>;
+  createRestriction(restriction: InsertSecretSantaRestriction): Promise<SecretSantaRestriction>;
+  deleteRestriction(id: string): Promise<boolean>;
+  deleteRestrictionsByEvent(eventId: string): Promise<boolean>;
   
   // Collective Gift Contribution Operations
   getContributions(eventId: string): Promise<CollectiveGiftContribution[]>;
@@ -2234,6 +2243,39 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  // ========== Secret Santa Restrictions (Forbidden Pairs) ==========
+
+  async getRestrictionsByEvent(eventId: string): Promise<SecretSantaRestriction[]> {
+    return await db
+      .select()
+      .from(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.eventId, eventId));
+  }
+
+  async createRestriction(restriction: InsertSecretSantaRestriction): Promise<SecretSantaRestriction> {
+    const [newRestriction] = await db
+      .insert(secretSantaRestrictions)
+      .values(restriction)
+      .returning();
+    return newRestriction;
+  }
+
+  async deleteRestriction(id: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteRestrictionsByEvent(eventId: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.eventId, eventId))
+      .returning();
+    return result.length >= 0; // Returns true even if no restrictions existed
   }
 
   // ========== Collective Gift Contribution Operations ==========
