@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -434,6 +434,25 @@ export default function PublicBirthday() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8 border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="pt-6 text-center">
+            <div className="text-3xl mb-3">🎁</div>
+            <h3 className="font-semibold text-lg mb-2">Quer facilitar sua vida nas próximas festas?</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Crie sua conta grátis no Giviti e nunca mais esqueça um aniversário importante! 
+              Além de organizar seus próprios eventos, você pode criar listas de desejos, 
+              receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
+              É rápido, é grátis, e seu futuro eu agradece! 😉
+            </p>
+            <Link href="/register">
+              <Button className="gap-2" data-testid="button-create-account">
+                <Sparkles className="w-4 h-4" />
+                Criar minha conta grátis
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
