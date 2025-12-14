@@ -24,7 +24,7 @@ function getStatusLabel(status: string): { label: string; variant: "default" | "
   switch (status) {
     case 'confirmed':
     case 'accepted':
-      return { label: 'Confirmado', variant: 'default', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800' };
+      return { label: 'Vou participar!', variant: 'default', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800' };
     case 'declined':
     case 'rejected':
       return { label: 'Recusado', variant: 'destructive' };
