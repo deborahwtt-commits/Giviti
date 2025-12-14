@@ -843,76 +843,116 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
     to,
     subject: `${ownerName} te convidou para o aniversário!`,
     html: `
-      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
-        
-        <div style="text-align: center; margin-bottom: 30px;">
-          <div style="background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%); padding: 30px 20px; border-radius: 16px; margin-bottom: 20px;">
-            <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você está convidado(a)!</p>
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">${eventName}</h1>
-          </div>
-        </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f9fafb;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9fafb;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; font-family: Inter, Arial, sans-serif;">
+                <tr>
+                  <td style="padding: 20px;">
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="text-align: center; margin-bottom: 30px;">
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%); padding: 30px 20px; border-radius: 16px;">
+                          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você está convidado(a)!</p>
+                          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">${eventName}</h1>
+                        </td>
+                      </tr>
+                    </table>
 
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          Olá <strong>${guestName}</strong>!
-        </p>
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 16px 0;">
+                      Olá <strong>${guestName}</strong>!
+                    </p>
 
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          <strong>${ownerName}</strong> te convidou para comemorar seu aniversário!
-        </p>
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 16px 0;">
+                      <strong>${ownerName}</strong> te convidou para comemorar seu aniversário!
+                    </p>
 
-        <p style="color: #374151; font-size: 16px; line-height: 1.6; background-color: #fdf2f8; padding: 16px; border-radius: 8px; text-align: center;">
-          🥳 Fiz uma wishlist com presentes pagos e outros que custam um total de 0 reais mas valem muito! Porque presentear com estilo não precisa vir com boleto depois.
-        </p>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0;">
+                      <tr>
+                        <td style="background-color: #fdf2f8; padding: 16px; border-radius: 8px; text-align: center;">
+                          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+                            Fiz uma wishlist com presentes pagos e outros que custam um total de 0 reais mas valem muito! Porque presentear com estilo não precisa vir com boleto depois.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
 
-        ${formattedDate || eventLocation ? `
-          <div style="background-color: #fdf2f8; border: 1px solid #fbcfe8; padding: 20px; border-radius: 12px; margin: 24px 0;">
-            <h3 style="color: #be185d; margin: 0 0 12px 0; font-size: 16px;">Detalhes do Evento</h3>
-            ${formattedDate ? `
-              <p style="color: #9d174d; margin: 8px 0; font-size: 14px;">
-                <strong>Quando:</strong> ${formattedDate}
-              </p>
-            ` : ''}
-            ${eventLocation ? `
-              <p style="color: #9d174d; margin: 8px 0; font-size: 14px;">
-                <strong>Onde:</strong> ${eventLocation}
-              </p>
-            ` : ''}
-          </div>
-        ` : ''}
+                    ${formattedDate || eventLocation ? `
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0;">
+                      <tr>
+                        <td style="background-color: #fdf2f8; border: 1px solid #fbcfe8; padding: 20px; border-radius: 12px;">
+                          <h3 style="color: #be185d; margin: 0 0 12px 0; font-size: 16px;">Detalhes do Evento</h3>
+                          ${formattedDate ? `
+                          <p style="color: #9d174d; margin: 8px 0; font-size: 14px; line-height: 1.5;">
+                            <strong>Quando:</strong> ${formattedDate}
+                          </p>
+                          ` : ''}
+                          ${eventLocation ? `
+                          <p style="color: #9d174d; margin: 8px 0; font-size: 14px; line-height: 1.5;">
+                            <strong>Onde:</strong> ${eventLocation}
+                          </p>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    </table>
+                    ` : ''}
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${wishlistLink}" 
-             style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
-                    text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);">
-            Clique para aceitar ou recusar
-          </a>
-        </div>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                      <tr>
+                        <td align="center">
+                          <a href="${wishlistLink}" 
+                             style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
+                                    text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px;">
+                            Clique para aceitar ou recusar
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
 
-        <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">
-          Se você não conhece ${ownerName}, pode ignorar este email.
-        </p>
+                    <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 20px 0;">
+                      Se você não conhece ${ownerName}, pode ignorar este email.
+                    </p>
 
-        <div style="background-color: #ecfdf5; border: 2px dashed #10b981; padding: 24px; border-radius: 12px; margin: 30px 0; text-align: center;">
-          <p style="color: #065f46; font-size: 18px; margin: 0 0 12px 0; font-weight: 600;">
-            🎁 Quer facilitar sua vida nas próximas festas?
-          </p>
-          <p style="color: #047857; font-size: 14px; margin: 0 0 20px 0; line-height: 1.6;">
-            Crie sua conta grátis no Giviti e nunca mais esqueça um aniversário importante! 
-            Além de organizar seus próprios eventos, você pode criar listas de desejos, 
-            receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
-            É rápido, é grátis, e seu futuro eu agradece! 😉
-          </p>
-          <a href="${signupLink}" 
-             style="display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; 
-                    text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-            Criar minha conta Giviti grátis
-          </a>
-        </div>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                      <tr>
+                        <td style="background-color: #ecfdf5; border: 2px dashed #10b981; padding: 24px; border-radius: 12px; text-align: center;">
+                          <p style="color: #065f46; font-size: 18px; margin: 0 0 12px 0; font-weight: 600;">
+                            Quer facilitar sua vida nas próximas festas?
+                          </p>
+                          <p style="color: #047857; font-size: 14px; margin: 0 0 20px 0; line-height: 1.6;">
+                            Crie sua conta grátis no Giviti e nunca mais esqueça um aniversário importante! 
+                            Além de organizar seus próprios eventos, você pode criar listas de desejos, 
+                            receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
+                            É rápido, é grátis, e seu futuro eu agradece!
+                          </p>
+                          <a href="${signupLink}" 
+                             style="display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; 
+                                    text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                            Criar minha conta Giviti grátis
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
 
-        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          Este email foi enviado automaticamente pelo Giviti.
-        </p>
-      </div>
+                    <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                      Este email foi enviado automaticamente pelo Giviti.
+                    </p>
+                    
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `
   });
 }
