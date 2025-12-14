@@ -17,6 +17,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +79,7 @@ interface WishlistItem {
   imageUrl: string | null;
   purchaseUrl: string | null;
   price: string | null;
+  category: string | null;
   priority: number;
   isReceived: boolean;
   receivedFrom: string | null;
@@ -115,6 +117,7 @@ export default function BirthdayManage() {
     imageUrl: "",
     purchaseUrl: "",
     price: "",
+    category: "paid" as "paid" | "free",
     priority: 0,
   });
 
@@ -145,7 +148,7 @@ export default function BirthdayManage() {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowAddItemDialog(false);
-      setNewItem({ title: "", description: "", imageUrl: "", purchaseUrl: "", price: "", priority: 0 });
+      setNewItem({ title: "", description: "", imageUrl: "", purchaseUrl: "", price: "", category: "paid", priority: 0 });
       toast({ title: "Item adicionado!", description: "Seu desejo foi adicionado à lista." });
     },
     onError: (error: any) => {
@@ -437,6 +440,24 @@ export default function BirthdayManage() {
                         data-testid="input-wishlist-description"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Tipo de presente</Label>
+                      <RadioGroup
+                        value={newItem.category}
+                        onValueChange={(value: "paid" | "free") => setNewItem({ ...newItem, category: value })}
+                        className="flex gap-4"
+                        data-testid="radio-wishlist-category"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="paid" id="category-paid" />
+                          <Label htmlFor="category-paid" className="font-normal cursor-pointer">Pago</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="free" id="category-free" />
+                          <Label htmlFor="category-free" className="font-normal cursor-pointer">Gratuito</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="price">Preço estimado</Label>
@@ -495,8 +516,15 @@ export default function BirthdayManage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-medium">{item.title}</h4>
+                            {item.category === "free" ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                Gratuito
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Pago</Badge>
+                            )}
                             {item.isReceived && (
                               <Badge variant="default" className="bg-green-500">
                                 Recebido

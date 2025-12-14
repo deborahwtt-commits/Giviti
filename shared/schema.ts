@@ -876,6 +876,7 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
   imageUrl: varchar("image_url"),
   purchaseUrl: varchar("purchase_url"),
   price: varchar("price"),
+  category: varchar("category").default("paid"), // "paid" or "free"
   priority: integer("priority").default(0), // 0 = normal, 1 = high priority
   isReceived: boolean("is_received").default(false).notNull(),
   receivedFrom: varchar("received_from"),
