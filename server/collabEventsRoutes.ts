@@ -979,6 +979,133 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // ========== SECRET SANTA RESTRICTIONS (FORBIDDEN PAIRS) ROUTES ==========
+
+  // GET /api/collab-events/:id/restrictions - Get all restrictions for an event
+  app.get("/api/collab-events/:id/restrictions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "This event is not a Secret Santa event" });
+      }
+      
+      const restrictions = await storage.getRestrictionsByEvent(id);
+      
+      // Enrich with participant names
+      const enrichedRestrictions = await Promise.all(
+        restrictions.map(async (restriction) => {
+          const blocker = await storage.getParticipant(restriction.blockerParticipantId);
+          const blocked = await storage.getParticipant(restriction.blockedParticipantId);
+          return {
+            ...restriction,
+            blockerName: blocker?.name || 'Desconhecido',
+            blockedName: blocked?.name || 'Desconhecido',
+          };
+        })
+      );
+      
+      res.json(enrichedRestrictions);
+    } catch (error) {
+      console.error("Error fetching restrictions:", error);
+      res.status(500).json({ error: "Failed to fetch restrictions" });
+    }
+  });
+
+  // POST /api/collab-events/:id/restrictions - Create a new restriction (owner only)
+  app.post("/api/collab-events/:id/restrictions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      const { blockerParticipantId, blockedParticipantId } = req.body;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can manage restrictions" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "This event is not a Secret Santa event" });
+      }
+      
+      // Validate that both participants exist and belong to this event
+      const blocker = await storage.getParticipant(blockerParticipantId);
+      const blocked = await storage.getParticipant(blockedParticipantId);
+      
+      if (!blocker || blocker.eventId !== id) {
+        return res.status(400).json({ error: "Invalid blocker participant" });
+      }
+      
+      if (!blocked || blocked.eventId !== id) {
+        return res.status(400).json({ error: "Invalid blocked participant" });
+      }
+      
+      // Cannot restrict yourself from yourself
+      if (blockerParticipantId === blockedParticipantId) {
+        return res.status(400).json({ error: "A participant cannot be restricted from themselves" });
+      }
+      
+      // Check if restriction already exists
+      const existingRestrictions = await storage.getRestrictionsByEvent(id);
+      const exists = existingRestrictions.some(
+        r => r.blockerParticipantId === blockerParticipantId && r.blockedParticipantId === blockedParticipantId
+      );
+      
+      if (exists) {
+        return res.status(400).json({ error: "This restriction already exists" });
+      }
+      
+      const restriction = await storage.createRestriction({
+        eventId: id,
+        blockerParticipantId,
+        blockedParticipantId,
+      });
+      
+      res.status(201).json(restriction);
+    } catch (error) {
+      console.error("Error creating restriction:", error);
+      res.status(500).json({ error: "Failed to create restriction" });
+    }
+  });
+
+  // DELETE /api/collab-events/:id/restrictions/:restrictionId - Delete a restriction (owner only)
+  app.delete("/api/collab-events/:id/restrictions/:restrictionId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id, restrictionId } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can manage restrictions" });
+      }
+      
+      const success = await storage.deleteRestriction(restrictionId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Restriction not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting restriction:", error);
+      res.status(500).json({ error: "Failed to delete restriction" });
+    }
+  });
+
   // ========== COLLECTIVE GIFT CONTRIBUTION ROUTES ==========
 
   // GET /api/collab-events/:id/contributions - Get all contributions for a collective gift event
