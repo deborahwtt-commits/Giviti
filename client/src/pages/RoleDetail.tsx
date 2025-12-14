@@ -188,6 +188,20 @@ interface EnrichedRestriction {
   blockedName: string;
 }
 
+interface SecretSantaWishlistItem {
+  id: string;
+  participantId: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  purchaseUrl: string | null;
+  price: string | null;
+  priority: number | null;
+  displayOrder: number | null;
+  createdAt: string | null;
+}
+
 export default function RoleDetail() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -339,6 +353,14 @@ export default function RoleDetail() {
   // State for restrictions management
   const [selectedBlockerId, setSelectedBlockerId] = useState<string>("");
   const [selectedBlockedId, setSelectedBlockedId] = useState<string>("");
+  
+  // State for wishlist dialog
+  const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
+  const [wishlistTitle, setWishlistTitle] = useState("");
+  const [wishlistDescription, setWishlistDescription] = useState("");
+  const [wishlistUrl, setWishlistUrl] = useState("");
+  const [wishlistPrice, setWishlistPrice] = useState("");
+  const [wishlistPriority, setWishlistPriority] = useState<string>("3");
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -383,6 +405,105 @@ export default function RoleDetail() {
     },
     enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
   });
+
+  // Secret Santa Wishlist Query (participant view)
+  const { data: myWishlist, isLoading: wishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
+    queryKey: ["/api/collab-events", id, "my-wishlist"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/my-wishlist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar lista de desejos");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
+  });
+
+  // Add wishlist item mutation
+  const addWishlistItemMutation = useMutation({
+    mutationFn: async (item: { title: string; description?: string; purchaseUrl?: string; price?: string; priority?: number }) => {
+      const response = await fetch(`/api/collab-events/${id}/my-wishlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(item),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao adicionar item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      setWishlistDialogOpen(false);
+      setWishlistTitle("");
+      setWishlistDescription("");
+      setWishlistUrl("");
+      setWishlistPrice("");
+      setWishlistPriority("3");
+      toast({
+        title: "Item adicionado",
+        description: "O item foi adicionado à sua lista de desejos.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao adicionar item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove wishlist item mutation
+  const removeWishlistItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const response = await fetch(`/api/collab-events/${id}/my-wishlist/${itemId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao remover item");
+      }
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      toast({
+        title: "Item removido",
+        description: "O item foi removido da sua lista de desejos.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddWishlistItem = () => {
+    if (!wishlistTitle.trim()) {
+      toast({
+        title: "Título obrigatório",
+        description: "Por favor, informe o nome do item desejado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    addWishlistItemMutation.mutate({
+      title: wishlistTitle.trim(),
+      description: wishlistDescription.trim() || undefined,
+      purchaseUrl: wishlistUrl.trim() || undefined,
+      price: wishlistPrice.trim() || undefined,
+      priority: parseInt(wishlistPriority) || 3,
+    });
+  };
 
   // Create restriction mutation
   const createRestrictionMutation = useMutation({
@@ -1571,6 +1692,109 @@ export default function RoleDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Participant view: My Wishlist */}
+          {event.eventType === "secret_santa" && !isOwner && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Heart className="w-5 h-5" />
+                      Minha Lista de Desejos
+                    </CardTitle>
+                    <CardDescription>
+                      Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWishlistDialogOpen(true)}
+                    disabled={(myWishlist?.length || 0) >= 10}
+                    data-testid="button-add-wishlist-item"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {wishlistLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : myWishlist && myWishlist.length > 0 ? (
+                  <div className="space-y-3">
+                    {myWishlist.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border"
+                        data-testid={`wishlist-item-${item.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium" data-testid={`text-wishlist-title-${item.id}`}>
+                              {item.title}
+                            </p>
+                            {item.priority && (
+                              <Badge variant="outline" className="text-xs">
+                                {item.priority === 1 ? "Muito desejado" : item.priority === 2 ? "Desejado" : "Opcional"}
+                              </Badge>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground mt-1" data-testid={`text-wishlist-desc-${item.id}`}>
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            {item.price && (
+                              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" />
+                                R$ {item.price}
+                              </span>
+                            )}
+                            {item.purchaseUrl && (
+                              <a
+                                href={item.purchaseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-primary hover:underline flex items-center gap-1"
+                                data-testid={`link-wishlist-url-${item.id}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Ver produto
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeWishlistItemMutation.mutate(item.id)}
+                          disabled={removeWishlistItemMutation.isPending}
+                          data-testid={`button-remove-wishlist-${item.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Sua lista de desejos está vazia.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Adicione itens que você gostaria de ganhar!
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="participants" className="space-y-6">
@@ -2246,6 +2470,103 @@ export default function RoleDetail() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Reagendar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={wishlistDialogOpen}
+        onOpenChange={(open) => {
+          setWishlistDialogOpen(open);
+          if (!open) {
+            setWishlistTitle("");
+            setWishlistDescription("");
+            setWishlistUrl("");
+            setWishlistPrice("");
+            setWishlistPriority("3");
+          }
+        }}
+      >
+        <AlertDialogContent data-testid="dialog-add-wishlist-item">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adicionar Item à Lista</AlertDialogTitle>
+            <AlertDialogDescription>
+              Adicione um item que você gostaria de ganhar. Quem te tirou no sorteio poderá ver sua lista.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="wishlist-title">Nome do item *</Label>
+              <Input
+                id="wishlist-title"
+                value={wishlistTitle}
+                onChange={(e) => setWishlistTitle(e.target.value)}
+                placeholder="Ex: Fone de ouvido Bluetooth"
+                className="mt-1"
+                data-testid="input-wishlist-title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="wishlist-description">Descrição (opcional)</Label>
+              <Textarea
+                id="wishlist-description"
+                value={wishlistDescription}
+                onChange={(e) => setWishlistDescription(e.target.value)}
+                placeholder="Detalhes sobre o item, cor preferida, modelo específico..."
+                className="mt-1"
+                data-testid="input-wishlist-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="wishlist-price">Preço estimado</Label>
+                <Input
+                  id="wishlist-price"
+                  value={wishlistPrice}
+                  onChange={(e) => setWishlistPrice(e.target.value)}
+                  placeholder="Ex: 150,00"
+                  className="mt-1"
+                  data-testid="input-wishlist-price"
+                />
+              </div>
+              <div>
+                <Label htmlFor="wishlist-priority">Prioridade</Label>
+                <Select value={wishlistPriority} onValueChange={setWishlistPriority}>
+                  <SelectTrigger className="mt-1" data-testid="select-wishlist-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Muito desejado</SelectItem>
+                    <SelectItem value="2">Desejado</SelectItem>
+                    <SelectItem value="3">Opcional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="wishlist-url">Link do produto (opcional)</Label>
+              <Input
+                id="wishlist-url"
+                value={wishlistUrl}
+                onChange={(e) => setWishlistUrl(e.target.value)}
+                placeholder="https://..."
+                className="mt-1"
+                data-testid="input-wishlist-url"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-wishlist">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAddWishlistItem}
+              disabled={addWishlistItemMutation.isPending || !wishlistTitle.trim()}
+              data-testid="button-confirm-wishlist"
+            >
+              {addWishlistItemMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Adicionar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
