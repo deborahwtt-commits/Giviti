@@ -340,6 +340,10 @@ export default function PublicBirthday() {
                                   href={item.purchaseUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={() => {
+                                    navigator.sendBeacon(`/api/wishlist-click/${item.id}`);
+                                  }}
+                                  data-testid={`link-wishlist-item-${item.id}`}
                                 >
                                   Ver produto
                                   <ExternalLink className="h-3 w-3 ml-2" />

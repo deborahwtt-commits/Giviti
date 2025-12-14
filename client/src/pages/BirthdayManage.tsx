@@ -593,7 +593,11 @@ export default function BirthdayManage() {
                                 href={item.purchaseUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => {
+                                  navigator.sendBeacon(`/api/wishlist-click/${item.id}`);
+                                }}
                                 className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                                data-testid={`link-wishlist-item-${item.id}`}
                               >
                                 Ver produto <ExternalLink className="h-3 w-3" />
                               </a>

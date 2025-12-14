@@ -1712,6 +1712,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/wishlist-click/:itemId - Track click on wishlist item (public endpoint)
+  app.post("/api/wishlist-click/:itemId", async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      
+      const updated = await storage.incrementWishlistItemClick(itemId);
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json({ success: true, clickCount: updated.clickCount });
+    } catch (error) {
+      console.error("Error tracking wishlist click:", error);
+      res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
+  // GET /api/admin/wishlist-clicks - Get most clicked wishlist items (admin only)
+  app.get("/api/admin/wishlist-clicks", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const items = await storage.getMostClickedWishlistItems(20);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching wishlist clicks:", error);
+      res.status(500).json({ message: "Failed to fetch wishlist clicks" });
+    }
+  });
+
   // POST /api/events/:eventId/share-link - Generate share link for birthday event
   app.post("/api/events/:eventId/share-link", isAuthenticated, async (req: any, res) => {
     try {

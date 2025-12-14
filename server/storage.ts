@@ -369,6 +369,8 @@ export interface IStorage {
   markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined>;
   deleteBirthdayWishlistItem(id: string): Promise<boolean>;
   countBirthdayWishlistItems(eventId: string): Promise<number>;
+  incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined>;
+  getMostClickedWishlistItems(limit?: number): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>>;
   
   // Free Gift Options
   getFreeGiftOptions(): Promise<FreeGiftOption[]>;
@@ -2605,6 +2607,49 @@ export class DatabaseStorage implements IStorage {
       .from(birthdayWishlistItems)
       .where(eq(birthdayWishlistItems.eventId, eventId));
     return result[0]?.count || 0;
+  }
+
+  async incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({
+        clickCount: sql`${birthdayWishlistItems.clickCount} + 1`,
+        lastClickedAt: new Date(),
+      })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getMostClickedWishlistItems(limit: number = 20): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>> {
+    const result = await db
+      .select({
+        id: birthdayWishlistItems.id,
+        eventId: birthdayWishlistItems.eventId,
+        title: birthdayWishlistItems.title,
+        description: birthdayWishlistItems.description,
+        imageUrl: birthdayWishlistItems.imageUrl,
+        purchaseUrl: birthdayWishlistItems.purchaseUrl,
+        price: birthdayWishlistItems.price,
+        category: birthdayWishlistItems.category,
+        priority: birthdayWishlistItems.priority,
+        isReceived: birthdayWishlistItems.isReceived,
+        receivedFrom: birthdayWishlistItems.receivedFrom,
+        displayOrder: birthdayWishlistItems.displayOrder,
+        clickCount: birthdayWishlistItems.clickCount,
+        lastClickedAt: birthdayWishlistItems.lastClickedAt,
+        createdAt: birthdayWishlistItems.createdAt,
+        updatedAt: birthdayWishlistItems.updatedAt,
+        eventTitle: events.title,
+        ownerName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email}, 'Unknown')`.as('ownerName'),
+      })
+      .from(birthdayWishlistItems)
+      .leftJoin(events, eq(birthdayWishlistItems.eventId, events.id))
+      .leftJoin(users, eq(events.userId, users.id))
+      .where(sql`${birthdayWishlistItems.clickCount} > 0`)
+      .orderBy(sql`${birthdayWishlistItems.clickCount} DESC`)
+      .limit(limit);
+    return result;
   }
 
   async getFreeGiftOptions(): Promise<FreeGiftOption[]> {
