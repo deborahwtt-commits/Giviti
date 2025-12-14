@@ -421,6 +421,24 @@ export default function RoleDetail() {
     enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
   });
 
+  // Receiver's wishlist query (for participant to see what their receiver wants)
+  const { data: receiverWishlist, isLoading: receiverWishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
+    queryKey: ["/api/collab-events", id, "receiver-wishlist", myPair?.receiver?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/receiver-wishlist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return [];
+        }
+        throw new Error("Erro ao buscar lista de desejos do sorteado");
+      }
+      return response.json();
+    },
+    enabled: Boolean(id && event && event.eventType === "secret_santa" && !isOwner && myPair?.receiver),
+  });
+
   // Add wishlist item mutation
   const addWishlistItemMutation = useMutation({
     mutationFn: async (item: { title: string; description?: string; purchaseUrl?: string; price?: string; priority?: number }) => {
@@ -1665,23 +1683,80 @@ export default function RoleDetail() {
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : myPair && myPair.receiver ? (
-                  <div className="flex items-center gap-4 p-4 rounded-lg border bg-primary/5">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="text-lg">
-                        {getInitials(myPair.receiver.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-lg font-semibold" data-testid="text-my-pair-name">
-                        {myPair.receiver.name || "Participante"}
-                      </p>
-                      {myPair.receiver.email && (
-                        <p className="text-sm text-muted-foreground" data-testid="text-my-pair-email">
-                          {myPair.receiver.email}
+                  <>
+                    <div className="flex items-center gap-4 p-4 rounded-lg border bg-primary/5">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="text-lg">
+                          {getInitials(myPair.receiver.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-lg font-semibold" data-testid="text-my-pair-name">
+                          {myPair.receiver.name || "Participante"}
                         </p>
-                      )}
+                        {myPair.receiver.email && (
+                          <p className="text-sm text-muted-foreground" data-testid="text-my-pair-email">
+                            {myPair.receiver.email}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Receiver's Wishlist */}
+                    {receiverWishlistLoading ? (
+                      <div className="flex items-center justify-center py-4 mt-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : receiverWishlist && receiverWishlist.length > 0 ? (
+                      <div className="mt-4 pt-4 border-t" data-testid="receiver-wishlist-section">
+                        <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          O que seu amigo quer ganhar
+                        </p>
+                        <div className="space-y-2">
+                          {receiverWishlist.map((item) => (
+                            <div key={item.id} className="p-3 rounded-lg border bg-background" data-testid={`receiver-wishlist-item-${item.id}`}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <p className="font-medium">{item.title}</p>
+                                {item.priority === 1 && (
+                                  <Badge variant="outline" className="text-xs">Muito desejado</Badge>
+                                )}
+                              </div>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                {item.price && (
+                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <DollarSign className="w-3 h-3" />
+                                    R$ {item.price}
+                                  </span>
+                                )}
+                                {item.purchaseUrl && (
+                                  <a
+                                    href={item.purchaseUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                                    data-testid={`link-receiver-wishlist-${item.id}`}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    Ver produto
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Seu amigo ainda não adicionou itens à lista de desejos
+                        </p>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="flex items-center justify-center py-4">
                     <p className="text-sm text-muted-foreground">
