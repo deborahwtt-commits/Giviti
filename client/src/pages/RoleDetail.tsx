@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +63,8 @@ import {
   ShoppingBag,
   ExternalLink,
   CalendarPlus,
+  Ban,
+  Plus,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -173,6 +176,16 @@ interface ContributionsSummary {
   paidCount: number;
   targetAmount: number;
   progress: number;
+}
+
+interface EnrichedRestriction {
+  id: string;
+  eventId: string;
+  blockerParticipantId: string;
+  blockedParticipantId: string;
+  createdAt: string;
+  blockerName: string;
+  blockedName: string;
 }
 
 export default function RoleDetail() {
@@ -316,6 +329,10 @@ export default function RoleDetail() {
   // State for reschedule dialog
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
+  
+  // State for restrictions management
+  const [selectedBlockerId, setSelectedBlockerId] = useState<string>("");
+  const [selectedBlockedId, setSelectedBlockedId] = useState<string>("");
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -344,6 +361,88 @@ export default function RoleDetail() {
       return response.json();
     },
     enabled: !!id && !!event && event.eventType === "collective_gift",
+  });
+
+  // Secret Santa Restrictions Query
+  const { data: restrictions, isLoading: restrictionsLoading } = useQuery<EnrichedRestriction[]>({
+    queryKey: ["/api/collab-events", id, "restrictions"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/restrictions`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar restrições");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
+  });
+
+  // Create restriction mutation
+  const createRestrictionMutation = useMutation({
+    mutationFn: async ({ blockerParticipantId, blockedParticipantId }: { blockerParticipantId: string; blockedParticipantId: string }) => {
+      if (blockerParticipantId === blockedParticipantId) {
+        throw new Error("Um participante não pode ser bloqueado de tirar a si mesmo.");
+      }
+      const response = await fetch(`/api/collab-events/${id}/restrictions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ blockerParticipantId, blockedParticipantId }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao criar restrição");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "restrictions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
+      setSelectedBlockerId("");
+      setSelectedBlockedId("");
+      toast({
+        title: "Restrição adicionada",
+        description: "A restrição de par foi criada com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar restrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete restriction mutation
+  const deleteRestrictionMutation = useMutation({
+    mutationFn: async (restrictionId: string) => {
+      const response = await fetch(`/api/collab-events/${id}/restrictions/${restrictionId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao remover restrição");
+      }
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "restrictions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
+      toast({
+        title: "Restrição removida",
+        description: "A restrição de par foi removida com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover restrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Initialize contributions mutation
@@ -542,7 +641,22 @@ export default function RoleDetail() {
 
   const performDrawMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/collab-events/${id}/draw`, "POST", {});
+      const response = await fetch(`/api/collab-events/${id}/draw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 422 && errorData.code === "IMPOSSIBLE_DRAW") {
+          throw new Error("IMPOSSIBLE_DRAW");
+        }
+        throw new Error(errorData.error || "Erro ao realizar sorteio");
+      }
+      
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
@@ -560,12 +674,21 @@ export default function RoleDetail() {
       setConfirmDrawOpen(false);
     },
     onError: (error: Error) => {
-      toast({
-        title: "Erro ao realizar sorteio",
-        description: error.message,
-        variant: "destructive",
-      });
       setConfirmDrawOpen(false);
+      
+      if (error.message === "IMPOSSIBLE_DRAW") {
+        toast({
+          title: "Sorteio impossível",
+          description: "Não foi possível realizar o sorteio com as restrições configuradas. Tente remover algumas restrições de pares proibidos nas Configurações.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao realizar sorteio",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -1695,6 +1818,136 @@ export default function RoleDetail() {
                     Salvar Regras
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Secret Santa Restrictions */}
+          {event?.eventType === "secret_santa" && isOwner && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ban className="w-5 h-5" />
+                  Pares Proibidos
+                </CardTitle>
+                <CardDescription>
+                  Defina quem não pode tirar quem no sorteio (ex: casais, familiares)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Add new restriction */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        Participante
+                      </Label>
+                      <Select
+                        value={selectedBlockerId}
+                        onValueChange={setSelectedBlockerId}
+                      >
+                        <SelectTrigger data-testid="select-blocker-participant">
+                          <SelectValue placeholder="Selecione quem..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                            <SelectItem 
+                              key={participant.id} 
+                              value={participant.id}
+                              disabled={participant.id === selectedBlockedId}
+                            >
+                              {participant.name || participant.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Ban className="w-4 h-4 text-muted-foreground" />
+                        Não pode tirar
+                      </Label>
+                      <Select
+                        value={selectedBlockedId}
+                        onValueChange={setSelectedBlockedId}
+                      >
+                        <SelectTrigger data-testid="select-blocked-participant">
+                          <SelectValue placeholder="Selecione quem não pode tirar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                            <SelectItem 
+                              key={participant.id} 
+                              value={participant.id}
+                              disabled={participant.id === selectedBlockerId}
+                            >
+                              {participant.name || participant.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (selectedBlockerId && selectedBlockedId) {
+                        createRestrictionMutation.mutate({
+                          blockerParticipantId: selectedBlockerId,
+                          blockedParticipantId: selectedBlockedId,
+                        });
+                      }
+                    }}
+                    disabled={!selectedBlockerId || !selectedBlockedId || createRestrictionMutation.isPending}
+                    data-testid="button-add-restriction"
+                  >
+                    {createRestrictionMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-2" />
+                    )}
+                    Adicionar Restrição
+                  </Button>
+                </div>
+
+                {/* List existing restrictions */}
+                {restrictionsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : restrictions && restrictions.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Restrições ativas:</p>
+                    <div className="space-y-2">
+                      {restrictions.map((restriction) => (
+                        <div 
+                          key={restriction.id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                          data-testid={`restriction-${restriction.id}`}
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium">{restriction.blockerName}</span>
+                            <Ban className="w-4 h-4 text-destructive" />
+                            <span className="font-medium">{restriction.blockedName}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteRestrictionMutation.mutate(restriction.id)}
+                            disabled={deleteRestrictionMutation.isPending}
+                            data-testid={`button-delete-restriction-${restriction.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma restrição definida. O sorteio será completamente aleatório.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

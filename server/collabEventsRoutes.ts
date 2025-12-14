@@ -739,23 +739,127 @@ export function registerCollabEventsRoutes(app: Express) {
         });
       }
       
-      // Fisher-Yates shuffle
-      const shuffled = [...confirmedParticipants];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      // Get restrictions for this event
+      const restrictions = await storage.getRestrictionsByEvent(id);
+      
+      // Build forbidden pairs set (including self-matching)
+      const forbiddenPairs = new Set<string>();
+      
+      // Add self-matching restrictions (no one can draw themselves)
+      for (const participant of confirmedParticipants) {
+        forbiddenPairs.add(`${participant.id}->${participant.id}`);
       }
       
-      // Create circular pairs (each person gives to the next)
-      const pairs = shuffled.map((giver, index) => {
-        const receiver = shuffled[(index + 1) % shuffled.length];
-        return {
-          eventId: id,
-          giverParticipantId: giver.id,
-          receiverParticipantId: receiver.id,
-          isRevealed: false,
+      // Add user-defined restrictions
+      for (const restriction of restrictions) {
+        forbiddenPairs.add(`${restriction.blockerParticipantId}->${restriction.blockedParticipantId}`);
+      }
+      
+      // Backtracking algorithm to find valid matching
+      const participantIds = confirmedParticipants.map(p => p.id);
+      const n = participantIds.length;
+      
+      // Build adjacency list of allowed receivers for each giver
+      const allowedReceivers: Map<string, string[]> = new Map();
+      for (const giverId of participantIds) {
+        const allowed = participantIds.filter(receiverId => 
+          !forbiddenPairs.has(`${giverId}->${receiverId}`)
+        );
+        allowedReceivers.set(giverId, allowed);
+      }
+      
+      // Shuffle the order of givers and their allowed receivers for randomness
+      const shuffleArray = <T>(arr: T[]): T[] => {
+        const shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      };
+      
+      // Backtracking algorithm with forward-checking constraint propagation
+      const tryBacktrackingDraw = (giverOrder: string[]): Map<string, string> | null => {
+        const assignment: Map<string, string> = new Map();
+        const usedReceivers = new Set<string>();
+        
+        // Forward-checking: verify all unassigned givers still have at least one option
+        const forwardCheck = (fromIndex: number): boolean => {
+          for (let i = fromIndex; i < giverOrder.length; i++) {
+            const futureGiverId = giverOrder[i];
+            const futureOptions = (allowedReceivers.get(futureGiverId) || [])
+              .filter(r => !usedReceivers.has(r));
+            if (futureOptions.length === 0) {
+              return false; // This giver would have no options
+            }
+          }
+          return true;
         };
+        
+        const backtrack = (giverIndex: number): boolean => {
+          if (giverIndex === giverOrder.length) {
+            return true; // All givers assigned
+          }
+          
+          const giverId = giverOrder[giverIndex];
+          const candidates = shuffleArray(allowedReceivers.get(giverId) || []);
+          
+          for (const receiverId of candidates) {
+            if (!usedReceivers.has(receiverId)) {
+              // Try this assignment
+              assignment.set(giverId, receiverId);
+              usedReceivers.add(receiverId);
+              
+              // Forward-check: ensure remaining givers still have options
+              if (forwardCheck(giverIndex + 1) && backtrack(giverIndex + 1)) {
+                return true;
+              }
+              
+              // Backtrack
+              assignment.delete(giverId);
+              usedReceivers.delete(receiverId);
+            }
+          }
+          
+          return false; // No valid assignment found for this giver
+        };
+        
+        return backtrack(0) ? assignment : null;
+      };
+      
+      // Try multiple orderings with constraint-based ordering first
+      // Sort givers by number of allowed receivers (most constrained first)
+      const sortedByConstraint = [...participantIds].sort((a, b) => {
+        const aCount = (allowedReceivers.get(a) || []).length;
+        const bCount = (allowedReceivers.get(b) || []).length;
+        return aCount - bCount; // Most constrained first
       });
+      
+      // Try constraint-ordered approach first (most likely to find solution quickly)
+      let assignment = tryBacktrackingDraw(sortedByConstraint);
+      
+      // If constraint-ordered fails, try multiple random orderings
+      const maxRetries = 5;
+      for (let attempt = 0; attempt < maxRetries && !assignment; attempt++) {
+        assignment = tryBacktrackingDraw(shuffleArray(participantIds));
+      }
+      
+      const success = assignment !== null;
+      
+      if (!success) {
+        return res.status(422).json({ 
+          error: "Não foi possível realizar o sorteio com as restrições definidas. Por favor, revise as restrições e tente novamente.",
+          code: "IMPOSSIBLE_DRAW"
+        });
+      }
+      
+      // Create pairs from the valid assignment
+      const pairs = Array.from(assignment.entries()).map(([giverId, receiverId]) => ({
+        eventId: id,
+        giverParticipantId: giverId,
+        receiverParticipantId: receiverId,
+        isRevealed: false,
+      }));
       
       // Save pairs
       const savedPairs = await storage.savePairs(id, pairs);
