@@ -915,3 +915,33 @@ export const insertFreeGiftOptionSchema = createInsertSchema(freeGiftOptions).om
 
 export type InsertFreeGiftOption = z.infer<typeof insertFreeGiftOptionSchema>;
 export type FreeGiftOption = typeof freeGiftOptions.$inferSelect;
+
+// ========== Secret Santa Wishlist Feature ==========
+
+// Secret Santa wishlist items - for participants to share gift ideas (max 10 items)
+export const secretSantaWishlistItems = pgTable("secret_santa_wishlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  participantId: varchar("participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  purchaseUrl: varchar("purchase_url"),
+  price: varchar("price"),
+  priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecretSantaWishlistItemSchema = createInsertSchema(secretSantaWishlistItems).omit({
+  id: true,
+  displayOrder: true,
+  createdAt: true,
+});
+
+export type InsertSecretSantaWishlistItem = z.infer<typeof insertSecretSantaWishlistItemSchema>;
+export type SecretSantaWishlistItem = typeof secretSantaWishlistItems.$inferSelect;

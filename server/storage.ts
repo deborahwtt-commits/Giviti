@@ -94,6 +94,9 @@ import {
   type InsertBirthdayWishlistItem,
   freeGiftOptions,
   type FreeGiftOption,
+  secretSantaWishlistItems,
+  type SecretSantaWishlistItem,
+  type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -378,6 +381,13 @@ export interface IStorage {
   // Birthday Event public access
   getEventByShareToken(token: string): Promise<Event | undefined>;
   generateBirthdayShareToken(eventId: string): Promise<string>;
+  
+  // ========== SECRET SANTA WISHLIST FEATURE ==========
+  getSecretSantaWishlistItems(participantId: string): Promise<SecretSantaWishlistItem[]>;
+  getSecretSantaWishlistItemsByEvent(eventId: string, participantId: string): Promise<SecretSantaWishlistItem[]>;
+  createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem>;
+  deleteSecretSantaWishlistItem(id: string): Promise<boolean>;
+  countSecretSantaWishlistItems(participantId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2687,6 +2697,52 @@ export class DatabaseStorage implements IStorage {
       .set({ birthdayShareToken: token })
       .where(eq(events.id, eventId));
     return token;
+  }
+
+  // ========== SECRET SANTA WISHLIST FEATURE ==========
+  
+  async getSecretSantaWishlistItems(participantId: string): Promise<SecretSantaWishlistItem[]> {
+    return await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.participantId, participantId))
+      .orderBy(secretSantaWishlistItems.displayOrder);
+  }
+
+  async getSecretSantaWishlistItemsByEvent(eventId: string, participantId: string): Promise<SecretSantaWishlistItem[]> {
+    return await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(and(
+        eq(secretSantaWishlistItems.eventId, eventId),
+        eq(secretSantaWishlistItems.participantId, participantId)
+      ))
+      .orderBy(secretSantaWishlistItems.displayOrder);
+  }
+
+  async createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem> {
+    const count = await this.countSecretSantaWishlistItems(item.participantId);
+    const [newItem] = await db
+      .insert(secretSantaWishlistItems)
+      .values({ ...item, displayOrder: count })
+      .returning();
+    return newItem;
+  }
+
+  async deleteSecretSantaWishlistItem(id: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async countSecretSantaWishlistItems(participantId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.participantId, participantId));
+    return result[0]?.count || 0;
   }
 }
 
