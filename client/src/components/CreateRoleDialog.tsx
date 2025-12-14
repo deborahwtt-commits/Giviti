@@ -47,9 +47,9 @@ import type { CollaborativeEvent } from "@shared/schema";
 const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge"]),
-  eventDate: z.date().optional().nullable(),
-  confirmationDeadline: z.date().optional().nullable(),
-  location: z.string().max(200).optional(),
+  eventDate: z.date({ required_error: "Data e hora são obrigatórios" }),
+  confirmationDeadline: z.date({ required_error: "Data limite para confirmação é obrigatória" }),
+  location: z.string().min(1, "Local é obrigatório").max(200),
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
@@ -61,7 +61,6 @@ const createRoleSchema = z.object({
   targetAmount: z.string().optional(),
   recipientName: z.string().max(100).optional(),
 }).refine((data) => {
-  if (!data.eventDate) return true;
   const today = startOfDay(new Date());
   const selectedDate = startOfDay(data.eventDate);
   return selectedDate >= today;
@@ -70,7 +69,6 @@ const createRoleSchema = z.object({
   path: ["eventDate"],
 }).refine((data) => {
   // Confirmation deadline must be today or in the future
-  if (!data.confirmationDeadline) return true;
   const today = startOfDay(new Date());
   const deadline = startOfDay(data.confirmationDeadline);
   return deadline >= today;
@@ -78,8 +76,7 @@ const createRoleSchema = z.object({
   message: "A data limite deve ser hoje ou no futuro",
   path: ["confirmationDeadline"],
 }).refine((data) => {
-  // Confirmation deadline must be before event date
-  if (!data.confirmationDeadline || !data.eventDate) return true;
+  // Confirmation deadline must be before or equal to event date
   return data.confirmationDeadline <= data.eventDate;
 }, {
   message: "A data limite de confirmação deve ser antes da data do evento",
@@ -196,9 +193,9 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       const payload = {
         name: data.name,
         eventType: data.eventType,
-        eventDate: data.eventDate ? data.eventDate.toISOString() : null,
-        confirmationDeadline: data.confirmationDeadline ? data.confirmationDeadline.toISOString() : null,
-        location: data.location || null,
+        eventDate: data.eventDate.toISOString(),
+        confirmationDeadline: data.confirmationDeadline.toISOString(),
+        location: data.location,
         description: data.description || null,
         isPublic: data.isPublic,
         status: "active" as const,
@@ -486,7 +483,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               name="eventDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Data e Hora (opcional)</FormLabel>
+                  <FormLabel>Data e Hora *</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -573,17 +570,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                               </SelectContent>
                             </Select>
                           </div>
-                          {field.value && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="mt-5"
-                              onClick={() => field.onChange(null)}
-                              data-testid="button-clear-date"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </PopoverContent>
@@ -601,7 +587,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               name="confirmationDeadline"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Data limite para confirmação (opcional)</FormLabel>
+                  <FormLabel>Data limite para confirmação *</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -637,19 +623,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                           locale={ptBR}
                           data-testid="calendar-deadline"
                         />
-                        {field.value && (
-                          <div className="border-t pt-2 mt-2 flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => field.onChange(null)}
-                              data-testid="button-clear-deadline"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Limpar
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -666,7 +639,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Local (opcional)</FormLabel>
+                  <FormLabel>Local *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Ex: Casa do João"

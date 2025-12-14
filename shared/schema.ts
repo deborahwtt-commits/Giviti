@@ -600,30 +600,29 @@ export const collaborativeEvents = pgTable("collaborative_events", {
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   eventType: varchar("event_type").notNull(), // secret_santa, themed_night, collective_gift, creative_challenge
-  eventDate: timestamp("event_date"),
-  location: varchar("location"),
+  eventDate: timestamp("event_date").notNull(),
+  location: varchar("location").notNull(),
   description: text("description"),
   themedNightCategoryId: varchar("themed_night_category_id")
     .references(() => themedNightCategories.id, { onDelete: "set null" }),
   isPublic: boolean("is_public").default(false).notNull(),
   status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
   typeSpecificData: jsonb("type_specific_data"), // JSON for type-specific settings
-  confirmationDeadline: timestamp("confirmation_deadline"), // Deadline for participants to confirm attendance
+  confirmationDeadline: timestamp("confirmation_deadline").notNull(), // Deadline for participants to confirm attendance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents, {
-  eventDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
-    if (!val) return null;
+  eventDate: z.union([z.string(), z.date()]).transform(val => {
     if (val instanceof Date) return val;
     return new Date(val);
   }),
-  confirmationDeadline: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
-    if (!val) return null;
+  confirmationDeadline: z.union([z.string(), z.date()]).transform(val => {
     if (val instanceof Date) return val;
     return new Date(val);
   }),
+  location: z.string().min(1, "Local é obrigatório"),
 }).omit({
   id: true,
   ownerId: true,  // Omit ownerId - will be set from authenticated user
