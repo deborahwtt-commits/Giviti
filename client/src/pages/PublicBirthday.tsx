@@ -90,9 +90,26 @@ export default function PublicBirthday() {
       });
     },
     onError: (error: any) => {
+      let errorMessage = "Não foi possível confirmar sua presença";
+      
+      try {
+        if (typeof error.message === "string") {
+          if (error.message.includes("{")) {
+            const parsed = JSON.parse(error.message.replace(/^\d+:\s*/, ""));
+            errorMessage = parsed.message || errorMessage;
+          } else {
+            errorMessage = error.message;
+          }
+        }
+      } catch {
+        if (error.message) {
+          errorMessage = error.message.replace(/^\d+:\s*/, "").replace(/[{}\"]/g, "").replace("message:", "").trim();
+        }
+      }
+      
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível confirmar sua presença",
+        description: errorMessage,
         variant: "destructive",
       });
     },
