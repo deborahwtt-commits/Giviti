@@ -897,6 +897,55 @@ export default function RoleDetail() {
                     </div>
                   </div>
                 )}
+                {event.confirmationDeadline && (() => {
+                  const deadline = typeof event.confirmationDeadline === 'string' 
+                    ? parseISO(event.confirmationDeadline) 
+                    : event.confirmationDeadline;
+                  const now = new Date();
+                  const isExpired = now > deadline;
+                  const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
+                  
+                  return (
+                    <div className={`flex items-start gap-3 p-2 rounded-md ${
+                      isExpired 
+                        ? 'bg-destructive/10' 
+                        : isUrgent 
+                          ? 'bg-amber-100 dark:bg-amber-950'
+                          : ''
+                    }`}>
+                      <Clock className={`w-5 h-5 mt-0.5 ${
+                        isExpired 
+                          ? 'text-destructive' 
+                          : isUrgent 
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-muted-foreground'
+                      }`} />
+                      <div>
+                        <p className={`text-sm font-medium ${
+                          isExpired 
+                            ? 'text-destructive' 
+                            : isUrgent 
+                              ? 'text-amber-700 dark:text-amber-300'
+                              : ''
+                        }`}>
+                          Prazo para Confirmar
+                        </p>
+                        <p className={`text-sm ${
+                          isExpired 
+                            ? 'text-destructive' 
+                            : isUrgent 
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-muted-foreground'
+                        }`} data-testid="text-confirmation-deadline">
+                          {isExpired 
+                            ? `Encerrado em ${format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                            : format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {event.location && (
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />

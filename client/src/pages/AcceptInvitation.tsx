@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Gift, PartyPopper, Heart, Sparkles, Calendar, MapPin, Loader2, Check, LogIn, UserPlus } from "lucide-react";
+import { Gift, PartyPopper, Heart, Sparkles, Calendar, MapPin, Loader2, Check, LogIn, UserPlus, Clock, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
@@ -33,6 +33,7 @@ interface InvitationData {
     eventDate: string | null;
     location: string | null;
     description: string | null;
+    confirmationDeadline: string | null;
   };
 }
 
@@ -200,6 +201,36 @@ export default function AcceptInvitation() {
                 {event.description}
               </p>
             )}
+            
+            {event.confirmationDeadline && (() => {
+              const deadline = parseISO(event.confirmationDeadline);
+              const now = new Date();
+              const isExpired = now > deadline;
+              const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
+              
+              return (
+                <div className={`flex items-center gap-2 text-sm p-2 rounded-md ${
+                  isExpired 
+                    ? 'bg-destructive/10 text-destructive' 
+                    : isUrgent 
+                      ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                      : 'text-muted-foreground'
+                }`}>
+                  {isExpired ? (
+                    <AlertTriangle className="h-4 w-4" />
+                  ) : (
+                    <Clock className="h-4 w-4" />
+                  )}
+                  <span data-testid="text-confirmation-deadline">
+                    {isExpired ? (
+                      <>Prazo para confirmar encerrou em {format(deadline, "d 'de' MMMM", { locale: ptBR })}</>
+                    ) : (
+                      <>Confirme até {format(deadline, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                    )}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {user ? (

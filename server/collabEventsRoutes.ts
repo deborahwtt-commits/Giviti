@@ -64,6 +64,7 @@ export function registerCollabEventsRoutes(app: Express) {
           eventDate: event.eventDate,
           location: event.location,
           description: event.description,
+          confirmationDeadline: event.confirmationDeadline,
         },
       });
     } catch (error) {
@@ -92,6 +93,26 @@ export function registerCollabEventsRoutes(app: Express) {
       // Check if participant status is already accepted
       if (participant.status === "accepted") {
         return res.status(400).json({ error: "Este convite já foi aceito" });
+      }
+      
+      // Get event to check confirmation deadline
+      const event = await storage.getCollaborativeEvent(participant.eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado" });
+      }
+      
+      // Check if confirmation deadline has passed
+      if (event.confirmationDeadline) {
+        const deadline = new Date(event.confirmationDeadline);
+        const now = new Date();
+        if (now > deadline) {
+          const formattedDeadline = deadline.toLocaleDateString('pt-BR', { 
+            day: 'numeric', month: 'long', year: 'numeric' 
+          });
+          return res.status(400).json({ 
+            error: `O prazo para confirmar presença encerrou em ${formattedDeadline}. Entre em contato com o organizador.` 
+          });
+        }
       }
       
       // Verify the user's email matches the participant's email (if participant has email)
@@ -567,6 +588,23 @@ export function registerCollabEventsRoutes(app: Express) {
       const hasAccess = await canAccessEvent(userId, eventId);
       if (!hasAccess) {
         return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Get event to check confirmation deadline (only for accepting invitations)
+      if (status === "accepted") {
+        const event = await storage.getCollaborativeEvent(eventId, userId);
+        if (event && event.confirmationDeadline) {
+          const deadline = new Date(event.confirmationDeadline);
+          const now = new Date();
+          if (now > deadline) {
+            const formattedDeadline = deadline.toLocaleDateString('pt-BR', { 
+              day: 'numeric', month: 'long', year: 'numeric' 
+            });
+            return res.status(400).json({ 
+              error: `O prazo para confirmar presença encerrou em ${formattedDeadline}. Entre em contato com o organizador.` 
+            });
+          }
+        }
       }
       
       const participant = await storage.updateParticipantStatus(participantId, status);
