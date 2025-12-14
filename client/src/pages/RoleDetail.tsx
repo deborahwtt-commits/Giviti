@@ -873,10 +873,12 @@ export default function RoleDetail() {
             <Users className="w-4 h-4 mr-2" />
             Participantes ({participants?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="settings" data-testid="tab-settings">
-            <Settings className="w-4 h-4 mr-2" />
-            Configurações
-          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="settings" data-testid="tab-settings">
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -1535,35 +1537,37 @@ export default function RoleDetail() {
                     Gerencie os participantes do seu rolê
                   </CardDescription>
                 </div>
-                {event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled
-                          data-testid="button-invite-participants"
-                        >
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Convidar
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Realize um novo sorteio para adicionar participantes</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAddParticipantOpen(true)}
-                    data-testid="button-invite-participants"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Convidar
-                  </Button>
+                {isOwner && (
+                  event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            data-testid="button-invite-participants"
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Convidar
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Realize um novo sorteio para adicionar participantes</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAddParticipantOpen(true)}
+                      data-testid="button-invite-participants"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Convidar
+                    </Button>
+                  )
                 )}
               </div>
             </CardHeader>
@@ -1679,74 +1683,119 @@ export default function RoleDetail() {
                           )}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            data-testid={`button-participant-menu-${participant.id}`}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => updateParticipantStatusMutation.mutate({
-                              participantId: participant.id,
-                              status: "accepted"
-                            })}
-                            disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
-                            data-testid={`menu-item-accept-${participant.id}`}
-                          >
-                            <Check className="w-4 h-4 mr-2" />
-                            Confirmar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateParticipantStatusMutation.mutate({
-                              participantId: participant.id,
-                              status: "pending"
-                            })}
-                            disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
-                            data-testid={`menu-item-pending-${participant.id}`}
-                          >
-                            <Clock className="w-4 h-4 mr-2" />
-                            Marcar Pendente
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateParticipantStatusMutation.mutate({
-                              participantId: participant.id,
-                              status: "declined"
-                            })}
-                            disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
-                            data-testid={`menu-item-decline-${participant.id}`}
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Recusar
-                          </DropdownMenuItem>
-                          {participant.email && (
-                            <DropdownMenuItem
-                              onClick={() => resendInviteMutation.mutate(participant.id)}
-                              disabled={resendInviteMutation.isPending}
-                              data-testid={`menu-item-resend-invite-${participant.id}`}
+                      {isOwner ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              data-testid={`button-participant-menu-${participant.id}`}
                             >
-                              <Mail className="w-4 h-4 mr-2" />
-                              Reenviar convite
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => updateParticipantStatusMutation.mutate({
+                                participantId: participant.id,
+                                status: "accepted"
+                              })}
+                              disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
+                              data-testid={`menu-item-accept-${participant.id}`}
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              Confirmar
                             </DropdownMenuItem>
-                          )}
-                          {participant.role !== "owner" && (
-                            <>
+                            <DropdownMenuItem
+                              onClick={() => updateParticipantStatusMutation.mutate({
+                                participantId: participant.id,
+                                status: "pending"
+                              })}
+                              disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
+                              data-testid={`menu-item-pending-${participant.id}`}
+                            >
+                              <Clock className="w-4 h-4 mr-2" />
+                              Marcar Pendente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => updateParticipantStatusMutation.mutate({
+                                participantId: participant.id,
+                                status: "declined"
+                              })}
+                              disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
+                              data-testid={`menu-item-decline-${participant.id}`}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Recusar
+                            </DropdownMenuItem>
+                            {participant.email && (
                               <DropdownMenuItem
-                                onClick={() => setParticipantToRemove(participant.id)}
-                                className="text-destructive focus:text-destructive"
-                                data-testid={`menu-item-remove-${participant.id}`}
+                                onClick={() => resendInviteMutation.mutate(participant.id)}
+                                disabled={resendInviteMutation.isPending}
+                                data-testid={`menu-item-resend-invite-${participant.id}`}
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remover
+                                <Mail className="w-4 h-4 mr-2" />
+                                Reenviar convite
                               </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            )}
+                            {participant.role !== "owner" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => setParticipantToRemove(participant.id)}
+                                  className="text-destructive focus:text-destructive"
+                                  data-testid={`menu-item-remove-${participant.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        user?.email && participant.email === user.email && participant.status === "pending" && (
+                          <div className="flex gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "accepted"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending}
+                                  data-testid={`button-accept-own-${participant.id}`}
+                                >
+                                  <Check className="w-4 h-4 text-green-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aceitar convite</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "declined"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending}
+                                  data-testid={`button-decline-own-${participant.id}`}
+                                >
+                                  <X className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Recusar convite</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        )
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1754,35 +1803,37 @@ export default function RoleDetail() {
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">Nenhum participante ainda</p>
-                  {event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button
-                            variant="outline"
-                            className="mt-4"
-                            disabled
-                            data-testid="button-add-first-participant"
-                          >
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Adicionar Primeiro Participante
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Realize um novo sorteio para adicionar participantes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={() => setAddParticipantOpen(true)}
-                      data-testid="button-add-first-participant"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Adicionar Primeiro Participante
-                    </Button>
+                  {isOwner && (
+                    event?.eventType === "secret_santa" && drawStatus?.isDrawPerformed ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              variant="outline"
+                              className="mt-4"
+                              disabled
+                              data-testid="button-add-first-participant"
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Adicionar Primeiro Participante
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Realize um novo sorteio para adicionar participantes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => setAddParticipantOpen(true)}
+                        data-testid="button-add-first-participant"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Adicionar Primeiro Participante
+                      </Button>
+                    )
                   )}
                 </div>
               )}
