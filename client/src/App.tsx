@@ -27,6 +27,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import BirthdayManage from "@/pages/BirthdayManage";
 import PublicBirthday from "@/pages/PublicBirthday";
 import ReceivedInvitations from "@/pages/ReceivedInvitations";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -63,6 +64,15 @@ function AuthenticatedApp() {
     return (
       <Switch>
         <Route path="/aniversario/:token" component={PublicBirthday} />
+      </Switch>
+    );
+  }
+
+  // Allow invitation acceptance page (handles both logged in and logged out users)
+  if (location.startsWith("/convite/")) {
+    return (
+      <Switch>
+        <Route path="/convite/:token" component={AcceptInvitation} />
       </Switch>
     );
   }
