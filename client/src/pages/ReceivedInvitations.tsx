@@ -122,7 +122,7 @@ export default function ReceivedInvitations() {
                             {invitation.eventName}
                           </CardTitle>
                           <span className="text-sm text-muted-foreground">
-                            por <strong className="text-foreground">{invitation.ownerName}</strong>
+                            Organizado por <strong className="text-foreground">{invitation.ownerName}</strong>
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
