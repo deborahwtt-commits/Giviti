@@ -103,6 +103,7 @@ export type ReceivedInvitation = {
   eventName: string;
   eventType: string;
   eventDate: Date | null;
+  confirmationDeadline: Date | null;
   ownerName: string;
   status: string;
   invitedAt: Date | null;
@@ -867,6 +868,7 @@ export class DatabaseStorage implements IStorage {
         eventName: invite.eventName || invite.eventType,
         eventType: invite.eventType,
         eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        confirmationDeadline: null,
         ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
         status: invite.rsvpStatus || 'pending',
         invitedAt: invite.invitedAt,
@@ -885,6 +887,7 @@ export class DatabaseStorage implements IStorage {
         eventName: collaborativeEvents.name,
         eventType: collaborativeEvents.eventType,
         eventDate: collaborativeEvents.eventDate,
+        confirmationDeadline: collaborativeEvents.confirmationDeadline,
         ownerFirstName: users.firstName,
         ownerLastName: users.lastName,
       })
@@ -912,6 +915,7 @@ export class DatabaseStorage implements IStorage {
         eventName: invite.eventName,
         eventType: eventTypeLabel,
         eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        confirmationDeadline: invite.confirmationDeadline ? new Date(invite.confirmationDeadline) : null,
         ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
         status: invite.status || 'invited',
         invitedAt: invite.createdAt,

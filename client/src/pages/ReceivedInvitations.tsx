@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Mail, Calendar, User, Gift, Users, PartyPopper, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, User, Gift, Users, PartyPopper, Sparkles, Loader2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ type ReceivedInvitation = {
   eventName: string;
   eventType: string;
   eventDate: string | null;
+  confirmationDeadline: string | null;
   ownerName: string;
   status: string;
   invitedAt: string | null;
@@ -130,23 +131,44 @@ export default function ReceivedInvitations() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-4 h-4" />
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <User className="w-4 h-4 flex-shrink-0" />
                       <span>Organizado por <strong className="text-foreground">{invitation.ownerName}</strong></span>
                     </div>
                     
                     {invitation.eventDate && (
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="w-4 h-4 flex-shrink-0" />
                         <span>
-                          {format(parseISO(invitation.eventDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          Data do evento: <strong className="text-foreground">{format(parseISO(invitation.eventDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong>
+                        </span>
+                      </div>
+                    )}
+                    
+                    {invitation.confirmationDeadline && (
+                      <div className={`flex items-center gap-1.5 ${
+                        isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline))
+                          ? 'text-destructive' 
+                          : isToday(parseISO(invitation.confirmationDeadline))
+                            ? 'text-orange-600 dark:text-orange-400'
+                            : 'text-muted-foreground'
+                      }`}>
+                        <Clock className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                          Responder até: <strong>{format(parseISO(invitation.confirmationDeadline), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong>
+                          {isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline)) && (
+                            <span className="ml-1.5 text-xs">(prazo expirado)</span>
+                          )}
+                          {isToday(parseISO(invitation.confirmationDeadline)) && (
+                            <span className="ml-1.5 text-xs">(hoje)</span>
+                          )}
                         </span>
                       </div>
                     )}
                     
                     {invitation.invitedAt && (
-                      <div className="text-xs text-muted-foreground/70">
+                      <div className="text-xs text-muted-foreground/70 pt-1">
                         Convidado em {format(parseISO(invitation.invitedAt), "d/MM/yyyy", { locale: ptBR })}
                       </div>
                     )}
