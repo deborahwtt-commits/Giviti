@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X } from "lucide-react";
+import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfDay } from "date-fns";
@@ -48,6 +48,7 @@ const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge"]),
   eventDate: z.date().optional().nullable(),
+  confirmationDeadline: z.date().optional().nullable(),
   location: z.string().max(200).optional(),
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
@@ -67,6 +68,22 @@ const createRoleSchema = z.object({
 }, {
   message: "A data do rolê deve ser hoje ou no futuro",
   path: ["eventDate"],
+}).refine((data) => {
+  // Confirmation deadline must be today or in the future
+  if (!data.confirmationDeadline) return true;
+  const today = startOfDay(new Date());
+  const deadline = startOfDay(data.confirmationDeadline);
+  return deadline >= today;
+}, {
+  message: "A data limite deve ser hoje ou no futuro",
+  path: ["confirmationDeadline"],
+}).refine((data) => {
+  // Confirmation deadline must be before event date
+  if (!data.confirmationDeadline || !data.eventDate) return true;
+  return data.confirmationDeadline <= data.eventDate;
+}, {
+  message: "A data limite de confirmação deve ser antes da data do evento",
+  path: ["confirmationDeadline"],
 }).refine((data) => {
   // Require targetAmount for collective gift
   if (data.eventType === "collective_gift") {
@@ -120,6 +137,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       name: "",
       eventType: undefined,
       eventDate: undefined,
+      confirmationDeadline: undefined,
       location: "",
       description: "",
       isPublic: false,
@@ -179,6 +197,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         name: data.name,
         eventType: data.eventType,
         eventDate: data.eventDate ? data.eventDate.toISOString() : null,
+        confirmationDeadline: data.confirmationDeadline ? data.confirmationDeadline.toISOString() : null,
         location: data.location || null,
         description: data.description || null,
         isPublic: data.isPublic,
@@ -571,6 +590,71 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                   </Popover>
                   <FormDescription>
                     Clique para selecionar data e hora do evento
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmationDeadline"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data limite para confirmação (opcional)</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          data-testid="button-select-deadline"
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          {field.value ? (
+                            format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          ) : (
+                            <span>Selecione a data limite</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              date.setHours(23, 59, 59);
+                              field.onChange(date);
+                            }
+                          }}
+                          initialFocus
+                          locale={ptBR}
+                          data-testid="calendar-deadline"
+                        />
+                        {field.value && (
+                          <div className="border-t pt-2 mt-2 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => field.onChange(null)}
+                              data-testid="button-clear-deadline"
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Limpar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Participantes não poderão confirmar presença após esta data
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
