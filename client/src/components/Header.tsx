@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Gift, Menu, X, Sun, Moon, LogOut, User, Shield, Mail } from "lucide-react";
+import { Gift, Menu, X, Sun, Moon, LogOut, User, Shield, Mail, HelpCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +53,7 @@ export default function Header({
     { path: "/sugestoes", label: "Presentes" },
     { path: "/role", label: "Planeje seu rolê!" },
     { path: "/convites", label: "Convites", icon: Mail },
+    { path: "/faq", label: "Ajuda", icon: HelpCircle },
   ];
 
   return (

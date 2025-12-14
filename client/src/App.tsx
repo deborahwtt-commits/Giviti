@@ -28,6 +28,7 @@ import BirthdayManage from "@/pages/BirthdayManage";
 import PublicBirthday from "@/pages/PublicBirthday";
 import ReceivedInvitations from "@/pages/ReceivedInvitations";
 import AcceptInvitation from "@/pages/AcceptInvitation";
+import FAQ from "@/pages/FAQ";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -99,6 +100,7 @@ function AuthenticatedApp() {
         <Route path="/role/:id" component={RoleDetail} />
         <Route path="/eventos/:id/aniversario" component={BirthdayManage} />
         <Route path="/convites" component={ReceivedInvitations} />
+        <Route path="/faq" component={FAQ} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />
