@@ -469,7 +469,8 @@ export function registerCollabEventsRoutes(app: Express) {
               eventLocation: event.location || null,
               eventDescription: event.description || null,
               categorySuggestions,
-              signupLink: inviteLink
+              signupLink: inviteLink,
+              confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
             });
           } else if (event.eventType === 'collective_gift') {
             // Use specialized email for collective gift events
@@ -508,7 +509,8 @@ export function registerCollabEventsRoutes(app: Express) {
               eventDate: event.eventDate ? event.eventDate.toString() : null,
               eventDescription: event.description || null,
               purchaseLink: giftData?.purchaseLink || null,
-              signupLink: inviteLink
+              signupLink: inviteLink,
+              confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
             });
           } else {
             await sendCollaborativeEventInviteEmail(
@@ -516,7 +518,8 @@ export function registerCollabEventsRoutes(app: Express) {
               inviterName,
               event.name,
               event.eventType,
-              inviteLink
+              inviteLink,
+              event.confirmationDeadline ? event.confirmationDeadline.toString() : null
             );
           }
           

@@ -195,7 +195,8 @@ export async function sendCollaborativeEventInviteEmail(
   inviterName: string,
   eventName: string,
   eventType: string,
-  inviteLink: string
+  inviteLink: string,
+  confirmationDeadline?: string | Date | null
 ) {
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
@@ -204,6 +205,14 @@ export async function sendCollaborativeEventInviteEmail(
   };
   
   const typeLabel = eventTypeLabels[eventType] || 'Rolê';
+  
+  const formatDeadline = (deadline: string | Date | null | undefined) => {
+    if (!deadline) return null;
+    const date = new Date(deadline);
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+  
+  const formattedDeadline = formatDeadline(confirmationDeadline);
   
   return sendEmail({
     to,
@@ -215,6 +224,11 @@ export async function sendCollaborativeEventInviteEmail(
           <strong>${inviterName}</strong> te convidou para participar do ${typeLabel}: 
           <strong>${eventName}</strong>
         </p>
+        ${formattedDeadline ? `
+          <p style="color: #dc2626; font-weight: 600; margin: 16px 0; text-align: center;">
+            Confirme sua presença até: ${formattedDeadline}
+          </p>
+        ` : ''}
         <div style="margin: 30px 0; text-align: center;">
           <a href="${inviteLink}" 
              style="background-color: #e11d48; color: white; padding: 12px 24px; 
@@ -389,6 +403,7 @@ export interface ThemedNightInviteEmailOptions {
   eventDescription?: string | null;
   categorySuggestions?: string[] | null;
   signupLink: string;
+  confirmationDeadline?: string | Date | null;
 }
 
 export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmailOptions) {
@@ -402,8 +417,17 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
     eventLocation,
     eventDescription,
     categorySuggestions,
-    signupLink
+    signupLink,
+    confirmationDeadline
   } = options;
+
+  const formatDeadline = (deadline: string | Date | null | undefined) => {
+    if (!deadline) return null;
+    const date = new Date(deadline);
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const formattedDeadline = formatDeadline(confirmationDeadline);
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
@@ -504,6 +528,12 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
 
         ${suggestionsHtml}
 
+        ${formattedDeadline ? `
+          <p style="color: #dc2626; font-weight: 600; margin: 16px 0; text-align: center;">
+            Confirme sua presença até: ${formattedDeadline}
+          </p>
+        ` : ''}
+
         <div style="text-align: center; margin: 30px 0;">
           <a href="${signupLink}" 
              style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 16px 32px; 
@@ -549,6 +579,7 @@ export interface CollectiveGiftInviteEmailOptions {
   eventDescription?: string | null;
   purchaseLink?: string | null;
   signupLink: string;
+  confirmationDeadline?: string | Date | null;
 }
 
 export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInviteEmailOptions) {
@@ -564,8 +595,17 @@ export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInvit
     eventDate,
     eventDescription,
     purchaseLink,
-    signupLink
+    signupLink,
+    confirmationDeadline
   } = options;
+
+  const formatDeadline = (deadline: string | Date | null | undefined) => {
+    if (!deadline) return null;
+    const date = new Date(deadline);
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const formattedDeadline = formatDeadline(confirmationDeadline);
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
@@ -666,6 +706,12 @@ export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInvit
               <strong>Data limite para contribuição:</strong> ${formattedDate}
             </p>
           </div>
+        ` : ''}
+
+        ${formattedDeadline ? `
+          <p style="color: #dc2626; font-weight: 600; margin: 16px 0; text-align: center;">
+            Confirme sua presença até: ${formattedDeadline}
+          </p>
         ` : ''}
 
         <div style="text-align: center; margin: 30px 0;">
