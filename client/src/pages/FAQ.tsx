@@ -65,8 +65,7 @@ export default function FAQ() {
                     </p>
                     <p className="text-muted-foreground mb-3">
                       E tem mais! Com os <strong>Rolês</strong>, você organiza eventos colaborativos com a galera: 
-                      monte um <strong>Amigo Secreto</strong> com sorteio automático, planeje uma <strong>Noite Temática</strong> 
-                      épica, ou junte o pessoal pra dar um <strong>Presente Coletivo</strong> daqueles. 
+                      monte um <strong>Amigo Secreto</strong> com sorteio automático, planeje uma <strong>Noite Temática</strong> épica, ou junte o pessoal pra dar um <strong>Presente Coletivo</strong> daqueles. 
                       Tudo integrado, com convites por email e acompanhamento das confirmações!
                     </p>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
