@@ -325,7 +325,6 @@ export default function FAQ() {
                       <li>Criar uma <strong>Wishlist</strong> com os presentes que você quer</li>
                       <li>Convidar amigos e família por email</li>
                       <li>Compartilhar um link público da sua lista</li>
-                      <li>Ver quem já comprou o quê (surpresa garantida!)</li>
                     </ul>
                     <p className="text-muted-foreground mb-3">
                       Nada de presente repetido ou aquela blusa que você nunca vai usar!
