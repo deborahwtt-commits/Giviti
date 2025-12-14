@@ -418,7 +418,7 @@ export default function BirthdayManage() {
           </TabsList>
 
           <TabsContent value="wishlist" className="mt-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-medium">Meus Desejos</h3>
               <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
                 <DialogTrigger asChild>
@@ -535,6 +535,9 @@ export default function BirthdayManage() {
                 </DialogContent>
               </Dialog>
             </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Não esquece de incluir uns presentes grátis: tipo carinho, bolo caseiro e aquela playlist caprichada. O orçamento do convidado agradece e o coração também! 💝
+            </p>
 
             {isLoadingWishlist ? (
               <div className="flex justify-center py-8">
