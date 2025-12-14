@@ -352,6 +352,7 @@ export default function Events() {
                     onDelete={() => handleDelete(event.id)}
                     onArchive={() => handleArchive(event.id)}
                     onAdvanceYear={() => handleAdvanceYear(event.id)}
+                    hasGiftPurchased={event.hasWishlistItems}
                   />
                 ))}
               </div>
@@ -371,6 +372,7 @@ export default function Events() {
                       onDelete={() => handleDelete(event.id)}
                       onArchive={() => handleArchive(event.id)}
                       onAdvanceYear={() => handleAdvanceYear(event.id)}
+                      hasGiftPurchased={event.hasWishlistItems}
                     />
                   ))}
                 </div>
@@ -397,6 +399,7 @@ export default function Events() {
                       onDelete={() => handleDelete(event.id)}
                       onArchive={() => handleArchive(event.id)}
                       onAdvanceYear={() => handleAdvanceYear(event.id)}
+                      hasGiftPurchased={event.hasWishlistItems}
                     />
                   ))}
                 </div>
@@ -421,6 +424,7 @@ export default function Events() {
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onEdit={() => handleEdit(event)}
                       onDelete={() => handleDelete(event.id)}
+                      hasGiftPurchased={event.hasWishlistItems}
                     />
                   ))}
                 </div>

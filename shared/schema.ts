@@ -166,6 +166,7 @@ export type EventRecipient = typeof eventRecipients.$inferSelect;
 // Extended event type with recipients array
 export type EventWithRecipients = Event & {
   recipients: Recipient[];
+  hasWishlistItems?: boolean;
 };
 
 // Google Product Categories table (Google Shopping Taxonomy)

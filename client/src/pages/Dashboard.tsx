@@ -331,6 +331,7 @@ export default function Dashboard() {
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onDelete={() => {}}
+                      hasGiftPurchased={event.hasWishlistItems}
                     />
                   );
                 } else {
@@ -416,6 +417,7 @@ export default function Dashboard() {
                       date={formatEventDate(event.eventDate)}
                       onViewSuggestions={() => setLocation("/sugestoes")}
                       onDelete={() => {}}
+                      hasGiftPurchased={event.hasWishlistItems}
                     />
                   );
                 } else {
