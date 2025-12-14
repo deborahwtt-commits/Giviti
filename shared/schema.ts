@@ -896,3 +896,20 @@ export const insertBirthdayWishlistItemSchema = createInsertSchema(birthdayWishl
 
 export type InsertBirthdayWishlistItem = z.infer<typeof insertBirthdayWishlistItemSchema>;
 export type BirthdayWishlistItem = typeof birthdayWishlistItems.$inferSelect;
+
+// Free gift options table - pre-defined free gift suggestions
+export const freeGiftOptions = pgTable("free_gift_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFreeGiftOptionSchema = createInsertSchema(freeGiftOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFreeGiftOption = z.infer<typeof insertFreeGiftOptionSchema>;
+export type FreeGiftOption = typeof freeGiftOptions.$inferSelect;

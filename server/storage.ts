@@ -92,6 +92,8 @@ import {
   type InsertBirthdayGuest,
   type BirthdayWishlistItem,
   type InsertBirthdayWishlistItem,
+  freeGiftOptions,
+  type FreeGiftOption,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
@@ -367,6 +369,9 @@ export interface IStorage {
   markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined>;
   deleteBirthdayWishlistItem(id: string): Promise<boolean>;
   countBirthdayWishlistItems(eventId: string): Promise<number>;
+  
+  // Free Gift Options
+  getFreeGiftOptions(): Promise<FreeGiftOption[]>;
   
   // Birthday Event public access
   getEventByShareToken(token: string): Promise<Event | undefined>;
@@ -2600,6 +2605,14 @@ export class DatabaseStorage implements IStorage {
       .from(birthdayWishlistItems)
       .where(eq(birthdayWishlistItems.eventId, eventId));
     return result[0]?.count || 0;
+  }
+
+  async getFreeGiftOptions(): Promise<FreeGiftOption[]> {
+    return await db
+      .select()
+      .from(freeGiftOptions)
+      .where(eq(freeGiftOptions.isActive, true))
+      .orderBy(freeGiftOptions.displayOrder);
   }
 
   async getEventByShareToken(token: string): Promise<Event | undefined> {
