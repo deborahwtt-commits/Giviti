@@ -1637,12 +1637,13 @@ export default function RoleDetail() {
                             {participant.role === "owner" ? "Organizador" : "Participante"}
                           </Badge>
                           <Badge
-                            variant={
+                            variant="outline"
+                            className={
                               participant.status === "accepted"
-                                ? "default"
+                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
                                 : participant.status === "pending"
-                                ? "secondary"
-                                : "destructive"
+                                ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                                : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
                             }
                             data-testid={`badge-participant-status-${participant.id}`}
                           >
