@@ -19,6 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -103,6 +110,12 @@ interface Event {
   isBirthday: boolean;
 }
 
+interface FreeGiftOption {
+  id: string;
+  title: string;
+  displayOrder: number;
+}
+
 export default function BirthdayManage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -138,6 +151,10 @@ export default function BirthdayManage() {
   const { data: guests = [], isLoading: isLoadingGuests } = useQuery<BirthdayGuest[]>({
     queryKey: ["/api/events", id, "guests"],
     enabled: !!id,
+  });
+
+  const { data: freeGiftOptions = [] } = useQuery<FreeGiftOption[]>({
+    queryKey: ["/api/free-gift-options"],
   });
 
   const addWishlistItemMutation = useMutation({
@@ -420,31 +437,10 @@ export default function BirthdayManage() {
                   </DialogHeader>
                   <form onSubmit={handleAddItem} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="title">O que você deseja? *</Label>
-                      <Input
-                        id="title"
-                        value={newItem.title}
-                        onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-                        placeholder="Ex: Fone de ouvido bluetooth"
-                        required
-                        data-testid="input-wishlist-title"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Detalhes (opcional)</Label>
-                      <Textarea
-                        id="description"
-                        value={newItem.description}
-                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                        placeholder="Cor, tamanho, modelo específico..."
-                        data-testid="input-wishlist-description"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Tipo de presente</Label>
+                      <Label>Tipo de presente *</Label>
                       <RadioGroup
                         value={newItem.category}
-                        onValueChange={(value: "paid" | "free") => setNewItem({ ...newItem, category: value })}
+                        onValueChange={(value: "paid" | "free") => setNewItem({ ...newItem, category: value, title: "", price: "", purchaseUrl: "" })}
                         className="flex gap-4"
                         data-testid="radio-wishlist-category"
                       >
@@ -458,30 +454,77 @@ export default function BirthdayManage() {
                         </div>
                       </RadioGroup>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    {newItem.category === "free" ? (
                       <div className="space-y-2">
-                        <Label htmlFor="price">Preço estimado</Label>
-                        <Input
-                          id="price"
-                          value={newItem.price}
-                          onChange={(e) => setNewItem({ ...newItem, price: formatCurrency(e.target.value) })}
-                          placeholder="R$ 0,00"
-                          data-testid="input-wishlist-price"
-                        />
+                        <Label htmlFor="freeGiftSelect">Escolha um presente gratuito *</Label>
+                        <Select
+                          value={newItem.title}
+                          onValueChange={(value) => setNewItem({ ...newItem, title: value })}
+                        >
+                          <SelectTrigger data-testid="select-free-gift">
+                            <SelectValue placeholder="Selecione uma opção" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {freeGiftOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.title}>
+                                {option.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="purchaseUrl">Link de compra</Label>
-                        <Input
-                          id="purchaseUrl"
-                          value={newItem.purchaseUrl}
-                          onChange={(e) => setNewItem({ ...newItem, purchaseUrl: e.target.value })}
-                          placeholder="https://..."
-                          data-testid="input-wishlist-url"
-                        />
-                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="title">O que você deseja? *</Label>
+                          <Input
+                            id="title"
+                            value={newItem.title}
+                            onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+                            placeholder="Ex: Fone de ouvido bluetooth"
+                            required
+                            data-testid="input-wishlist-title"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="price">Preço estimado</Label>
+                            <Input
+                              id="price"
+                              value={newItem.price}
+                              onChange={(e) => setNewItem({ ...newItem, price: formatCurrency(e.target.value) })}
+                              placeholder="R$ 0,00"
+                              data-testid="input-wishlist-price"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="purchaseUrl">Link de compra</Label>
+                            <Input
+                              id="purchaseUrl"
+                              value={newItem.purchaseUrl}
+                              onChange={(e) => setNewItem({ ...newItem, purchaseUrl: e.target.value })}
+                              placeholder="https://..."
+                              data-testid="input-wishlist-url"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Detalhes (opcional)</Label>
+                      <Textarea
+                        id="description"
+                        value={newItem.description}
+                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                        placeholder="Cor, tamanho, modelo específico..."
+                        data-testid="input-wishlist-description"
+                      />
                     </div>
+
                     <DialogFooter>
-                      <Button type="submit" disabled={addWishlistItemMutation.isPending}>
+                      <Button type="submit" disabled={addWishlistItemMutation.isPending || !newItem.title}>
                         {addWishlistItemMutation.isPending && (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         )}

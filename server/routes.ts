@@ -1557,6 +1557,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/free-gift-options - Get pre-defined free gift options
+  app.get("/api/free-gift-options", isAuthenticated, async (req: any, res) => {
+    try {
+      const options = await storage.getFreeGiftOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching free gift options:", error);
+      res.status(500).json({ message: "Failed to fetch free gift options" });
+    }
+  });
+
   // GET /api/events/:eventId/wishlist - Get wishlist items for a birthday event
   app.get("/api/events/:eventId/wishlist", isAuthenticated, async (req: any, res) => {
     try {
@@ -1582,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { eventId } = req.params;
       const userId = req.user!.id;
-      const { title, description, imageUrl, purchaseUrl, price, priority } = req.body;
+      const { title, description, imageUrl, purchaseUrl, price, priority, category } = req.body;
       
       // Verify user owns this event
       const event = await storage.getEvent(eventId, userId);
@@ -1608,6 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         purchaseUrl,
         price,
         priority: priority || 0,
+        category: category || "paid",
       });
       
       res.status(201).json(item);
