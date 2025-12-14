@@ -81,7 +81,7 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
                 <Users className="w-5 h-5" />
                 {stats.totalRecipients}
               </div>
@@ -159,7 +159,7 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                 <Gift className="w-5 h-5" />
                 {stats.giftsPurchased}
               </div>
