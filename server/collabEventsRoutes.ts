@@ -1633,4 +1633,147 @@ export function registerCollabEventsRoutes(app: Express) {
       res.status(500).json({ error: "Failed to initialize contributions" });
     }
   });
+
+  // ========== SECRET SANTA WISHLIST ROUTES ==========
+
+  // GET /api/collab-events/:id/my-wishlist - Get participant's own wishlist
+  app.get("/api/collab-events/:id/my-wishlist", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "Wishlist is only available for Secret Santa events" });
+      }
+      
+      // Find current user's participant record
+      const participants = await storage.getParticipants(id);
+      const myParticipant = participants.find(p => p.userId === userId);
+      
+      if (!myParticipant) {
+        return res.status(403).json({ error: "You are not a participant in this event" });
+      }
+      
+      const items = await storage.getSecretSantaWishlistItemsByEvent(id, myParticipant.id);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      res.status(500).json({ error: "Failed to fetch wishlist" });
+    }
+  });
+
+  // GET /api/collab-events/:id/participant/:participantId/wishlist - Get another participant's wishlist (for secret santa giver)
+  app.get("/api/collab-events/:id/participant/:participantId/wishlist", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id, participantId } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "Wishlist is only available for Secret Santa events" });
+      }
+      
+      const items = await storage.getSecretSantaWishlistItemsByEvent(id, participantId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching participant wishlist:", error);
+      res.status(500).json({ error: "Failed to fetch wishlist" });
+    }
+  });
+
+  // POST /api/collab-events/:id/my-wishlist - Add item to wishlist (max 10)
+  app.post("/api/collab-events/:id/my-wishlist", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      const { title, description, imageUrl, purchaseUrl, price, priority } = req.body;
+      
+      if (!title || title.trim().length === 0) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      if (event.eventType !== "secret_santa") {
+        return res.status(400).json({ error: "Wishlist is only available for Secret Santa events" });
+      }
+      
+      // Find current user's participant record
+      const participants = await storage.getParticipants(id);
+      const myParticipant = participants.find(p => p.userId === userId);
+      
+      if (!myParticipant) {
+        return res.status(403).json({ error: "You are not a participant in this event" });
+      }
+      
+      // Check limit of 10 items
+      const currentCount = await storage.countSecretSantaWishlistItems(myParticipant.id);
+      if (currentCount >= 10) {
+        return res.status(400).json({ error: "Maximum of 10 items allowed in wishlist" });
+      }
+      
+      const newItem = await storage.createSecretSantaWishlistItem({
+        participantId: myParticipant.id,
+        eventId: id,
+        title: title.trim(),
+        description: description?.trim() || null,
+        imageUrl: imageUrl?.trim() || null,
+        purchaseUrl: purchaseUrl?.trim() || null,
+        price: price?.trim() || null,
+        priority: priority || 0,
+      });
+      
+      res.status(201).json(newItem);
+    } catch (error) {
+      console.error("Error adding wishlist item:", error);
+      res.status(500).json({ error: "Failed to add wishlist item" });
+    }
+  });
+
+  // DELETE /api/collab-events/:id/my-wishlist/:itemId - Remove item from wishlist
+  app.delete("/api/collab-events/:id/my-wishlist/:itemId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id, itemId } = req.params;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      // Find current user's participant record
+      const participants = await storage.getParticipants(id);
+      const myParticipant = participants.find(p => p.userId === userId);
+      
+      if (!myParticipant) {
+        return res.status(403).json({ error: "You are not a participant in this event" });
+      }
+      
+      // Verify the item belongs to this participant
+      const items = await storage.getSecretSantaWishlistItems(myParticipant.id);
+      const itemToDelete = items.find(item => item.id === itemId);
+      
+      if (!itemToDelete) {
+        return res.status(404).json({ error: "Item not found or does not belong to you" });
+      }
+      
+      await storage.deleteSecretSantaWishlistItem(itemId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting wishlist item:", error);
+      res.status(500).json({ error: "Failed to delete wishlist item" });
+    }
+  });
 }
