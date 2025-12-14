@@ -323,6 +323,12 @@ export default function RoleDetail() {
     enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
   });
 
+  // Query: User profile (participant view) - to check if profile is filled
+  const { data: userProfile } = useQuery<{ isCompleted: boolean }>({
+    queryKey: ["/api/profile"],
+    enabled: !isOwner && event?.eventType === "secret_santa",
+  });
+
   // State for confirming redraw
   const [confirmRedrawOpen, setConfirmRedrawOpen] = useState(false);
   
@@ -1035,6 +1041,46 @@ export default function RoleDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Card de Status do Perfil - Participante Amigo Secreto */}
+            {event.eventType === "secret_santa" && !isOwner && (
+              <Card data-testid="card-profile-status">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-pink-500" />
+                    Seu Perfil de Presentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userProfile?.isCompleted ? (
+                    <div className="text-center py-4">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+                        <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800">
+                        Perfil Completo
+                      </Badge>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Quem te tirou vai ter boas dicas do que você gosta!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Psiu... seu amigo secreto está perdido sem saber o que você gosta! 
+                        Que tal dar uma mãozinha e preencher suas preferências?
+                      </p>
+                      <Link href="/perfil" data-testid="link-fill-profile">
+                        <Button variant="outline" size="sm" data-testid="button-fill-profile">
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Preencher meu perfil
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Themed Night Suggestions Card */}
             {event.eventType === "themed_night" && themedSuggestions && themedSuggestions.length > 0 && (
