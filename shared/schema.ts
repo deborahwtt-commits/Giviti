@@ -715,6 +715,29 @@ export const insertSecretSantaPairSchema = createInsertSchema(secretSantaPairs).
 export type InsertSecretSantaPair = z.infer<typeof insertSecretSantaPairSchema>;
 export type SecretSantaPair = typeof secretSantaPairs.$inferSelect;
 
+// Secret Santa restrictions table - for forbidden pairs
+export const secretSantaRestrictions = pgTable("secret_santa_restrictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  blockerParticipantId: varchar("blocker_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  blockedParticipantId: varchar("blocked_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecretSantaRestrictionSchema = createInsertSchema(secretSantaRestrictions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSecretSantaRestriction = z.infer<typeof insertSecretSantaRestrictionSchema>;
+export type SecretSantaRestriction = typeof secretSantaRestrictions.$inferSelect;
+
 // Collective gift contributions table
 export const collectiveGiftContributions = pgTable("collective_gift_contributions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
