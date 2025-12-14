@@ -307,6 +307,7 @@ export interface IStorage {
   getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]>;
   getParticipantsWithProfiles(eventId: string): Promise<ParticipantWithProfile[]>;
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
+  getParticipantByInviteToken(token: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined>;
@@ -2076,6 +2077,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(collaborativeEventParticipants)
       .where(eq(collaborativeEventParticipants.id, id));
+    return participant;
+  }
+
+  async getParticipantByInviteToken(token: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [participant] = await db
+      .select()
+      .from(collaborativeEventParticipants)
+      .where(eq(collaborativeEventParticipants.inviteToken, token));
     return participant;
   }
 

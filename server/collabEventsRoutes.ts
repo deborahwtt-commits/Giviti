@@ -24,6 +24,106 @@ async function canAccessEvent(userId: string, eventId: string): Promise<boolean>
 }
 
 export function registerCollabEventsRoutes(app: Express) {
+  // ========== INVITATION TOKEN ROUTES (PUBLIC) ==========
+
+  // GET /api/invitations/by-token/:token - Get invitation details by token (public)
+  app.get("/api/invitations/by-token/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token || token.length < 32) {
+        return res.status(400).json({ error: "Token inválido" });
+      }
+      
+      const participant = await storage.getParticipantByInviteToken(token);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Convite não encontrado ou já utilizado" });
+      }
+      
+      // Get the event details (no userId needed for public lookup)
+      const event = await storage.getCollaborativeEvent(participant.eventId);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado" });
+      }
+      
+      // Return invitation info (without sensitive data)
+      res.json({
+        participant: {
+          id: participant.id,
+          name: participant.name,
+          email: participant.email,
+          status: participant.status,
+          eventId: participant.eventId,
+        },
+        event: {
+          id: event.id,
+          name: event.name,
+          eventType: event.eventType,
+          eventDate: event.eventDate,
+          location: event.location,
+          description: event.description,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching invitation by token:", error);
+      res.status(500).json({ error: "Erro ao buscar convite" });
+    }
+  });
+
+  // POST /api/invitations/by-token/:token/accept - Accept invitation by token (requires auth)
+  app.post("/api/invitations/by-token/:token/accept", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const userEmail = (req as AuthenticatedRequest).user.email;
+      
+      if (!token || token.length < 32) {
+        return res.status(400).json({ error: "Token inválido" });
+      }
+      
+      const participant = await storage.getParticipantByInviteToken(token);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Convite não encontrado ou já utilizado" });
+      }
+      
+      // Check if participant status is already accepted
+      if (participant.status === "accepted") {
+        return res.status(400).json({ error: "Este convite já foi aceito" });
+      }
+      
+      // Verify the user's email matches the participant's email (if participant has email)
+      if (participant.email && userEmail && participant.email.toLowerCase() !== userEmail.toLowerCase()) {
+        return res.status(403).json({ 
+          error: "Este convite foi enviado para outro email. Por favor, faça login com o email correto." 
+        });
+      }
+      
+      // Update participant status to accepted and link to user
+      const updatedParticipant = await storage.updateParticipantStatus(participant.id, "accepted");
+      
+      // Clear the invite token so it can't be used again
+      await storage.updateParticipantInviteToken(participant.id, "");
+      
+      // Link participant to user if they have an email
+      if (userEmail) {
+        await storage.linkParticipantsByEmail(userEmail, userId);
+      }
+      
+      res.json({
+        success: true,
+        message: "Convite aceito com sucesso!",
+        eventId: participant.eventId,
+        participant: updatedParticipant,
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Erro ao aceitar convite" });
+    }
+  });
+
   // ========== COLLABORATIVE EVENT ROUTES ==========
 
   // GET /api/collab-events - Get all collaborative events for the user
