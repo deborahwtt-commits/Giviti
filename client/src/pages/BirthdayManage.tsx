@@ -143,6 +143,7 @@ export default function BirthdayManage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowAddItemDialog(false);
       setNewItem({ title: "", description: "", imageUrl: "", purchaseUrl: "", price: "", priority: 0 });
       toast({ title: "Item adicionado!", description: "Seu desejo foi adicionado à lista." });
@@ -162,6 +163,7 @@ export default function BirthdayManage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Item removido" });
     },
   });
