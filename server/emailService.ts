@@ -833,6 +833,12 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
 
   const formattedDate = formatDate(eventDate);
 
+  // Get base URL for signup link
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DEPLOYMENT_URL || 'https://giviti.com.br';
+  const signupLink = baseUrl;
+
   return sendEmail({
     to,
     subject: `${ownerName} te convidou para o aniversário!`,
@@ -851,8 +857,11 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
         </p>
 
         <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          <strong>${ownerName}</strong> te convidou para comemorar seu aniversário! 
-          E o melhor: preparou uma lista de desejos para facilitar sua vida na hora de escolher um presente.
+          <strong>${ownerName}</strong> te convidou para comemorar seu aniversário!
+        </p>
+
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; background-color: #fdf2f8; padding: 16px; border-radius: 8px; text-align: center;">
+          🥳 Fiz uma wishlist com presentes pagos e outros que custam um total de 0 reais mas valem muito! Porque presentear com estilo não precisa vir com boleto depois.
         </p>
 
         ${formattedDate || eventLocation ? `
@@ -875,24 +884,30 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
           <a href="${wishlistLink}" 
              style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); color: white; padding: 16px 32px; 
                     text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);">
-            Ver detalhes e dicas de presentes
+            Clique para aceitar ou recusar
           </a>
-        </div>
-
-        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0;">
-          Clique no botão acima para ver o que ${ownerName} gostaria de ganhar!
-        </p>
-
-        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-          <p style="color: #92400e; margin: 0; font-size: 14px;">
-            <strong>Dica:</strong> Na lista de desejos você encontrará sugestões com links diretos para compra. 
-            Escolha o que combina mais com você e surpreenda!
-          </p>
         </div>
 
         <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">
           Se você não conhece ${ownerName}, pode ignorar este email.
         </p>
+
+        <div style="background-color: #ecfdf5; border: 2px dashed #10b981; padding: 24px; border-radius: 12px; margin: 30px 0; text-align: center;">
+          <p style="color: #065f46; font-size: 18px; margin: 0 0 12px 0; font-weight: 600;">
+            🎁 Quer facilitar sua vida nas próximas festas?
+          </p>
+          <p style="color: #047857; font-size: 14px; margin: 0 0 20px 0; line-height: 1.6;">
+            Crie sua conta grátis no Giviti e nunca mais esqueça um aniversário importante! 
+            Além de organizar seus próprios eventos, você pode criar listas de desejos, 
+            receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
+            É rápido, é grátis, e seu futuro eu agradece! 😉
+          </p>
+          <a href="${signupLink}" 
+             style="display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; 
+                    text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            Criar minha conta Giviti grátis
+          </a>
+        </div>
 
         <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
           Este email foi enviado automaticamente pelo Giviti.
