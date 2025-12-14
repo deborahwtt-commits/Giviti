@@ -1049,6 +1049,28 @@ export function registerCollabEventsRoutes(app: Express) {
             ? (typeof event.eventDate === 'string' ? event.eventDate : event.eventDate.toISOString())
             : null;
           
+          // Try to get receiver's profile if they have a user account
+          let receiverProfile = null;
+          if (receiver.userId) {
+            try {
+              const profile = await storage.getUserProfile(receiver.userId);
+              if (profile && profile.isCompleted) {
+                receiverProfile = {
+                  zodiacSign: profile.zodiacSign,
+                  giftPreference: profile.giftPreference,
+                  freeTimeActivity: profile.freeTimeActivity,
+                  musicalStyle: profile.musicalStyle,
+                  specialTalent: profile.specialTalent,
+                  giftsToAvoid: profile.giftsToAvoid,
+                  interests: profile.interests,
+                };
+                console.log(`[Draw] Found profile for receiver ${receiver.name}`);
+              }
+            } catch (profileError) {
+              console.log(`[Draw] Could not fetch profile for receiver ${receiver.userId}:`, profileError);
+            }
+          }
+          
           await sendSecretSantaDrawResultEmail({
             to: giver.email,
             participantName: giver.name || 'Participante',
@@ -1059,9 +1081,10 @@ export function registerCollabEventsRoutes(app: Express) {
             eventDescription: event.description,
             rules,
             signupLink,
+            receiverProfile,
           });
           emailsSent++;
-          console.log(`[Draw] Email sent to ${giver.email}`);
+          console.log(`[Draw] Email sent to ${giver.email}${receiverProfile ? ' (with profile)' : ''}`);
         } catch (emailError) {
           console.error(`[Draw] Failed to send email to ${giver.email}:`, emailError);
           emailsFailed++;

@@ -274,6 +274,16 @@ export async function sendCollaborativeEventInviteEmail(
   });
 }
 
+export interface ReceiverProfile {
+  zodiacSign?: string | null;
+  giftPreference?: string | null;
+  freeTimeActivity?: string | null;
+  musicalStyle?: string | null;
+  specialTalent?: string | null;
+  giftsToAvoid?: string | null;
+  interests?: string[] | null;
+}
+
 export interface SecretSantaDrawEmailOptions {
   to: string;
   participantName: string;
@@ -288,6 +298,7 @@ export interface SecretSantaDrawEmailOptions {
     rulesDescription?: string | null;
   } | null;
   signupLink: string;
+  receiverProfile?: ReceiverProfile | null;
 }
 
 export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEmailOptions) {
@@ -300,7 +311,8 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
     eventLocation,
     eventDescription,
     rules,
-    signupLink
+    signupLink,
+    receiverProfile
   } = options;
 
   const formatDate = (dateStr: string | null | undefined) => {
@@ -342,6 +354,142 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
             <strong>Observações:</strong> ${rules.rulesDescription}
           </p>
         ` : ''}
+      </div>
+    `;
+  }
+
+  const getZodiacEmoji = (sign: string | null | undefined): string => {
+    if (!sign) return '';
+    const signs: Record<string, string> = {
+      "Áries": "♈", "Aries": "♈",
+      "Touro": "♉", "Taurus": "♉",
+      "Gêmeos": "♊", "Gemini": "♊",
+      "Câncer": "♋", "Cancer": "♋",
+      "Leão": "♌", "Leo": "♌",
+      "Virgem": "♍", "Virgo": "♍",
+      "Libra": "♎",
+      "Escorpião": "♏", "Scorpio": "♏",
+      "Sagitário": "♐", "Sagittarius": "♐",
+      "Capricórnio": "♑", "Capricorn": "♑",
+      "Aquário": "♒", "Aquarius": "♒",
+      "Peixes": "♓", "Pisces": "♓",
+    };
+    return signs[sign] || '';
+  };
+
+  let profileHtml = '';
+  const hasProfile = receiverProfile && (
+    receiverProfile.zodiacSign ||
+    receiverProfile.giftPreference ||
+    receiverProfile.freeTimeActivity ||
+    receiverProfile.musicalStyle ||
+    receiverProfile.specialTalent ||
+    receiverProfile.giftsToAvoid ||
+    (receiverProfile.interests && receiverProfile.interests.length > 0)
+  );
+
+  if (hasProfile && receiverProfile) {
+    const firstName = receiverName.split(' ')[0];
+    
+    let profileItems = '';
+    
+    if (receiverProfile.zodiacSign) {
+      profileItems += `
+        <tr>
+          <td style="padding: 8px 12px; vertical-align: top; width: 50%;">
+            <span style="font-size: 20px;">${getZodiacEmoji(receiverProfile.zodiacSign)}</span>
+            <span style="color: #6b7280; font-size: 12px; display: block;">Signo</span>
+            <span style="color: #374151; font-weight: 500;">${receiverProfile.zodiacSign}</span>
+          </td>
+        </tr>
+      `;
+    }
+    
+    if (receiverProfile.freeTimeActivity) {
+      profileItems += `
+        <tr>
+          <td style="padding: 8px 12px; vertical-align: top;">
+            <span style="color: #f59e0b; font-size: 16px;">✨</span>
+            <span style="color: #6b7280; font-size: 12px; display: block;">Tempo livre</span>
+            <span style="color: #374151; font-weight: 500;">${receiverProfile.freeTimeActivity}</span>
+          </td>
+        </tr>
+      `;
+    }
+    
+    if (receiverProfile.musicalStyle) {
+      profileItems += `
+        <tr>
+          <td style="padding: 8px 12px; vertical-align: top;">
+            <span style="color: #8b5cf6; font-size: 16px;">🎵</span>
+            <span style="color: #6b7280; font-size: 12px; display: block;">Estilo musical</span>
+            <span style="color: #374151; font-weight: 500;">${receiverProfile.musicalStyle}</span>
+          </td>
+        </tr>
+      `;
+    }
+    
+    if (receiverProfile.specialTalent) {
+      profileItems += `
+        <tr>
+          <td style="padding: 8px 12px; vertical-align: top;">
+            <span style="color: #eab308; font-size: 16px;">⭐</span>
+            <span style="color: #6b7280; font-size: 12px; display: block;">Talento especial</span>
+            <span style="color: #374151; font-weight: 500;">${receiverProfile.specialTalent}</span>
+          </td>
+        </tr>
+      `;
+    }
+    
+    let interestsHtml = '';
+    if (receiverProfile.interests && receiverProfile.interests.length > 0) {
+      const badges = receiverProfile.interests.map(interest => 
+        `<span style="display: inline-block; background-color: #e5e7eb; color: #374151; padding: 4px 10px; border-radius: 12px; font-size: 12px; margin: 2px;">${interest}</span>`
+      ).join(' ');
+      interestsHtml = `
+        <div style="margin-top: 12px; padding: 12px;">
+          <span style="color: #6b7280; font-size: 12px; display: block; margin-bottom: 8px;">Interesses</span>
+          ${badges}
+        </div>
+      `;
+    }
+    
+    let giftPreferenceHtml = '';
+    if (receiverProfile.giftPreference) {
+      giftPreferenceHtml = `
+        <div style="background-color: #fdf2f8; padding: 12px; border-radius: 8px; margin-top: 12px;">
+          <span style="color: #6b7280; font-size: 12px; display: block;">Preferência de presente</span>
+          <span style="color: #374151; font-weight: 500;">${receiverProfile.giftPreference}</span>
+        </div>
+      `;
+    }
+    
+    let giftsToAvoidHtml = '';
+    if (receiverProfile.giftsToAvoid) {
+      giftsToAvoidHtml = `
+        <div style="background-color: #fef2f2; padding: 12px; border-radius: 8px; margin-top: 12px;">
+          <span style="color: #dc2626; font-size: 12px; display: block;">Evitar</span>
+          <span style="color: #6b7280;">${receiverProfile.giftsToAvoid}</span>
+        </div>
+      `;
+    }
+    
+    profileHtml = `
+      <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin: 24px 0;">
+        <h3 style="color: #e11d48; margin: 0 0 4px 0; font-size: 18px; display: flex; align-items: center;">
+          <span style="color: #ec4899; margin-right: 8px;">💝</span> Sobre ${firstName}
+        </h3>
+        <p style="color: #6b7280; font-size: 13px; margin: 0 0 16px 0;">
+          Conheça um pouco mais para escolher o presente perfeito
+        </p>
+        
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+          ${profileItems}
+        </table>
+        
+        ${interestsHtml}
+        ${giftPreferenceHtml}
+        ${giftsToAvoidHtml}
       </div>
     `;
   }
@@ -393,6 +541,8 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
         </div>
 
         ${rulesHtml}
+
+        ${profileHtml}
 
         <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 20px; border-radius: 12px; margin: 30px 0; text-align: center;">
           <p style="color: #065f46; font-size: 16px; margin: 0 0 12px 0; font-weight: 600;">
