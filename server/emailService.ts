@@ -214,35 +214,62 @@ export async function sendCollaborativeEventInviteEmail(
   
   const formattedDeadline = formatDeadline(confirmationDeadline);
   
+  const deadlineHtml = formattedDeadline ? `
+              <p style="color: #dc2626; font-weight: 600; margin: 0 0 16px 0; font-size: 14px; text-align: center; font-family: Arial, sans-serif;">
+                Confirme sua presença até: ${formattedDeadline}
+              </p>
+  ` : '';
+
   return sendEmail({
     to,
     subject: `${inviterName} te convidou para um ${typeLabel}!`,
     html: `
-      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #e11d48; margin-bottom: 20px;">Você foi convidado!</h1>
-        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-          <strong>${inviterName}</strong> te convidou para participar do ${typeLabel}: 
-          <strong>${eventName}</strong>
-        </p>
-        ${formattedDeadline ? `
-          <p style="color: #dc2626; font-weight: 600; margin: 16px 0; text-align: center;">
-            Confirme sua presença até: ${formattedDeadline}
-          </p>
-        ` : ''}
-        <div style="margin: 30px 0; text-align: center;">
-          <a href="${inviteLink}" 
-             style="background-color: #e11d48; color: white; padding: 12px 24px; 
-                    text-decoration: none; border-radius: 8px; font-weight: 600;">
-            Aceitar Convite
-          </a>
-        </div>
-        <p style="color: #6b7280; font-size: 14px;">
-          Se você não esperava este convite, pode ignorar este email.
-        </p>
-        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          Equipe Giviti
-        </p>
-      </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9fafb;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; max-width: 600px;">
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h1 style="color: #e11d48; margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 28px; font-weight: bold;">
+                Você foi convidado!
+              </h1>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+                <strong>${inviterName}</strong> te convidou para participar do ${typeLabel}:
+              </p>
+              <p style="color: #374151; font-size: 18px; line-height: 1.6; margin: 0 0 24px 0; font-family: Arial, sans-serif;">
+                <strong>${eventName}</strong>
+              </p>
+              ${deadlineHtml}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 24px 0;">
+                    <a href="${inviteLink}" style="display: inline-block; background-color: #e11d48; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-family: Arial, sans-serif; font-size: 16px;">
+                      Aceitar Convite
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color: #6b7280; font-size: 14px; margin: 24px 0 0 0; font-family: Arial, sans-serif;">
+                Se você não esperava este convite, pode ignorar este email.
+              </p>
+              <p style="color: #6b7280; font-size: 14px; margin: 24px 0 0 0; font-family: Arial, sans-serif;">
+                Equipe Giviti
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `
   });
 }
