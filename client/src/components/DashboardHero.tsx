@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles, Mail } from "lucide-react";
+import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -81,7 +81,8 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Users className="w-5 h-5" />
                 {stats.totalRecipients}
               </div>
               <div className="text-xs text-muted-foreground">Presenteados</div>
@@ -98,7 +99,8 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-2xl font-bold text-primary flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
                 {stats.upcomingEvents}
               </div>
               <div className="text-xs text-muted-foreground">
@@ -117,7 +119,8 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
+              <div className="text-2xl font-bold text-violet-600 dark:text-violet-400 flex items-center gap-2">
+                <PartyPopper className="w-5 h-5" />
                 {stats.upcomingRoles}
               </div>
               <div className="text-xs text-muted-foreground">
@@ -156,7 +159,8 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Gift className="w-5 h-5" />
                 {stats.giftsPurchased}
               </div>
               <div className="text-xs text-muted-foreground">
