@@ -1022,23 +1022,26 @@ export function registerCollabEventsRoutes(app: Express) {
       } | null;
       
       // Send emails to all participants with their draw results
+      // IMPORTANT: Send emails sequentially with delay to respect Resend rate limit (2/second)
       let emailsSent = 0;
       let emailsFailed = 0;
       
-      const emailPromises = savedPairs.map(async (pair) => {
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      for (const pair of savedPairs) {
         const giver = participantMap.get(pair.giverParticipantId);
         const receiver = participantMap.get(pair.receiverParticipantId);
         
         if (!giver || !receiver) {
           console.error(`[Draw] Missing participant data for pair: giver=${pair.giverParticipantId}, receiver=${pair.receiverParticipantId}`);
           emailsFailed++;
-          return;
+          continue;
         }
         
         // Skip if giver has no email
         if (!giver.email) {
           console.log(`[Draw] Skipping email for participant ${giver.name || giver.id} - no email address`);
-          return;
+          continue;
         }
         
         try {
@@ -1062,11 +1065,12 @@ export function registerCollabEventsRoutes(app: Express) {
         } catch (emailError) {
           console.error(`[Draw] Failed to send email to ${giver.email}:`, emailError);
           emailsFailed++;
+        } finally {
+          // Wait 600ms between emails to respect Resend rate limit (2 requests/second)
+          // In finally block to ensure spacing even after failures
+          await delay(600);
         }
-      });
-      
-      // Wait for all emails to be sent (don't block response on failure)
-      await Promise.allSettled(emailPromises);
+      }
       
       console.log(`[Draw] Email summary: ${emailsSent} sent, ${emailsFailed} failed`);
       
