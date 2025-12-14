@@ -20,11 +20,11 @@ type ReceivedInvitation = {
   shareToken?: string | null;
 };
 
-function getStatusLabel(status: string): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } {
+function getStatusLabel(status: string): { label: string; variant: "default" | "secondary" | "outline" | "destructive"; className?: string } {
   switch (status) {
     case 'confirmed':
     case 'accepted':
-      return { label: 'Confirmado', variant: 'default' };
+      return { label: 'Confirmado', variant: 'default', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800' };
     case 'declined':
     case 'rejected':
       return { label: 'Recusado', variant: 'destructive' };
@@ -102,7 +102,7 @@ export default function ReceivedInvitations() {
       ) : (
         <div className="grid gap-4">
           {invitations.map((invitation) => {
-            const { label: statusLabel, variant: statusVariant } = getStatusLabel(invitation.status);
+            const { label: statusLabel, variant: statusVariant, className: statusClassName } = getStatusLabel(invitation.status);
             const typeIcon = getTypeIcon(invitation.type, invitation.eventType);
             
             return (
@@ -124,7 +124,7 @@ export default function ReceivedInvitations() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant={statusVariant} data-testid={`badge-invitation-status-${invitation.id}`}>
+                    <Badge variant={statusVariant} className={statusClassName} data-testid={`badge-invitation-status-${invitation.id}`}>
                       {statusLabel}
                     </Badge>
                   </div>
