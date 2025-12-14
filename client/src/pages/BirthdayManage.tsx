@@ -569,7 +569,7 @@ export default function BirthdayManage() {
                                 Gratuito
                               </Badge>
                             ) : (
-                              <Badge variant="outline">Pago</Badge>
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">Pago</Badge>
                             )}
                             {item.isReceived && (
                               <Badge variant="default" className="bg-green-500">
