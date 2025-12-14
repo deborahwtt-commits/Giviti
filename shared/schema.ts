@@ -608,12 +608,18 @@ export const collaborativeEvents = pgTable("collaborative_events", {
   isPublic: boolean("is_public").default(false).notNull(),
   status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
   typeSpecificData: jsonb("type_specific_data"), // JSON for type-specific settings
+  confirmationDeadline: timestamp("confirmation_deadline"), // Deadline for participants to confirm attendance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents, {
   eventDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+    if (!val) return null;
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
+  confirmationDeadline: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
     if (!val) return null;
     if (val instanceof Date) return val;
     return new Date(val);
