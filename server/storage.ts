@@ -687,7 +687,19 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(
       upcomingEvents.map(async (event) => {
         const recipients = await this.getEventRecipients(event.id);
-        return { ...event, recipients };
+        
+        // Check for wishlist items for birthday events
+        let hasWishlistItems = false;
+        if (event.eventType === "Meu Aniversário") {
+          const wishlistItems = await db
+            .select({ id: birthdayWishlistItems.id })
+            .from(birthdayWishlistItems)
+            .where(eq(birthdayWishlistItems.eventId, event.id))
+            .limit(1);
+          hasWishlistItems = wishlistItems.length > 0;
+        }
+        
+        return { ...event, recipients, hasWishlistItems };
       })
     );
   }
