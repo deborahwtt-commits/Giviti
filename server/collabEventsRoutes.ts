@@ -1012,7 +1012,7 @@ export function registerCollabEventsRoutes(app: Express) {
       const protocol = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers['host'] || 'localhost:5000';
       const baseUrl = `${protocol}://${host}`;
-      const signupLink = `${baseUrl}/cadastro`;
+      const signupLink = baseUrl;
       
       // Extract rules from event data
       const rules = event.typeSpecificData as {
