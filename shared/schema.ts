@@ -881,6 +881,8 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
   isReceived: boolean("is_received").default(false).notNull(),
   receivedFrom: varchar("received_from"),
   displayOrder: integer("display_order").default(0),
+  clickCount: integer("click_count").default(0).notNull(),
+  lastClickedAt: timestamp("last_clicked_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
