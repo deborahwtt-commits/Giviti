@@ -447,7 +447,7 @@ export default function PublicBirthday() {
               receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
               É rápido, é grátis, e seu futuro eu agradece! 😉
             </p>
-            <Link href="/register">
+            <Link href="/">
               <Button className="gap-2" data-testid="button-create-account">
                 <Sparkles className="w-4 h-4" />
                 Criar minha conta grátis
