@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Gift, Heart, Calendar, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Gift, Heart, Calendar, Sparkles, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,9 +15,16 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { z } from "zod";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 
 const SAVED_EMAIL_KEY = "giviti_saved_email";
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("E-mail inválido"),
+});
+
+type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -24,6 +32,7 @@ export default function Landing() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // Login form
   const loginForm = useForm<LoginUser>({
@@ -45,6 +54,56 @@ export default function Landing() {
       lastName: "",
     },
   });
+
+  // Forgot password form
+  const forgotPasswordForm = useForm<ForgotPasswordForm>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  // Forgot password mutation
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: ForgotPasswordForm) => {
+      return await apiRequest("/api/forgot-password", "POST", data) as any;
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "E-mail enviado!",
+        description: data.message || "Verifique sua caixa de entrada.",
+      });
+      setShowForgotPasswordModal(false);
+      forgotPasswordForm.reset();
+    },
+    onError: (error: any) => {
+      let errorMessage = "Não foi possível enviar o e-mail";
+      
+      if (error.message) {
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onForgotPasswordSubmit = (data: ForgotPasswordForm) => {
+    forgotPasswordMutation.mutate(data);
+  };
 
   // Auto-fill saved email on mount
   useEffect(() => {
@@ -83,9 +142,26 @@ export default function Landing() {
       setLocation("/dashboard");
     },
     onError: (error: any) => {
+      let errorMessage = "E-mail ou senha incorretos";
+      
+      if (error.message) {
+        // Try to parse JSON error message from backend
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Erro ao fazer login",
-        description: error.message || "E-mail ou senha incorretos",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -118,9 +194,26 @@ export default function Landing() {
       setLocation("/perfil");
     },
     onError: (error: any) => {
+      let errorMessage = "Não foi possível criar sua conta";
+      
+      if (error.message) {
+        // Try to parse JSON error message from backend
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Erro ao criar conta",
-        description: error.message || "Não foi possível criar sua conta",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -230,16 +323,30 @@ export default function Landing() {
                         )}
                       />
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="keep-logged-in-login"
-                          checked={keepLoggedIn}
-                          onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
-                          data-testid="checkbox-keep-logged-in"
-                        />
-                        <Label htmlFor="keep-logged-in-login" className="text-sm font-medium cursor-pointer">
-                          Manter-me logado neste navegador
-                        </Label>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="keep-logged-in-login"
+                            checked={keepLoggedIn}
+                            onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
+                            data-testid="checkbox-keep-logged-in"
+                          />
+                          <Label htmlFor="keep-logged-in-login" className="text-sm font-medium cursor-pointer">
+                            Manter-me logado
+                          </Label>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="p-0 h-auto text-sm text-muted-foreground hover:text-primary hover:bg-transparent"
+                          onClick={() => {
+                            forgotPasswordForm.setValue("email", loginForm.getValues("email"));
+                            setShowForgotPasswordModal(true);
+                          }}
+                          data-testid="link-forgot-password"
+                        >
+                          Esqueci minha senha
+                        </Button>
                       </div>
 
                       <Button
@@ -456,6 +563,64 @@ export default function Landing() {
           <p>© 2024 Giviti. Presentes Perfeitos, Sempre.</p>
         </div>
       </footer>
+
+      {/* Forgot Password Modal */}
+      <Dialog open={showForgotPasswordModal} onOpenChange={setShowForgotPasswordModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Esqueci minha senha</DialogTitle>
+            <DialogDescription>
+              Digite seu e-mail para receber um link de recuperação de senha.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...forgotPasswordForm}>
+            <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+              <FormField
+                control={forgotPasswordForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="email"
+                        placeholder="seu@email.com"
+                        data-testid="input-forgot-password-email"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForgotPasswordModal(false)}
+                  data-testid="button-cancel-forgot-password"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={forgotPasswordMutation.isPending}
+                  data-testid="button-submit-forgot-password"
+                >
+                  {forgotPasswordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar link"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

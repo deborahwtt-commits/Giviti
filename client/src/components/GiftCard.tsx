@@ -1,9 +1,11 @@
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Heart, ExternalLink } from "lucide-react";
+// Temporarily hidden imports
+// import { useState } from "react";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { Heart } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 interface GiftCardProps {
   id: string;
@@ -30,20 +32,25 @@ export default function GiftCard({
   isFavorite = false,
   isPurchased = false,
 }: GiftCardProps) {
-  const [favorite, setFavorite] = useState(isFavorite);
-  const [purchased, setPurchased] = useState(isPurchased);
+  // Temporarily hidden - favorite and purchased state/handlers
+  // const [favorite, setFavorite] = useState(isFavorite);
+  // const [purchased, setPurchased] = useState(isPurchased);
+  // const handleFavoriteToggle = () => {
+  //   setFavorite(!favorite);
+  //   onToggleFavorite?.();
+  //   console.log(`Favorite toggled for ${name}`);
+  // };
+  // const handlePurchasedToggle = () => {
+  //   setPurchased(!purchased);
+  //   onTogglePurchased?.();
+  //   console.log(`Purchased toggled for ${name}`);
+  // };
 
-  const handleFavoriteToggle = () => {
-    setFavorite(!favorite);
-    onToggleFavorite?.();
-    console.log(`Favorite toggled for ${name}`);
-  };
-
-  const handlePurchasedToggle = () => {
-    setPurchased(!purchased);
-    onTogglePurchased?.();
-    console.log(`Purchased toggled for ${name}`);
-  };
+  // Suppress unused parameter warnings
+  void onToggleFavorite;
+  void onTogglePurchased;
+  void isFavorite;
+  void isPurchased;
 
   return (
     <Card className="overflow-hidden group hover-elevate">
@@ -54,6 +61,7 @@ export default function GiftCard({
           className="w-full h-full object-cover"
         />
 
+{/* Temporarily hidden - favorite and purchased options
         <button
           onClick={handleFavoriteToggle}
           className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
@@ -86,6 +94,7 @@ export default function GiftCard({
             </label>
           </div>
         </div>
+        */}
       </div>
 
       <div className="p-4">

@@ -17,6 +17,7 @@ import {
   insertAuditLogSchema,
   insertGiftSuggestionSchema,
   updateGiftSuggestionSchema,
+  insertThemedNightSuggestionSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -52,6 +53,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Occasion Types Routes (Public) ==========
+  
+  // GET /api/occasions - Get all active occasion types for event creation
+  app.get("/api/occasions", isAuthenticated, async (req: any, res) => {
+    try {
+      const occasions = await storage.getOccasions(false); // Only active ones
+      res.json(occasions);
+    } catch (error) {
+      console.error("Error fetching occasions:", error);
+      res.status(500).json({ message: "Failed to fetch occasions" });
+    }
+  });
+
   // ========== Themed Night Categories Routes (Public) ==========
   
   // GET /api/themed-night-categories - Get all themed night categories (public)
@@ -79,6 +93,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching themed night category:", error);
       res.status(500).json({ message: "Failed to fetch themed night category" });
+    }
+  });
+
+  // ========== Themed Night Suggestions Routes ==========
+  
+  // GET /api/themed-night-categories/:categoryId/suggestions - Get all suggestions for a category
+  app.get("/api/themed-night-categories/:categoryId/suggestions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { categoryId } = req.params;
+      const includeInactive = req.query.includeInactive === 'true';
+      const suggestions = await storage.getThemedNightSuggestions(categoryId, includeInactive);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching themed night suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch suggestions" });
+    }
+  });
+  
+  // GET /api/themed-night-suggestions/:id - Get a specific suggestion
+  app.get("/api/themed-night-suggestions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const suggestion = await storage.getThemedNightSuggestion(id);
+      
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.json(suggestion);
+    } catch (error) {
+      console.error("Error fetching themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to fetch suggestion" });
+    }
+  });
+  
+  // POST /api/themed-night-categories/:categoryId/suggestions - Create a new suggestion (admin only)
+  app.post("/api/themed-night-categories/:categoryId/suggestions", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { categoryId } = req.params;
+      const validatedData = insertThemedNightSuggestionSchema.parse({
+        ...req.body,
+        categoryId,
+      });
+      const newSuggestion = await storage.createThemedNightSuggestion(validatedData);
+      res.status(201).json(newSuggestion);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid suggestion data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to create suggestion" });
+    }
+  });
+  
+  // PUT /api/themed-night-suggestions/:id - Update a suggestion (admin only)
+  app.put("/api/themed-night-suggestions/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const existingSuggestion = await storage.getThemedNightSuggestion(id);
+      
+      if (!existingSuggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      const updatedSuggestion = await storage.updateThemedNightSuggestion(id, req.body);
+      res.json(updatedSuggestion);
+    } catch (error) {
+      console.error("Error updating themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to update suggestion" });
+    }
+  });
+  
+  // DELETE /api/themed-night-suggestions/:id - Delete a suggestion (admin only)
+  app.delete("/api/themed-night-suggestions/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteThemedNightSuggestion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.json({ message: "Suggestion deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting themed night suggestion:", error);
+      res.status(500).json({ message: "Failed to delete suggestion" });
     }
   });
 
@@ -404,18 +507,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/gifts - Create a new user gift
+  // POST /api/gifts - Create a new user gift (supports internal suggestions and external items)
   app.post("/api/gifts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user!.id;
-      const validatedData = insertUserGiftSchema.parse(req.body);
       
-      // Verify that the recipient belongs to the user
-      const recipient = await storage.getRecipient(validatedData.recipientId, userId);
-      if (!recipient) {
-        return res.status(400).json({ 
-          message: "Invalid recipient ID or recipient does not belong to user" 
-        });
+      // Pre-process date strings to Date objects
+      const bodyWithDates = { ...req.body };
+      if (typeof bodyWithDates.purchasedAt === "string") {
+        bodyWithDates.purchasedAt = new Date(bodyWithDates.purchasedAt);
+      }
+      
+      const validatedData = insertUserGiftSchema.parse(bodyWithDates);
+      
+      // If recipientId is provided, verify that the recipient belongs to the user
+      if (validatedData.recipientId) {
+        const recipient = await storage.getRecipient(validatedData.recipientId, userId);
+        if (!recipient) {
+          return res.status(400).json({ 
+            message: "Invalid recipient ID or recipient does not belong to user" 
+          });
+        }
       }
       
       // If eventId is provided, verify it belongs to the user
@@ -428,7 +540,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const newGift = await storage.createUserGift(userId, validatedData);
+      // If marking as purchased without purchasedAt, set it to now
+      const giftData = { ...validatedData };
+      if (giftData.isPurchased && !giftData.purchasedAt) {
+        giftData.purchasedAt = new Date();
+      }
+      
+      const newGift = await storage.createUserGift(userId, giftData);
       res.status(201).json(newGift);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -506,6 +624,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // GET /api/user/invitations-count - Get count of invitations received by user
+  app.get("/api/user/invitations-count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user?.email;
+      if (!userEmail) {
+        return res.json({ count: 0 });
+      }
+      const count = await storage.getReceivedInvitationsCount(userEmail);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching invitations count:", error);
+      res.status(500).json({ message: "Failed to fetch invitations count" });
+    }
+  });
+
+  // GET /api/user/invitations - Get list of invitations received by user
+  app.get("/api/user/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user?.email;
+      if (!userEmail) {
+        return res.json([]);
+      }
+      const invitations = await storage.getReceivedInvitations(userEmail);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // GET /api/horoscope - Get user's weekly horoscope message based on zodiac sign
+  app.get("/api/horoscope", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const horoscope = await storage.getHoroscope(userId);
+      
+      if (!horoscope) {
+        return res.json({ 
+          available: false, 
+          message: "Complete seu perfil com seu signo para receber sua mensagem semanal." 
+        });
+      }
+      
+      res.json({
+        available: true,
+        signo: {
+          nome: horoscope.signo.nome,
+          emoji: horoscope.signo.emoji,
+        },
+        mensagem: horoscope.mensagem.mensagem,
+        semana: horoscope.mensagem.numeroSemana,
+      });
+    } catch (error) {
+      console.error("Error fetching horoscope:", error);
+      res.status(500).json({ message: "Failed to fetch horoscope" });
     }
   });
 
@@ -1251,6 +1427,433 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to search products",
         error: error.message 
       });
+    }
+  });
+
+  // ========== Birthday Special Feature Routes ==========
+
+  // GET /api/events/:eventId/guests - Get all guests for a birthday event
+  app.get("/api/events/:eventId/guests", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const guests = await storage.getBirthdayGuests(eventId);
+      res.json(guests);
+    } catch (error) {
+      console.error("Error fetching birthday guests:", error);
+      res.status(500).json({ message: "Failed to fetch guests" });
+    }
+  });
+
+  // POST /api/events/:eventId/guests - Add a guest to birthday event
+  app.post("/api/events/:eventId/guests", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      const { name, email } = req.body;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: "Name and email are required" });
+      }
+      
+      const guest = await storage.createBirthdayGuest({
+        eventId,
+        name,
+        email: email.toLowerCase(),
+      });
+      
+      // Send invite email
+      try {
+        const user = await storage.getUser(userId);
+        const ownerName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Um amigo' : 'Um amigo';
+        
+        // Generate or get existing share token
+        const token = await storage.generateBirthdayShareToken(eventId);
+        const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+        const wishlistLink = `${baseUrl}/aniversario/${token}`;
+        
+        const { sendBirthdayInviteEmail } = await import("./emailService");
+        await sendBirthdayInviteEmail({
+          to: email.toLowerCase(),
+          guestName: name,
+          ownerName,
+          eventName: event.eventName || event.eventType,
+          eventDate: event.eventDate ? event.eventDate.toString() : null,
+          eventLocation: event.eventLocation,
+          wishlistLink,
+        });
+        
+        // Update email status to sent
+        await storage.updateBirthdayGuestEmailStatus(guest.id, "sent");
+      } catch (emailError) {
+        console.error("Error sending birthday invite email:", emailError);
+        // Update email status to failed
+        await storage.updateBirthdayGuestEmailStatus(guest.id, "failed");
+      }
+      
+      res.status(201).json(guest);
+    } catch (error) {
+      console.error("Error creating birthday guest:", error);
+      res.status(500).json({ message: "Failed to add guest" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/guests/:guestId/rsvp - Update guest RSVP
+  app.patch("/api/events/:eventId/guests/:guestId/rsvp", async (req: any, res) => {
+    try {
+      const { guestId } = req.params;
+      const { rsvpStatus } = req.body;
+      
+      if (!["yes", "no", "maybe"].includes(rsvpStatus)) {
+        return res.status(400).json({ message: "Invalid RSVP status" });
+      }
+      
+      const updated = await storage.updateBirthdayGuestRsvp(guestId, rsvpStatus);
+      if (!updated) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating RSVP:", error);
+      res.status(500).json({ message: "Failed to update RSVP" });
+    }
+  });
+
+  // DELETE /api/events/:eventId/guests/:guestId - Remove a guest
+  app.delete("/api/events/:eventId/guests/:guestId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, guestId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const deleted = await storage.deleteBirthdayGuest(guestId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      res.json({ message: "Guest removed successfully" });
+    } catch (error) {
+      console.error("Error deleting guest:", error);
+      res.status(500).json({ message: "Failed to remove guest" });
+    }
+  });
+
+  // GET /api/free-gift-options - Get pre-defined free gift options
+  app.get("/api/free-gift-options", isAuthenticated, async (req: any, res) => {
+    try {
+      const options = await storage.getFreeGiftOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching free gift options:", error);
+      res.status(500).json({ message: "Failed to fetch free gift options" });
+    }
+  });
+
+  // GET /api/events/:eventId/wishlist - Get wishlist items for a birthday event
+  app.get("/api/events/:eventId/wishlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const items = await storage.getBirthdayWishlistItems(eventId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      res.status(500).json({ message: "Failed to fetch wishlist" });
+    }
+  });
+
+  // POST /api/events/:eventId/wishlist - Add item to wishlist
+  app.post("/api/events/:eventId/wishlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      const { title, description, imageUrl, purchaseUrl, price, priority, category } = req.body;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Check limit of 15 items
+      const count = await storage.countBirthdayWishlistItems(eventId);
+      if (count >= 15) {
+        return res.status(400).json({ message: "Maximum of 15 wishlist items reached" });
+      }
+      
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      
+      const item = await storage.createBirthdayWishlistItem({
+        eventId,
+        title,
+        description,
+        imageUrl,
+        purchaseUrl,
+        price,
+        priority: priority || 0,
+        category: category || "paid",
+      });
+      
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating wishlist item:", error);
+      res.status(500).json({ message: "Failed to add wishlist item" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/wishlist/:itemId - Update wishlist item
+  app.patch("/api/events/:eventId/wishlist/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const { title, description, imageUrl, purchaseUrl, price, priority } = req.body;
+      const updated = await storage.updateBirthdayWishlistItem(itemId, {
+        title,
+        description,
+        imageUrl,
+        purchaseUrl,
+        price,
+        priority,
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating wishlist item:", error);
+      res.status(500).json({ message: "Failed to update item" });
+    }
+  });
+
+  // PATCH /api/events/:eventId/wishlist/:itemId/received - Mark item as received
+  app.patch("/api/events/:eventId/wishlist/:itemId/received", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const { receivedFrom } = req.body;
+      const updated = await storage.markWishlistItemReceived(itemId, receivedFrom);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking item received:", error);
+      res.status(500).json({ message: "Failed to update item" });
+    }
+  });
+
+  // DELETE /api/events/:eventId/wishlist/:itemId - Delete wishlist item
+  app.delete("/api/events/:eventId/wishlist/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const deleted = await storage.deleteBirthdayWishlistItem(itemId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json({ message: "Item removed successfully" });
+    } catch (error) {
+      console.error("Error deleting wishlist item:", error);
+      res.status(500).json({ message: "Failed to remove item" });
+    }
+  });
+
+  // POST /api/wishlist-click/:itemId - Track click on wishlist item (public endpoint)
+  app.post("/api/wishlist-click/:itemId", async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      
+      const updated = await storage.incrementWishlistItemClick(itemId);
+      if (!updated) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json({ success: true, clickCount: updated.clickCount });
+    } catch (error) {
+      console.error("Error tracking wishlist click:", error);
+      res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
+  // GET /api/admin/wishlist-clicks - Get most clicked wishlist items (admin only)
+  app.get("/api/admin/wishlist-clicks", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const items = await storage.getMostClickedWishlistItems(20);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching wishlist clicks:", error);
+      res.status(500).json({ message: "Failed to fetch wishlist clicks" });
+    }
+  });
+
+  // POST /api/events/:eventId/share-link - Generate share link for birthday event
+  app.post("/api/events/:eventId/share-link", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify user owns this event
+      const event = await storage.getEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const token = await storage.generateBirthdayShareToken(eventId);
+      res.json({ token, shareUrl: `/aniversario/${token}` });
+    } catch (error) {
+      console.error("Error generating share link:", error);
+      res.status(500).json({ message: "Failed to generate share link" });
+    }
+  });
+
+  // GET /api/birthday/:token - Public endpoint to view birthday event
+  app.get("/api/birthday/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Birthday event not found" });
+      }
+      
+      // Get user profile for "about me" section
+      const userProfile = await storage.getUserProfile(event.userId);
+      const user = await storage.getUser(event.userId);
+      
+      // Get wishlist items
+      const wishlistItems = await storage.getBirthdayWishlistItems(event.id);
+      
+      // Return public data (no sensitive info)
+      res.json({
+        event: {
+          id: event.id,
+          eventName: event.eventName,
+          eventDate: event.eventDate,
+          eventLocation: event.eventLocation,
+          eventDescription: event.eventDescription,
+        },
+        owner: {
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+        },
+        profile: userProfile ? {
+          zodiacSign: userProfile.zodiacSign,
+          giftPreference: userProfile.giftPreference,
+          freeTimeActivity: userProfile.freeTimeActivity,
+          musicalStyle: userProfile.musicalStyle,
+          specialTalent: userProfile.specialTalent,
+          giftsToAvoid: userProfile.giftsToAvoid,
+          interests: userProfile.interests,
+        } : null,
+        wishlist: wishlistItems.filter(item => !item.isReceived).map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          imageUrl: item.imageUrl,
+          purchaseUrl: item.purchaseUrl,
+          price: item.price,
+          priority: item.priority,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching public birthday:", error);
+      res.status(500).json({ message: "Failed to fetch birthday event" });
+    }
+  });
+
+  // POST /api/birthday/:token/rsvp - Public endpoint to update guest RSVP
+  app.post("/api/birthday/:token/rsvp", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const { email, rsvpStatus } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      if (!["yes", "no", "maybe"].includes(rsvpStatus)) {
+        return res.status(400).json({ message: "Status de presença inválido" });
+      }
+      
+      // Find event by token
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Find guest by email
+      const guest = await storage.getBirthdayGuestByEmail(event.id, email);
+      if (!guest) {
+        return res.status(404).json({ message: "Você não está na lista de convidados deste evento" });
+      }
+      
+      // Update RSVP status
+      const updated = await storage.updateBirthdayGuestRsvp(guest.id, rsvpStatus);
+      if (!updated) {
+        return res.status(500).json({ message: "Erro ao atualizar presença" });
+      }
+      
+      res.json({ 
+        message: "Presença confirmada com sucesso!",
+        rsvpStatus: updated.rsvpStatus
+      });
+    } catch (error) {
+      console.error("Error updating public RSVP:", error);
+      res.status(500).json({ message: "Erro ao atualizar presença" });
     }
   });
 

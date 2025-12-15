@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X } from "lucide-react";
+import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfDay } from "date-fns";
@@ -47,20 +47,49 @@ import type { CollaborativeEvent } from "@shared/schema";
 const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge"]),
-  eventDate: z.date().optional().nullable(),
-  location: z.string().max(200).optional(),
+  eventDate: z.date({ required_error: "Data e hora são obrigatórios" }),
+  confirmationDeadline: z.date({ required_error: "Data limite para confirmação é obrigatória" }),
+  location: z.string().min(1, "Local é obrigatório").max(200),
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
   themedNightCategoryId: z.string().optional(),
+  // Collective gift specific fields
+  giftName: z.string().max(100).optional(),
+  giftDescription: z.string().max(500).optional(),
+  purchaseLink: z.string().url("Link inválido").max(500).optional().or(z.literal("")),
+  targetAmount: z.string().optional(),
+  recipientName: z.string().max(100).optional(),
 }).refine((data) => {
-  if (!data.eventDate) return true;
   const today = startOfDay(new Date());
   const selectedDate = startOfDay(data.eventDate);
   return selectedDate >= today;
 }, {
   message: "A data do rolê deve ser hoje ou no futuro",
   path: ["eventDate"],
+}).refine((data) => {
+  // Confirmation deadline must be today or in the future
+  const today = startOfDay(new Date());
+  const deadline = startOfDay(data.confirmationDeadline);
+  return deadline >= today;
+}, {
+  message: "A data limite deve ser hoje ou no futuro",
+  path: ["confirmationDeadline"],
+}).refine((data) => {
+  // Confirmation deadline must be before or equal to event date
+  return data.confirmationDeadline <= data.eventDate;
+}, {
+  message: "A data limite de confirmação deve ser antes da data do evento",
+  path: ["confirmationDeadline"],
+}).refine((data) => {
+  // Require targetAmount for collective gift
+  if (data.eventType === "collective_gift") {
+    return data.targetAmount && parseFloat(data.targetAmount) > 0;
+  }
+  return true;
+}, {
+  message: "O valor alvo é obrigatório para presente coletivo",
+  path: ["targetAmount"],
 });
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>;
@@ -105,15 +134,25 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       name: "",
       eventType: undefined,
       eventDate: undefined,
+      confirmationDeadline: undefined,
       location: "",
       description: "",
       isPublic: false,
       budgetLimit: "",
       themedNightCategoryId: "",
+      giftName: "",
+      giftDescription: "",
+      purchaseLink: "",
+      targetAmount: "",
+      recipientName: "",
     },
   });
 
   const selectedType = form.watch("eventType");
+  const selectedCategoryId = form.watch("themedNightCategoryId");
+  
+  // Find the selected category to show its description
+  const selectedCategory = themedCategories.find(cat => cat.id === selectedCategoryId);
 
   // Show toast error if categories fail to load
   if (categoriesError && selectedType === "themed_night") {
@@ -131,12 +170,32 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       if (data.eventType === "secret_santa" && data.budgetLimit) {
         typeSpecificData.budgetLimit = parseFloat(data.budgetLimit);
       }
+      
+      if (data.eventType === "collective_gift") {
+        // Store amounts in cents for precision
+        if (data.targetAmount) {
+          typeSpecificData.targetAmount = Math.round(parseFloat(data.targetAmount) * 100);
+        }
+        if (data.giftName) {
+          typeSpecificData.giftName = data.giftName;
+        }
+        if (data.giftDescription) {
+          typeSpecificData.giftDescription = data.giftDescription;
+        }
+        if (data.purchaseLink) {
+          typeSpecificData.purchaseLink = data.purchaseLink;
+        }
+        if (data.recipientName) {
+          typeSpecificData.recipientName = data.recipientName;
+        }
+      }
 
       const payload = {
         name: data.name,
         eventType: data.eventType,
-        eventDate: data.eventDate ? data.eventDate.toISOString() : null,
-        location: data.location || null,
+        eventDate: data.eventDate.toISOString(),
+        confirmationDeadline: data.confirmationDeadline.toISOString(),
+        location: data.location,
         description: data.description || null,
         isPublic: data.isPublic,
         status: "active" as const,
@@ -242,31 +301,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            {selectedType === "secret_santa" && (
-              <FormField
-                control={form.control}
-                name="budgetLimit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Limite de Orçamento (R$)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Ex: 50.00"
-                        data-testid="input-budget-limit"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Valor máximo sugerido para os presentes
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
             {selectedType === "themed_night" && (
               <FormField
                 control={form.control}
@@ -313,9 +347,135 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                       Escolha o tema da noite temática
                     </FormDescription>
                     <FormMessage />
+                    
+                    {/* Show selected category description */}
+                    {selectedCategory?.description && (
+                      <div 
+                        className="mt-3 p-3 rounded-md bg-muted/50 border border-muted text-sm text-muted-foreground"
+                        data-testid="themed-category-description"
+                      >
+                        <p className="font-medium text-foreground mb-1">{selectedCategory.name}</p>
+                        <p>{selectedCategory.description}</p>
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
+            )}
+
+            {/* Collective Gift specific fields */}
+            {selectedType === "collective_gift" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-pink-50/50 dark:bg-pink-950/20">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-pink-500" />
+                  Detalhes do Presente
+                </h4>
+                
+                <FormField
+                  control={form.control}
+                  name="recipientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quem vai receber o presente?</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: Maria (aniversariante)"
+                          data-testid="input-recipient-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nome da pessoa que vai receber o presente coletivo
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="targetAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor alvo (R$) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Ex: 500.00"
+                          data-testid="input-target-amount"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Valor total que o grupo pretende arrecadar
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="giftName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do presente (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: iPhone 15 Pro"
+                          data-testid="input-gift-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="giftDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição do presente (opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Detalhes sobre o presente escolhido..."
+                          data-testid="input-gift-description"
+                          className="resize-none"
+                          rows={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="purchaseLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link para compra (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://loja.com/produto"
+                          data-testid="input-purchase-link"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Link do produto na loja online
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             <FormField
@@ -323,7 +483,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               name="eventDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Data e Hora (opcional)</FormLabel>
+                  <FormLabel>Data e Hora *</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -410,17 +570,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                               </SelectContent>
                             </Select>
                           </div>
-                          {field.value && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="mt-5"
-                              onClick={() => field.onChange(null)}
-                              data-testid="button-clear-date"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </PopoverContent>
@@ -435,10 +584,62 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
 
             <FormField
               control={form.control}
+              name="confirmationDeadline"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data limite para confirmação *</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          data-testid="button-select-deadline"
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          {field.value ? (
+                            format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          ) : (
+                            <span>Selecione a data limite</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              date.setHours(23, 59, 59);
+                              field.onChange(date);
+                            }
+                          }}
+                          initialFocus
+                          locale={ptBR}
+                          data-testid="calendar-deadline"
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Participantes não poderão confirmar presença após esta data
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Local (opcional)</FormLabel>
+                  <FormLabel>Local *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Ex: Casa do João"

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { startOfDay } from "date-fns";
+import { startOfDay, parseISO } from "date-fns";
+import { Loader2, Cake, Gift, Users, MapPin } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Occasion } from "@shared/schema";
 
 interface EventFormProps {
   isOpen: boolean;
@@ -31,19 +35,9 @@ interface EventFormProps {
     eventType: string;
     eventDate: string;
     recipientIds: string[];
+    eventLocation?: string | null;
   };
 }
-
-const eventTypes = [
-  "Aniversário",
-  "Casamento",
-  "Formatura",
-  "Aniversário de Namoro",
-  "Dia das Mães",
-  "Dia dos Pais",
-  "Natal",
-  "Outro",
-];
 
 export default function EventForm({
   isOpen,
@@ -56,18 +50,27 @@ export default function EventForm({
   const [eventName, setEventName] = useState(initialEvent?.eventName || "");
   const [eventType, setEventType] = useState(initialEvent?.eventType || "");
   const [eventDate, setEventDate] = useState(initialEvent?.eventDate || "");
+  const [eventLocation, setEventLocation] = useState(initialEvent?.eventLocation || "");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>(initialEvent?.recipientIds || []);
+
+  const { data: occasions, isLoading: isLoadingOccasions } = useQuery<Occasion[]>({
+    queryKey: ["/api/occasions"],
+  });
+
+  const isBirthdayEvent = eventType === "Meu Aniversário";
 
   useEffect(() => {
     if (initialEvent) {
       setEventName(initialEvent.eventName || "");
       setEventType(initialEvent.eventType);
       setEventDate(initialEvent.eventDate);
+      setEventLocation(initialEvent.eventLocation || "");
       setSelectedRecipients(initialEvent.recipientIds);
     } else {
       setEventName("");
       setEventType("");
       setEventDate("");
+      setEventLocation("");
       setSelectedRecipients([]);
     }
   }, [initialEvent]);
@@ -85,13 +88,13 @@ export default function EventForm({
     
     // Validate date is not in the past
     if (eventDate) {
-      const selectedDate = startOfDay(new Date(eventDate));
+      const selectedDate = startOfDay(parseISO(eventDate));
       const today = startOfDay(new Date());
       
       if (selectedDate < today) {
         toast({
           title: "Data inválida",
-          description: "A data do evento deve ser hoje ou no futuro",
+          description: "A data deve ser hoje ou no futuro",
           variant: "destructive",
         });
         return;
@@ -103,6 +106,7 @@ export default function EventForm({
       eventName,
       eventType,
       eventDate,
+      eventLocation: isBirthdayEvent ? eventLocation : undefined,
       recipientIds: selectedRecipients,
     };
     onSubmit(data);
@@ -110,6 +114,7 @@ export default function EventForm({
       setEventName("");
       setEventType("");
       setEventDate("");
+      setEventLocation("");
       setSelectedRecipients([]);
     }
   };
@@ -119,29 +124,40 @@ export default function EventForm({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl">
-            {initialEvent ? "Editar Evento" : "Criar Novo Evento"}
+            {initialEvent ? "Editar Data Comemorativa" : "Nova Data Comemorativa"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="eventType">Tipo de evento</Label>
+            <Label htmlFor="eventType">Tipo de data</Label>
             <Select value={eventType} onValueChange={setEventType} required>
               <SelectTrigger id="eventType" data-testid="select-event-type">
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                {eventTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
+                {isLoadingOccasions ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : occasions && occasions.length > 0 ? (
+                  occasions.map((occasion) => (
+                    <SelectItem key={occasion.id} value={occasion.name}>
+                      {occasion.icon && <span className="mr-2">{occasion.icon}</span>}
+                      {occasion.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">
+                    Nenhum tipo cadastrado
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="eventName">Nome do evento (opcional)</Label>
+            <Label htmlFor="eventName">Nome da data (opcional)</Label>
             <Input
               id="eventName"
               value={eventName}
@@ -152,7 +168,7 @@ export default function EventForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="eventDate">Data do evento</Label>
+            <Label htmlFor="eventDate">Data</Label>
             <Input
               id="eventDate"
               type="date"
@@ -164,40 +180,76 @@ export default function EventForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Presenteados (opcional)</Label>
-            {recipients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum presenteado cadastrado
-              </p>
-            ) : (
-              <ScrollArea className="h-40 rounded-md border p-3">
-                <div className="space-y-3">
-                  {recipients.map((recipient) => (
-                    <div key={recipient.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`recipient-${recipient.id}`}
-                        checked={selectedRecipients.includes(recipient.id)}
-                        onCheckedChange={() => toggleRecipient(recipient.id)}
-                        data-testid={`checkbox-recipient-${recipient.id}`}
-                      />
-                      <label
-                        htmlFor={`recipient-${recipient.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {recipient.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-            {selectedRecipients.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {selectedRecipients.length} presenteado{selectedRecipients.length > 1 ? 's' : ''} selecionado{selectedRecipients.length > 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
+          {isBirthdayEvent && (
+            <div className="space-y-2">
+              <Label htmlFor="eventLocation">Local (opcional)</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="eventLocation"
+                  value={eventLocation}
+                  onChange={(e) => setEventLocation(e.target.value)}
+                  placeholder="Ex: Salão de festas, Restaurante..."
+                  className="pl-9"
+                  data-testid="input-event-location"
+                />
+              </div>
+            </div>
+          )}
+
+          {isBirthdayEvent ? (
+            <Alert className="border-primary/20 bg-primary/5">
+              <Cake className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <strong>Seu aniversário especial!</strong>
+                <br />
+                Após criar, você poderá:
+                <ul className="mt-2 space-y-1 text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Gift className="h-3 w-3" /> Criar sua lista de desejos (até 15 itens)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Users className="h-3 w-3" /> Convidar amigos e familiares
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-2">
+              <Label>Presenteados (opcional)</Label>
+              {recipients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum presenteado cadastrado
+                </p>
+              ) : (
+                <ScrollArea className="h-40 rounded-md border p-3">
+                  <div className="space-y-3">
+                    {recipients.map((recipient) => (
+                      <div key={recipient.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`recipient-${recipient.id}`}
+                          checked={selectedRecipients.includes(recipient.id)}
+                          onCheckedChange={() => toggleRecipient(recipient.id)}
+                          data-testid={`checkbox-recipient-${recipient.id}`}
+                        />
+                        <label
+                          htmlFor={`recipient-${recipient.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {recipient.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              {selectedRecipients.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedRecipients.length} presenteado{selectedRecipients.length > 1 ? 's' : ''} selecionado{selectedRecipients.length > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button
@@ -205,7 +257,7 @@ export default function EventForm({
               className="flex-1"
               data-testid="button-save-event"
             >
-              {initialEvent ? "Salvar" : "Criar Evento"}
+              {initialEvent ? "Salvar" : "Criar data comemorativa"}
             </Button>
             <Button
               type="button"

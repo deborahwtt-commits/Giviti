@@ -1,0 +1,84 @@
+Objetivo: Adicionar ao Giviti um módulo de personalização astrológica, com mensagens semanais específicas para cada signo do zodíaco. O sistema deve identificar o signo do usuário com base na sua data de nascimento e exibir uma mensagem diferente a cada semana do ano, de acordo com seu signo.
+Funcionalidades a implementar:
+1. Criar tabela signos
+Tabela que armazena os 12 signos do zodíaco, com datas de início e fim.
+Campos:
+* id (int, PK)
+* nome (string) — ex: “Áries”
+* data_inicio (date) — ex: “03-21”
+* data_fim (date) — ex: “04-19”
+* emoji (string, opcional) — ex: “♈”
+2. Criar tabela mensagens_semanais
+Tabela que armazena 52 mensagens por signo, uma para cada semana do ano.
+Campos:
+* id (int, PK)
+* signo_id (FK para signos.id)
+* numero_semana (int de 1 a 52)
+* mensagem (text)
+3. Cadastrar os 12 signos no banco
+Use os dados abaixo para popular a tabela signos:
+INSERT INTO signos (id, nome, data_inicio, data_fim, emoji) VALUES
+(1, 'Áries',        '2023-03-21', '2023-04-19', '♈'),
+(2, 'Touro',        '2023-04-20', '2023-05-20', '♉'),
+(3, 'Gêmeos',       '2023-05-21', '2023-06-20', '♊'),
+(4, 'Câncer',       '2023-06-21', '2023-07-22', '♋'),
+(5, 'Leão',         '2023-07-23', '2023-08-22', '♌'),
+(6, 'Virgem',       '2023-08-23', '2023-09-22', '♍'),
+(7, 'Libra',        '2023-09-23', '2023-10-22', '♎'),
+(8, 'Escorpião',    '2023-10-23', '2023-11-21', '♏'),
+(9, 'Sagitário',    '2023-11-22', '2023-12-21', '♐'),
+(10, 'Capricórnio', '2023-12-22', '2024-01-19', '♑'),
+(11, 'Aquário',     '2024-01-20', '2024-02-18', '♒'),
+(12, 'Peixes',      '2024-02-19', '2024-03-20', '♓');
+ 
+4. Importar as 624 mensagens semanais (52 por signo)
+Importar via script ou arquivo .csv as mensagens personalizadas por signo_id e numero_semana. Tenho o arquivo pronto.
+5. Criar função getSigno(dia, mes)
+Essa função retorna o signo correspondente a uma data de nascimento, com base nos dados da tabela signos.
+function getSigno(dia, mes) {
+  const signos = [
+    { nome: "Capricórnio", de: [22, 12], ate: [19, 1] },
+    { nome: "Aquário",     de: [20, 1],  ate: [18, 2] },
+    { nome: "Peixes",      de: [19, 2],  ate: [20, 3] },
+    { nome: "Áries",       de: [21, 3],  ate: [19, 4] },
+    { nome: "Touro",       de: [20, 4],  ate: [20, 5] },
+    { nome: "Gêmeos",      de: [21, 5],  ate: [20, 6] },
+    { nome: "Câncer",      de: [21, 6],  ate: [22, 7] },
+    { nome: "Leão",        de: [23, 7],  ate: [22, 8] },
+    { nome: "Virgem",      de: [23, 8],  ate: [22, 9] },
+    { nome: "Libra",       de: [23, 9],  ate: [22, 10] },
+    { nome: "Escorpião",   de: [23, 10], ate: [21, 11] },
+    { nome: "Sagitário",   de: [22, 11], ate: [21, 12] }
+  ];
+ 
+  for (const signo of signos) {
+    const [diaDe, mesDe] = signo.de;
+    const [diaAte, mesAte] = signo.ate;
+ 
+    if (
+      (mes === mesDe && dia >= diaDe) ||
+      (mes === mesAte && dia <= diaAte)
+    ) {
+      return signo.nome;
+    }
+  }
+ 
+  return "Capricórnio"; // fallback
+}
+ 
+6. Criar função getMensagemSemanal(usuario)
+Esta função deve:
+* Obter a data de nascimento do usuário
+* Calcular o signo com getSigno(dia, mes)
+* Calcular a semana atual do ano (new Date().getWeek() ou equivalente)
+* Buscar a mensagem da tabela mensagens_semanais para signo_id e numero_semana
+Extras (opcional):
+* Adicionar cache em Redis para mensagens da semana (melhora performance)
+* Adicionar campo ultima_mensagem_exibida na tabela de usuários para controle
+* Exibir como notificação ou banner na home do sistema
+Entregáveis esperados:
+* 2 tabelas criadas (signos e mensagens_semanais)
+* Dados dos 12 signos cadastrados
+* 624 mensagens inseridas via script ou seed 
+* Função para calcular signo por data
+Função para buscar mensagem da semana para o usuário

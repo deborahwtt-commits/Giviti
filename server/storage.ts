@@ -18,6 +18,7 @@ import {
   systemSettings,
   auditLogs,
   themedNightCategories,
+  themedNightSuggestions,
   collaborativeEvents,
   collaborativeEventParticipants,
   collaborativeEventLinks,
@@ -60,6 +61,8 @@ import {
   type InsertAuditLog,
   type ThemedNightCategory,
   type InsertThemedNightCategory,
+  type ThemedNightSuggestion,
+  type InsertThemedNightSuggestion,
   type CollaborativeEvent,
   type InsertCollaborativeEvent,
   type CollaborativeEventParticipant,
@@ -68,15 +71,71 @@ import {
   type InsertCollaborativeEventLink,
   type SecretSantaPair,
   type InsertSecretSantaPair,
+  type SecretSantaRestriction,
+  type InsertSecretSantaRestriction,
+  secretSantaRestrictions,
   type CollectiveGiftContribution,
   type InsertCollectiveGiftContribution,
   type CollaborativeEventTask,
   type InsertCollaborativeEventTask,
   type Click,
   type GoogleProductCategory,
+  signos,
+  mensagensSemanais,
+  type Signo,
+  type MensagemSemanal,
+  passwordResetTokens,
+  type PasswordResetToken,
+  birthdayGuests,
+  birthdayWishlistItems,
+  type BirthdayGuest,
+  type InsertBirthdayGuest,
+  type BirthdayWishlistItem,
+  type InsertBirthdayWishlistItem,
+  freeGiftOptions,
+  type FreeGiftOption,
+  secretSantaWishlistItems,
+  type SecretSantaWishlistItem,
+  type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray } from "drizzle-orm";
+
+// Received invitation type for user's invitation list
+export type ReceivedInvitation = {
+  id: string;
+  type: 'birthday' | 'collaborative';
+  eventName: string;
+  eventType: string;
+  eventDate: Date | null;
+  confirmationDeadline: Date | null;
+  ownerName: string;
+  status: string;
+  invitedAt: Date | null;
+  eventId: string;
+  shareToken?: string | null;
+};
+
+// Enriched participant type with profile data
+export type ParticipantWithProfile = CollaborativeEventParticipant & {
+  hasFilledProfile: boolean;
+  wishlistItemsCount: number;
+  userProfile: {
+    ageRange: string | null;
+    gender: string | null;
+    zodiacSign: string | null;
+    giftPreference: string | null;
+    freeTimeActivity: string | null;
+    musicalStyle: string | null;
+    monthlyGiftPreference: string | null;
+    surpriseReaction: string | null;
+    giftPriority: string | null;
+    giftGivingStyle: string | null;
+    specialTalent: string | null;
+    giftsToAvoid: string | null;
+    interests: string[] | null;
+  } | null;
+};
 
 // Storage interface with all CRUD operations
 export interface IStorage {
@@ -84,6 +143,14 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User>;
+  updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean>;
+
+  // Password reset tokens
+  createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(id: string): Promise<boolean>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
+  invalidatePasswordResetTokensForUser(userId: string): Promise<void>;
 
   // Recipient operations
   createRecipient(userId: string, recipient: InsertRecipient): Promise<Recipient>;
@@ -110,7 +177,9 @@ export interface IStorage {
   deleteUserGift(id: string, userId: string): Promise<boolean>;
 
   // Stats
-  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number }>;
+  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
+  getReceivedInvitationsCount(email: string): Promise<number>;
+  getReceivedInvitations(email: string): Promise<ReceivedInvitation[]>;
   
   // Admin stats
   getAdminStats(): Promise<{ 
@@ -198,6 +267,13 @@ export interface IStorage {
   updateThemedNightCategory(id: string, updates: Partial<InsertThemedNightCategory>): Promise<ThemedNightCategory | undefined>;
   deleteThemedNightCategory(id: string): Promise<boolean>;
   
+  // Themed Night Suggestions Management
+  getThemedNightSuggestions(categoryId: string, includeInactive?: boolean): Promise<ThemedNightSuggestion[]>;
+  getThemedNightSuggestion(id: string): Promise<ThemedNightSuggestion | undefined>;
+  createThemedNightSuggestion(suggestion: InsertThemedNightSuggestion): Promise<ThemedNightSuggestion>;
+  updateThemedNightSuggestion(id: string, updates: Partial<InsertThemedNightSuggestion>): Promise<ThemedNightSuggestion | undefined>;
+  deleteThemedNightSuggestion(id: string): Promise<boolean>;
+  
   // System Settings Management
   getSystemSettings(publicOnly?: boolean): Promise<SystemSetting[]>;
   getSystemSetting(key: string): Promise<SystemSetting | undefined>;
@@ -214,6 +290,7 @@ export interface IStorage {
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+    totalEvents: number;
   }>;
   
   // User statistics for detailed user list
@@ -229,14 +306,20 @@ export interface IStorage {
   getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]>;
   getCollaborativeEvent(id: string, userId?: string): Promise<CollaborativeEvent | undefined>;
   updateCollaborativeEvent(id: string, userId: string, updates: Partial<InsertCollaborativeEvent>): Promise<CollaborativeEvent | undefined>;
+  rescheduleCollaborativeEvent(id: string, userId: string, newDate: Date): Promise<CollaborativeEvent | undefined>;
   deleteCollaborativeEvent(id: string, userId: string): Promise<boolean>;
   
   // Participant Operations
   addParticipant(eventId: string, participant: InsertCollaborativeEventParticipant): Promise<CollaborativeEventParticipant>;
   getParticipants(eventId: string): Promise<CollaborativeEventParticipant[]>;
+  getParticipantsWithProfiles(eventId: string): Promise<ParticipantWithProfile[]>;
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
+  getParticipantByInviteToken(token: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
+  linkParticipantsByEmail(email: string, userId: string): Promise<number>;
   
   // Share Link Operations
   createShareLink(link: InsertCollaborativeEventLink): Promise<CollaborativeEventLink>;
@@ -250,6 +333,62 @@ export interface IStorage {
   getPairsByEvent(eventId: string): Promise<SecretSantaPair[]>;
   getPairForParticipant(eventId: string, participantId: string): Promise<SecretSantaPair | undefined>;
   deletePairsByEvent(eventId: string): Promise<boolean>;
+  
+  // Secret Santa Restrictions (forbidden pairs)
+  getRestrictionsByEvent(eventId: string): Promise<SecretSantaRestriction[]>;
+  createRestriction(restriction: InsertSecretSantaRestriction): Promise<SecretSantaRestriction>;
+  deleteRestriction(id: string): Promise<boolean>;
+  deleteRestrictionsByEvent(eventId: string): Promise<boolean>;
+  
+  // Collective Gift Contribution Operations
+  getContributions(eventId: string): Promise<CollectiveGiftContribution[]>;
+  getContribution(id: string): Promise<CollectiveGiftContribution | undefined>;
+  getContributionByParticipant(eventId: string, participantId: string): Promise<CollectiveGiftContribution | undefined>;
+  createContribution(contribution: InsertCollectiveGiftContribution): Promise<CollectiveGiftContribution>;
+  updateContribution(id: string, updates: Partial<InsertCollectiveGiftContribution>): Promise<CollectiveGiftContribution | undefined>;
+  deleteContribution(id: string): Promise<boolean>;
+  getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }>;
+  
+  // Horoscope Operations
+  getSignoByDate(dia: number, mes: number): Promise<Signo | undefined>;
+  getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined>;
+  getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null>;
+  
+  // ========== BIRTHDAY SPECIAL FEATURE ==========
+  
+  // Birthday Guest Operations
+  getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]>;
+  getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined>;
+  getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined>;
+  createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest>;
+  updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined>;
+  updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined>;
+  deleteBirthdayGuest(id: string): Promise<boolean>;
+  
+  // Birthday Wishlist Operations
+  getBirthdayWishlistItems(eventId: string): Promise<BirthdayWishlistItem[]>;
+  getBirthdayWishlistItem(id: string): Promise<BirthdayWishlistItem | undefined>;
+  createBirthdayWishlistItem(item: InsertBirthdayWishlistItem): Promise<BirthdayWishlistItem>;
+  updateBirthdayWishlistItem(id: string, updates: Partial<InsertBirthdayWishlistItem>): Promise<BirthdayWishlistItem | undefined>;
+  markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined>;
+  deleteBirthdayWishlistItem(id: string): Promise<boolean>;
+  countBirthdayWishlistItems(eventId: string): Promise<number>;
+  incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined>;
+  getMostClickedWishlistItems(limit?: number): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>>;
+  
+  // Free Gift Options
+  getFreeGiftOptions(): Promise<FreeGiftOption[]>;
+  
+  // Birthday Event public access
+  getEventByShareToken(token: string): Promise<Event | undefined>;
+  generateBirthdayShareToken(eventId: string): Promise<string>;
+  
+  // ========== SECRET SANTA WISHLIST FEATURE ==========
+  getSecretSantaWishlistItems(participantId: string): Promise<SecretSantaWishlistItem[]>;
+  getSecretSantaWishlistItemsByEvent(eventId: string, participantId: string): Promise<SecretSantaWishlistItem[]>;
+  createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem>;
+  deleteSecretSantaWishlistItem(id: string): Promise<boolean>;
+  countSecretSantaWishlistItems(participantId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -276,6 +415,58 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  // ========== Password Reset Token Operations ==========
+
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        userId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken;
+  }
+
+  async markPasswordResetTokenUsed(id: string): Promise<boolean> {
+    const result = await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    await db
+      .delete(passwordResetTokens)
+      .where(sql`${passwordResetTokens.expiresAt} < NOW()`);
+  }
+
+  async invalidatePasswordResetTokensForUser(userId: string): Promise<void> {
+    await db
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.userId, userId));
   }
 
   // ========== Recipient Operations ==========
@@ -364,7 +555,19 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(
       allEvents.map(async (event) => {
         const recipients = await this.getEventRecipients(event.id);
-        return { ...event, recipients };
+        
+        // Check for wishlist items for birthday events
+        let hasWishlistItems = false;
+        if (event.eventType === "Meu Aniversário") {
+          const wishlistItems = await db
+            .select({ id: birthdayWishlistItems.id })
+            .from(birthdayWishlistItems)
+            .where(eq(birthdayWishlistItems.eventId, event.id))
+            .limit(1);
+          hasWishlistItems = wishlistItems.length > 0;
+        }
+        
+        return { ...event, recipients, hasWishlistItems };
       })
     );
   }
@@ -378,7 +581,19 @@ export class DatabaseStorage implements IStorage {
     if (!event) return undefined;
 
     const recipients = await this.getEventRecipients(event.id);
-    return { ...event, recipients };
+    
+    // Check for wishlist items for birthday events
+    let hasWishlistItems = false;
+    if (event.eventType === "Meu Aniversário") {
+      const wishlistItems = await db
+        .select({ id: birthdayWishlistItems.id })
+        .from(birthdayWishlistItems)
+        .where(eq(birthdayWishlistItems.eventId, event.id))
+        .limit(1);
+      hasWishlistItems = wishlistItems.length > 0;
+    }
+    
+    return { ...event, recipients, hasWishlistItems };
   }
 
   async updateEvent(
@@ -483,7 +698,19 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(
       upcomingEvents.map(async (event) => {
         const recipients = await this.getEventRecipients(event.id);
-        return { ...event, recipients };
+        
+        // Check for wishlist items for birthday events
+        let hasWishlistItems = false;
+        if (event.eventType === "Meu Aniversário") {
+          const wishlistItems = await db
+            .select({ id: birthdayWishlistItems.id })
+            .from(birthdayWishlistItems)
+            .where(eq(birthdayWishlistItems.eventId, event.id))
+            .limit(1);
+          hasWishlistItems = wishlistItems.length > 0;
+        }
+        
+        return { ...event, recipients, hasWishlistItems };
       })
     );
   }
@@ -600,6 +827,7 @@ export class DatabaseStorage implements IStorage {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    totalSpent: number;
   }> {
     // Total recipients
     const recipientCount = await db
@@ -619,9 +847,12 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Gifts purchased
-    const purchasedGiftCount = await db
-      .select({ count: sql<number>`count(*)::int` })
+    // Gifts purchased and total spent
+    const purchasedGiftsData = await db
+      .select({ 
+        count: sql<number>`count(*)::int`,
+        totalSpent: sql<number>`COALESCE(SUM(${userGifts.price}::numeric), 0)::numeric`
+      })
       .from(userGifts)
       .where(
         and(
@@ -633,8 +864,125 @@ export class DatabaseStorage implements IStorage {
     return {
       totalRecipients: recipientCount[0]?.count || 0,
       upcomingEvents: upcomingEventCount[0]?.count || 0,
-      giftsPurchased: purchasedGiftCount[0]?.count || 0,
+      giftsPurchased: purchasedGiftsData[0]?.count || 0,
+      totalSpent: parseFloat(String(purchasedGiftsData[0]?.totalSpent || 0)),
     };
+  }
+
+  async getReceivedInvitationsCount(email: string): Promise<number> {
+    const normalizedEmail = email.toLowerCase();
+    
+    // Count invitations from birthday guests
+    const birthdayInvites = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayGuests)
+      .where(sql`LOWER(${birthdayGuests.email}) = ${normalizedEmail}`);
+    
+    // Count invitations from collaborative events (rolês, amigo secreto, etc.)
+    const collaborativeInvites = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEventParticipants)
+      .where(
+        and(
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
+          sql`${collaborativeEventParticipants.role} != 'owner'`
+        )
+      );
+    
+    return (birthdayInvites[0]?.count || 0) + (collaborativeInvites[0]?.count || 0);
+  }
+
+  async getReceivedInvitations(email: string): Promise<ReceivedInvitation[]> {
+    const normalizedEmail = email.toLowerCase();
+    const invitations: ReceivedInvitation[] = [];
+    
+    // Get birthday guest invitations with event and owner info
+    const birthdayInvites = await db
+      .select({
+        id: birthdayGuests.id,
+        eventId: birthdayGuests.eventId,
+        rsvpStatus: birthdayGuests.rsvpStatus,
+        invitedAt: birthdayGuests.invitedAt,
+        eventName: events.eventName,
+        eventType: events.eventType,
+        eventDate: events.eventDate,
+        shareToken: events.birthdayShareToken,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+      })
+      .from(birthdayGuests)
+      .innerJoin(events, eq(birthdayGuests.eventId, events.id))
+      .innerJoin(users, eq(events.userId, users.id))
+      .where(sql`LOWER(${birthdayGuests.email}) = ${normalizedEmail}`);
+    
+    for (const invite of birthdayInvites) {
+      invitations.push({
+        id: invite.id,
+        type: 'birthday',
+        eventName: invite.eventName || invite.eventType,
+        eventType: invite.eventType,
+        eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        confirmationDeadline: null,
+        ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
+        status: invite.rsvpStatus || 'pending',
+        invitedAt: invite.invitedAt,
+        eventId: invite.eventId,
+        shareToken: invite.shareToken,
+      });
+    }
+    
+    // Get collaborative event invitations with event and owner info
+    const collabInvites = await db
+      .select({
+        id: collaborativeEventParticipants.id,
+        eventId: collaborativeEventParticipants.eventId,
+        status: collaborativeEventParticipants.status,
+        createdAt: collaborativeEventParticipants.createdAt,
+        eventName: collaborativeEvents.name,
+        eventType: collaborativeEvents.eventType,
+        eventDate: collaborativeEvents.eventDate,
+        confirmationDeadline: collaborativeEvents.confirmationDeadline,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+      })
+      .from(collaborativeEventParticipants)
+      .innerJoin(collaborativeEvents, eq(collaborativeEventParticipants.eventId, collaborativeEvents.id))
+      .innerJoin(users, eq(collaborativeEvents.ownerId, users.id))
+      .where(
+        and(
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
+          sql`${collaborativeEventParticipants.role} != 'owner'`
+        )
+      );
+    
+    for (const invite of collabInvites) {
+      const eventTypeLabel = {
+        'secret_santa': 'Amigo Secreto',
+        'themed_night': 'Noite Temática',
+        'collective_gift': 'Presente Coletivo',
+        'creative_challenge': 'Desafio Criativo',
+      }[invite.eventType] || 'Rolê';
+      
+      invitations.push({
+        id: invite.id,
+        type: 'collaborative',
+        eventName: invite.eventName,
+        eventType: eventTypeLabel,
+        eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
+        confirmationDeadline: invite.confirmationDeadline ? new Date(invite.confirmationDeadline) : null,
+        ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
+        status: invite.status || 'invited',
+        invitedAt: invite.createdAt,
+        eventId: invite.eventId,
+      });
+    }
+    
+    // Sort by date (most recent first)
+    return invitations.sort((a, b) => {
+      if (!a.invitedAt) return 1;
+      if (!b.invitedAt) return -1;
+      return new Date(b.invitedAt).getTime() - new Date(a.invitedAt).getTime();
+    });
   }
 
   // ========== Gift Suggestions ==========
@@ -1197,6 +1545,48 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
   
+  // Themed Night Suggestions Management
+  async getThemedNightSuggestions(categoryId: string, includeInactive = false): Promise<ThemedNightSuggestion[]> {
+    if (includeInactive) {
+      return await db.select()
+        .from(themedNightSuggestions)
+        .where(eq(themedNightSuggestions.categoryId, categoryId))
+        .orderBy(themedNightSuggestions.priority);
+    }
+    
+    return await db.select()
+      .from(themedNightSuggestions)
+      .where(and(
+        eq(themedNightSuggestions.categoryId, categoryId),
+        eq(themedNightSuggestions.isActive, true)
+      ))
+      .orderBy(themedNightSuggestions.priority);
+  }
+  
+  async getThemedNightSuggestion(id: string): Promise<ThemedNightSuggestion | undefined> {
+    const [suggestion] = await db.select().from(themedNightSuggestions).where(eq(themedNightSuggestions.id, id));
+    return suggestion;
+  }
+  
+  async createThemedNightSuggestion(suggestion: InsertThemedNightSuggestion): Promise<ThemedNightSuggestion> {
+    const [newSuggestion] = await db.insert(themedNightSuggestions).values(suggestion).returning();
+    return newSuggestion;
+  }
+  
+  async updateThemedNightSuggestion(id: string, updates: Partial<InsertThemedNightSuggestion>): Promise<ThemedNightSuggestion | undefined> {
+    const [updated] = await db
+      .update(themedNightSuggestions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(themedNightSuggestions.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteThemedNightSuggestion(id: string): Promise<boolean> {
+    const result = await db.delete(themedNightSuggestions).where(eq(themedNightSuggestions.id, id)).returning();
+    return result.length > 0;
+  }
+  
   // System Settings Management
   async getSystemSettings(publicOnly = false): Promise<SystemSetting[]> {
     let query = db.select().from(systemSettings);
@@ -1270,6 +1660,7 @@ export class DatabaseStorage implements IStorage {
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
+    totalEvents: number;
   }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1329,10 +1720,17 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(gte(users.createdAt, today));
     
-    const newEventsToday = await db
+    // Count regular events created today
+    const newRegularEventsToday = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(events)
       .where(gte(events.createdAt, today));
+    
+    // Count collaborative events (rolês) created today
+    const newCollaborativeEventsToday = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEvents)
+      .where(gte(collaborativeEvents.createdAt, today));
     
     const giftsMarkedTodayAsPurchased = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -1341,6 +1739,15 @@ export class DatabaseStorage implements IStorage {
         eq(userGifts.isPurchased, true),
         gte(userGifts.purchasedAt, today)
       ));
+    
+    // Total events = regular events + collaborative events
+    const totalRegularEvents = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events);
+    
+    const totalCollaborativeEvents = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collaborativeEvents);
     
     return {
       userStats: {
@@ -1359,9 +1766,10 @@ export class DatabaseStorage implements IStorage {
       })),
       recentActivity: {
         newUsersToday: newUsersToday[0]?.count || 0,
-        newEventsToday: newEventsToday[0]?.count || 0,
+        newEventsToday: (newRegularEventsToday[0]?.count || 0) + (newCollaborativeEventsToday[0]?.count || 0),
         giftsMarkedTodayAsPurchased: giftsMarkedTodayAsPurchased[0]?.count || 0,
       },
+      totalEvents: (totalRegularEvents[0]?.count || 0) + (totalCollaborativeEvents[0]?.count || 0),
     };
   }
 
@@ -1438,11 +1846,17 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>> {
     // Optimized query using CTEs to aggregate all stats in a single round trip
+    // eventsCount includes both regular events (datas comemorativas) and collaborative events (rolês)
     const result = await db.execute(sql`
       WITH user_events AS (
         SELECT user_id, COUNT(*)::int AS events_count
         FROM events
         GROUP BY user_id
+      ),
+      user_collaborative_events AS (
+        SELECT owner_id AS user_id, COUNT(*)::int AS collaborative_count
+        FROM collaborative_events
+        GROUP BY owner_id
       ),
       user_recipients AS (
         SELECT user_id, COUNT(*)::int AS recipients_count
@@ -1457,11 +1871,12 @@ export class DatabaseStorage implements IStorage {
       )
       SELECT 
         u.*,
-        COALESCE(ue.events_count, 0) AS events_count,
+        (COALESCE(ue.events_count, 0) + COALESCE(uce.collaborative_count, 0)) AS events_count,
         COALESCE(ur.recipients_count, 0) AS recipients_count,
         COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count
       FROM users u
       LEFT JOIN user_events ue ON u.id = ue.user_id
+      LEFT JOIN user_collaborative_events uce ON u.id = uce.user_id
       LEFT JOIN user_recipients ur ON u.id = ur.user_id
       LEFT JOIN user_purchased_gifts upg ON u.id = upg.user_id
       ORDER BY u.created_at DESC
@@ -1497,6 +1912,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCollaborativeEvents(userId: string): Promise<CollaborativeEvent[]> {
+    // Auto-complete events that are past their date (1 day after event date)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(23, 59, 59, 999);
+    
+    await db
+      .update(collaborativeEvents)
+      .set({ status: "completed", updatedAt: new Date() })
+      .where(
+        and(
+          eq(collaborativeEvents.status, "active"),
+          sql`${collaborativeEvents.eventDate} IS NOT NULL`,
+          sql`${collaborativeEvents.eventDate} < ${yesterday}`
+        )
+      );
+
     // Get user email for email-only participant matching
     const [user] = await db
       .select({ email: users.email })
@@ -1615,6 +2046,25 @@ export class DatabaseStorage implements IStorage {
     return updatedEvent;
   }
 
+  async rescheduleCollaborativeEvent(id: string, userId: string, newDate: Date): Promise<CollaborativeEvent | undefined> {
+    const [updatedEvent] = await db
+      .update(collaborativeEvents)
+      .set({
+        eventDate: newDate,
+        status: "active",
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(collaborativeEvents.id, id),
+          eq(collaborativeEvents.ownerId, userId)
+        )
+      )
+      .returning();
+
+    return updatedEvent;
+  }
+
   async deleteCollaborativeEvent(id: string, userId: string): Promise<boolean> {
     const result = await db
       .delete(collaborativeEvents)
@@ -1649,11 +2099,63 @@ export class DatabaseStorage implements IStorage {
       .where(eq(collaborativeEventParticipants.eventId, eventId));
   }
 
+  async getParticipantsWithProfiles(eventId: string): Promise<ParticipantWithProfile[]> {
+    const results = await db
+      .select({
+        participant: collaborativeEventParticipants,
+        profile: userProfiles,
+      })
+      .from(collaborativeEventParticipants)
+      .leftJoin(userProfiles, eq(collaborativeEventParticipants.userId, userProfiles.userId))
+      .where(eq(collaborativeEventParticipants.eventId, eventId));
+
+    // Get wishlist counts for all participants in this event
+    const wishlistCounts = await db
+      .select({
+        participantId: secretSantaWishlistItems.participantId,
+        count: sql<number>`count(*)::int`.as('count'),
+      })
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.eventId, eventId))
+      .groupBy(secretSantaWishlistItems.participantId);
+
+    const wishlistCountMap = new Map(wishlistCounts.map(w => [w.participantId, w.count]));
+
+    return results.map(({ participant, profile }) => ({
+      ...participant,
+      hasFilledProfile: profile?.isCompleted === true,
+      wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
+      userProfile: profile ? {
+        ageRange: profile.ageRange,
+        gender: profile.gender,
+        zodiacSign: profile.zodiacSign,
+        giftPreference: profile.giftPreference,
+        freeTimeActivity: profile.freeTimeActivity,
+        musicalStyle: profile.musicalStyle,
+        monthlyGiftPreference: profile.monthlyGiftPreference,
+        surpriseReaction: profile.surpriseReaction,
+        giftPriority: profile.giftPriority,
+        giftGivingStyle: profile.giftGivingStyle,
+        specialTalent: profile.specialTalent,
+        giftsToAvoid: profile.giftsToAvoid,
+        interests: profile.interests,
+      } : null,
+    }));
+  }
+
   async getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined> {
     const [participant] = await db
       .select()
       .from(collaborativeEventParticipants)
       .where(eq(collaborativeEventParticipants.id, id));
+    return participant;
+  }
+
+  async getParticipantByInviteToken(token: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [participant] = await db
+      .select()
+      .from(collaborativeEventParticipants)
+      .where(eq(collaborativeEventParticipants.inviteToken, token));
     return participant;
   }
 
@@ -1663,6 +2165,32 @@ export class DatabaseStorage implements IStorage {
       .set({
         status,
         joinedAt: status === 'confirmed' ? sql`now()` : undefined,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        inviteToken,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        emailStatus,
         updatedAt: sql`now()`,
       })
       .where(eq(collaborativeEventParticipants.id, id))
@@ -1683,6 +2211,24 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  async linkParticipantsByEmail(email: string, userId: string): Promise<number> {
+    const result = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        userId,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(collaborativeEventParticipants.email, email.toLowerCase()),
+          sql`${collaborativeEventParticipants.userId} IS NULL`
+        )
+      )
+      .returning();
+
+    return result.length;
   }
 
   // ========== Share Link Operations ==========
@@ -1777,6 +2323,440 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  // ========== Secret Santa Restrictions (Forbidden Pairs) ==========
+
+  async getRestrictionsByEvent(eventId: string): Promise<SecretSantaRestriction[]> {
+    return await db
+      .select()
+      .from(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.eventId, eventId));
+  }
+
+  async createRestriction(restriction: InsertSecretSantaRestriction): Promise<SecretSantaRestriction> {
+    const [newRestriction] = await db
+      .insert(secretSantaRestrictions)
+      .values(restriction)
+      .returning();
+    return newRestriction;
+  }
+
+  async deleteRestriction(id: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteRestrictionsByEvent(eventId: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaRestrictions)
+      .where(eq(secretSantaRestrictions.eventId, eventId))
+      .returning();
+    return result.length >= 0; // Returns true even if no restrictions existed
+  }
+
+  // ========== Collective Gift Contribution Operations ==========
+
+  async getContributions(eventId: string): Promise<CollectiveGiftContribution[]> {
+    return await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.eventId, eventId))
+      .orderBy(collectiveGiftContributions.createdAt);
+  }
+
+  async getContribution(id: string): Promise<CollectiveGiftContribution | undefined> {
+    const [contribution] = await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.id, id));
+    return contribution;
+  }
+
+  async getContributionByParticipant(eventId: string, participantId: string): Promise<CollectiveGiftContribution | undefined> {
+    const [contribution] = await db
+      .select()
+      .from(collectiveGiftContributions)
+      .where(
+        and(
+          eq(collectiveGiftContributions.eventId, eventId),
+          eq(collectiveGiftContributions.participantId, participantId)
+        )
+      );
+    return contribution;
+  }
+
+  async createContribution(contribution: InsertCollectiveGiftContribution): Promise<CollectiveGiftContribution> {
+    const [newContribution] = await db
+      .insert(collectiveGiftContributions)
+      .values(contribution)
+      .returning();
+    return newContribution;
+  }
+
+  async updateContribution(id: string, updates: Partial<InsertCollectiveGiftContribution>): Promise<CollectiveGiftContribution | undefined> {
+    const [updated] = await db
+      .update(collectiveGiftContributions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(collectiveGiftContributions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContribution(id: string): Promise<boolean> {
+    const result = await db
+      .delete(collectiveGiftContributions)
+      .where(eq(collectiveGiftContributions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }> {
+    const contributions = await this.getContributions(eventId);
+    
+    const totalDue = contributions.reduce((sum, c) => sum + c.amountDue, 0);
+    const totalPaid = contributions.reduce((sum, c) => sum + c.amountPaid, 0);
+    const participantsCount = contributions.length;
+    const paidCount = contributions.filter(c => c.isPaid).length;
+    
+    return { totalDue, totalPaid, participantsCount, paidCount };
+  }
+
+  // ========== Horoscope Operations ==========
+
+  async getSignoByDate(dia: number, mes: number): Promise<Signo | undefined> {
+    const allSignos = await db.select().from(signos);
+    
+    for (const signo of allSignos) {
+      const { diaInicio, mesInicio, diaFim, mesFim } = signo;
+      
+      if (mesInicio === mesFim) {
+        if (mes === mesInicio && dia >= diaInicio && dia <= diaFim) {
+          return signo;
+        }
+      } else if (mesInicio > mesFim) {
+        if ((mes === mesInicio && dia >= diaInicio) || (mes === mesFim && dia <= diaFim)) {
+          return signo;
+        }
+      } else {
+        if ((mes === mesInicio && dia >= diaInicio) || (mes === mesFim && dia <= diaFim)) {
+          return signo;
+        }
+      }
+    }
+    
+    const [capricornio] = await db
+      .select()
+      .from(signos)
+      .where(eq(signos.nome, "Capricornio"));
+    return capricornio;
+  }
+
+  async getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined> {
+    const [mensagem] = await db
+      .select()
+      .from(mensagensSemanais)
+      .where(
+        and(
+          eq(mensagensSemanais.signoId, signoId),
+          eq(mensagensSemanais.numeroSemana, numeroSemana)
+        )
+      );
+    return mensagem;
+  }
+
+  async getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null> {
+    const profile = await this.getUserProfile(userId);
+    
+    if (!profile || !profile.zodiacSign) {
+      return null;
+    }
+    
+    const signoNameMap: Record<string, string> = {
+      "aries": "Aries",
+      "áries": "Aries",
+      "touro": "Touro",
+      "gemeos": "Gemeos",
+      "gêmeos": "Gemeos",
+      "cancer": "Cancer",
+      "câncer": "Cancer",
+      "leao": "Leao",
+      "leão": "Leao",
+      "virgem": "Virgem",
+      "libra": "Libra",
+      "escorpiao": "Escorpiao",
+      "escorpião": "Escorpiao",
+      "sagitario": "Sagitario",
+      "sagitário": "Sagitario",
+      "capricornio": "Capricornio",
+      "capricórnio": "Capricornio",
+      "aquario": "Aquario",
+      "aquário": "Aquario",
+      "peixes": "Peixes",
+    };
+    
+    const signoNome = signoNameMap[profile.zodiacSign.toLowerCase()] || profile.zodiacSign;
+    
+    const [signo] = await db
+      .select()
+      .from(signos)
+      .where(eq(signos.nome, signoNome));
+    
+    if (!signo) {
+      return null;
+    }
+    
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    const numeroSemana = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+    const semanaAjustada = Math.min(Math.max(numeroSemana, 1), 52);
+    
+    const mensagem = await this.getMensagemSemanal(signo.id, semanaAjustada);
+    
+    if (!mensagem) {
+      return null;
+    }
+    
+    return { signo, mensagem };
+  }
+
+  // ========== BIRTHDAY SPECIAL FEATURE ==========
+
+  async getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]> {
+    return await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.eventId, eventId));
+  }
+
+  async getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.id, id));
+    return guest;
+  }
+
+  async getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(
+        and(
+          eq(birthdayGuests.eventId, eventId),
+          sql`LOWER(${birthdayGuests.email}) = LOWER(${email})`
+        )
+      );
+    return guest;
+  }
+
+  async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
+    const [newGuest] = await db
+      .insert(birthdayGuests)
+      .values(guest)
+      .returning();
+    return newGuest;
+  }
+
+  async updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ rsvpStatus, respondedAt: new Date() })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ emailStatus })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBirthdayGuest(id: string): Promise<boolean> {
+    const result = await db
+      .delete(birthdayGuests)
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getBirthdayWishlistItems(eventId: string): Promise<BirthdayWishlistItem[]> {
+    return await db
+      .select()
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.eventId, eventId));
+  }
+
+  async getBirthdayWishlistItem(id: string): Promise<BirthdayWishlistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.id, id));
+    return item;
+  }
+
+  async createBirthdayWishlistItem(item: InsertBirthdayWishlistItem): Promise<BirthdayWishlistItem> {
+    const [newItem] = await db
+      .insert(birthdayWishlistItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async updateBirthdayWishlistItem(id: string, updates: Partial<InsertBirthdayWishlistItem>): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markWishlistItemReceived(id: string, receivedFrom?: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ isReceived: true, receivedFrom, updatedAt: new Date() })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBirthdayWishlistItem(id: string): Promise<boolean> {
+    const result = await db
+      .delete(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async countBirthdayWishlistItems(eventId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayWishlistItems)
+      .where(eq(birthdayWishlistItems.eventId, eventId));
+    return result[0]?.count || 0;
+  }
+
+  async incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({
+        clickCount: sql`${birthdayWishlistItems.clickCount} + 1`,
+        lastClickedAt: new Date(),
+      })
+      .where(eq(birthdayWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getMostClickedWishlistItems(limit: number = 20): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>> {
+    const result = await db
+      .select({
+        id: birthdayWishlistItems.id,
+        eventId: birthdayWishlistItems.eventId,
+        title: birthdayWishlistItems.title,
+        description: birthdayWishlistItems.description,
+        imageUrl: birthdayWishlistItems.imageUrl,
+        purchaseUrl: birthdayWishlistItems.purchaseUrl,
+        price: birthdayWishlistItems.price,
+        category: birthdayWishlistItems.category,
+        priority: birthdayWishlistItems.priority,
+        isReceived: birthdayWishlistItems.isReceived,
+        receivedFrom: birthdayWishlistItems.receivedFrom,
+        displayOrder: birthdayWishlistItems.displayOrder,
+        clickCount: birthdayWishlistItems.clickCount,
+        lastClickedAt: birthdayWishlistItems.lastClickedAt,
+        createdAt: birthdayWishlistItems.createdAt,
+        updatedAt: birthdayWishlistItems.updatedAt,
+        eventTitle: events.title,
+        ownerName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email}, 'Unknown')`.as('ownerName'),
+      })
+      .from(birthdayWishlistItems)
+      .leftJoin(events, eq(birthdayWishlistItems.eventId, events.id))
+      .leftJoin(users, eq(events.userId, users.id))
+      .where(sql`${birthdayWishlistItems.clickCount} > 0`)
+      .orderBy(sql`${birthdayWishlistItems.clickCount} DESC`)
+      .limit(limit);
+    return result;
+  }
+
+  async getFreeGiftOptions(): Promise<FreeGiftOption[]> {
+    return await db
+      .select()
+      .from(freeGiftOptions)
+      .where(eq(freeGiftOptions.isActive, true))
+      .orderBy(freeGiftOptions.displayOrder);
+  }
+
+  async getEventByShareToken(token: string): Promise<Event | undefined> {
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.birthdayShareToken, token));
+    return event;
+  }
+
+  async generateBirthdayShareToken(eventId: string): Promise<string> {
+    const token = crypto.randomUUID();
+    await db
+      .update(events)
+      .set({ birthdayShareToken: token })
+      .where(eq(events.id, eventId));
+    return token;
+  }
+
+  // ========== SECRET SANTA WISHLIST FEATURE ==========
+  
+  async getSecretSantaWishlistItems(participantId: string): Promise<SecretSantaWishlistItem[]> {
+    return await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.participantId, participantId))
+      .orderBy(secretSantaWishlistItems.displayOrder);
+  }
+
+  async getSecretSantaWishlistItemsByEvent(eventId: string, participantId: string): Promise<SecretSantaWishlistItem[]> {
+    return await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(and(
+        eq(secretSantaWishlistItems.eventId, eventId),
+        eq(secretSantaWishlistItems.participantId, participantId)
+      ))
+      .orderBy(secretSantaWishlistItems.displayOrder);
+  }
+
+  async createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem> {
+    const count = await this.countSecretSantaWishlistItems(item.participantId);
+    const [newItem] = await db
+      .insert(secretSantaWishlistItems)
+      .values({ ...item, displayOrder: count })
+      .returning();
+    return newItem;
+  }
+
+  async deleteSecretSantaWishlistItem(id: string): Promise<boolean> {
+    const result = await db
+      .delete(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async countSecretSantaWishlistItems(participantId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.participantId, participantId));
+    return result[0]?.count || 0;
   }
 }
 

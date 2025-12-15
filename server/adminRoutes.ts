@@ -12,6 +12,8 @@ import {
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
+import { sendPasswordResetEmail } from "./emailService";
 
 export function registerAdminRoutes(app: Express) {
   // Helper function to create audit log
@@ -156,6 +158,60 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // POST /api/admin/users/:id/reset-password - Admin triggers password reset email
+  app.post("/api/admin/users/:id/reset-password", isAuthenticated, hasRole("admin"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get user to reset password for
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(400).json({ message: "Não é possível redefinir senha de usuário inativo" });
+      }
+      
+      // Invalidate any existing tokens for this user
+      await storage.invalidatePasswordResetTokensForUser(id);
+      
+      // Generate new token
+      const token = randomUUID();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      
+      await storage.createPasswordResetToken(id, token, expiresAt);
+      
+      // Build reset link - prefer deployment URL, then dev domain, then localhost
+      let baseUrl: string;
+      if (process.env.REPLIT_DEPLOYMENT_URL) {
+        baseUrl = process.env.REPLIT_DEPLOYMENT_URL;
+      } else if (process.env.REPLIT_DEV_DOMAIN) {
+        baseUrl = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+      } else {
+        baseUrl = 'http://localhost:5000';
+      }
+      const resetLink = `${baseUrl}/redefinir-senha/${token}`;
+      
+      // Send password reset email
+      await sendPasswordResetEmail(user.email, resetLink, user.firstName || undefined);
+      
+      // Create audit log
+      await createAudit(req, "RESET_PASSWORD", "user", id, { 
+        targetEmail: user.email,
+        triggeredBy: req.user!.email 
+      });
+      
+      console.log(`[Admin] Password reset email sent to ${user.email} by ${req.user!.email}`);
+      
+      res.json({ message: "E-mail de redefinição de senha enviado com sucesso" });
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      res.status(500).json({ message: "Erro ao enviar e-mail de redefinição de senha" });
     }
   });
 

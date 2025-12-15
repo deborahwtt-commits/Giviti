@@ -5,8 +5,9 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import DashboardHero from "@/components/DashboardHero";
+import UpcomingAlert from "@/components/UpcomingAlert";
+import GettingStartedWizard from "@/components/GettingStartedWizard";
 import EventCard from "@/components/EventCard";
-import GiftCard from "@/components/GiftCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Gift, Palette, MapPin, Calendar } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import emptySuggestionsImage from "@assets/generated_images/Empty_state_no_suggestions_4bee11bc.png";
-import type { EventWithRecipients, Recipient, GiftSuggestion, CollaborativeEvent } from "@shared/schema";
+import type { EventWithRecipients, Recipient, CollaborativeEvent } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -28,6 +28,7 @@ export default function Dashboard() {
     totalRecipients: number;
     upcomingEvents: number;
     giftsPurchased: number;
+    totalSpent: number;
   }>({
     queryKey: ["/api/stats"],
   });
@@ -40,16 +41,16 @@ export default function Dashboard() {
     queryKey: ["/api/events?upcoming=true"],
   });
 
-  const { data: suggestions, isLoading: suggestionsLoading, error: suggestionsError } = useQuery<GiftSuggestion[]>({
-    queryKey: ["/api/suggestions"],
-  });
-
   const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
   });
 
+  const { data: invitationsData } = useQuery<{ count: number }>({
+    queryKey: ["/api/user/invitations-count"],
+  });
+
   useEffect(() => {
-    const error = statsError || recipientsError || eventsError || suggestionsError || rolesError;
+    const error = statsError || recipientsError || eventsError || rolesError;
     if (error && isUnauthorizedError(error as Error)) {
       toast({
         title: "Sessão Expirada",
@@ -60,38 +61,148 @@ export default function Dashboard() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [statsError, recipientsError, eventsError, suggestionsError, rolesError, toast]);
+  }, [statsError, recipientsError, eventsError, rolesError, toast]);
 
-  const calculateDaysUntil = (eventDate: string) => {
+  const calculateDaysUntil = (eventDate: string | Date | null) => {
+    if (!eventDate) return 999;
     const today = new Date();
-    const event = new Date(eventDate);
+    const event = typeof eventDate === "string" ? new Date(eventDate) : eventDate;
     return differenceInDays(event, today);
   };
 
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatEventDate = (dateString: string | Date | null) => {
+    if (!dateString) return "Sem data definida";
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString;
     return format(date, "d 'de' MMM, yyyy");
   };
 
-  const formatPrice = (price: number | string) => {
-    const numValue = typeof price === "string" ? parseFloat(price) : price;
-    if (isNaN(numValue)) return "R$ 0,00";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(numValue);
+  type UnifiedUpcomingItem = {
+    id: string;
+    type: 'event' | 'role';
+    name: string;
+    date: Date | null;
+    daysUntil: number;
+    eventType?: string;
+    data: EventWithRecipients | CollaborativeEvent;
+  };
+
+  const getItemsNext30Days = (): UnifiedUpcomingItem[] => {
+    const items: UnifiedUpcomingItem[] = [];
+    
+    if (upcomingEvents) {
+      upcomingEvents.forEach(event => {
+        const daysUntil = calculateDaysUntil(event.eventDate);
+        if (daysUntil >= 0 && daysUntil <= 30) {
+          items.push({
+            id: event.id,
+            type: 'event',
+            name: event.eventName ? `${event.eventType} - ${event.eventName}` : event.eventType,
+            date: event.eventDate ? new Date(event.eventDate) : null,
+            daysUntil,
+            data: event,
+          });
+        }
+      });
+    }
+    
+    if (roles) {
+      roles
+        .filter(role => role.status === "active" || role.status === "draft")
+        .forEach(role => {
+          const daysUntil = calculateDaysUntil(role.eventDate);
+          if (daysUntil >= 0 && daysUntil <= 30) {
+            items.push({
+              id: role.id,
+              type: 'role',
+              name: role.name,
+              date: role.eventDate ? new Date(role.eventDate) : null,
+              daysUntil,
+              eventType: role.eventType,
+              data: role as CollaborativeEvent,
+            });
+          }
+        });
+    }
+    
+    return items.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.getTime() - b.date.getTime();
+    });
+  };
+
+  const getDisplayedItemsIn30Days = () => {
+    return getItemsNext30Days().slice(0, 6);
+  };
+
+  const getUpcomingItemsForVemAi = () => {
+    const displayedItemIds = new Set(getDisplayedItemsIn30Days().map(e => e.id));
+    
+    type UnifiedItem = {
+      id: string;
+      type: 'event' | 'role';
+      name: string;
+      date: Date | null;
+      eventType?: string;
+      data: EventWithRecipients | CollaborativeEvent;
+    };
+    
+    const items: UnifiedItem[] = [];
+    
+    if (upcomingEvents) {
+      upcomingEvents
+        .filter(event => !displayedItemIds.has(event.id))
+        .forEach(event => {
+          items.push({
+            id: event.id,
+            type: 'event',
+            name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
+            date: event.eventDate ? new Date(event.eventDate) : null,
+            data: event,
+          });
+        });
+    }
+    
+    if (roles) {
+      roles
+        .filter(role => role.status === "active" || role.status === "draft")
+        .filter(role => !displayedItemIds.has(role.id))
+        .filter(role => {
+          if (!role.eventDate) return true;
+          const eventDate = new Date(role.eventDate);
+          return eventDate >= new Date();
+        })
+        .forEach(role => {
+          items.push({
+            id: role.id,
+            type: 'role',
+            name: role.name,
+            date: role.eventDate ? new Date(role.eventDate) : null,
+            eventType: role.eventType,
+            data: role as CollaborativeEvent,
+          });
+        });
+    }
+    
+    return items.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.getTime() - b.date.getTime();
+    });
   };
 
   const getRoleTypeInfo = (eventType: string) => {
     switch (eventType) {
       case "secret_santa":
-        return { icon: Users, label: "Amigo Secreto", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
-      case "collective_gift":
-        return { icon: Gift, label: "Presente Coletivo", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" };
+        return { icon: Gift, label: "Amigo Secreto", color: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800" };
       case "themed_night":
-        return { icon: Palette, label: "Noite Temática", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
+        return { icon: Palette, label: "Noite Temática", color: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800" };
+      case "collective_gift":
+        return { icon: Gift, label: "Presente Coletivo", color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" };
+      case "creative_challenge":
+        return { icon: Palette, label: "Desafio Criativo", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" };
       default:
-        return { icon: Users, label: "Rolê", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" };
+        return { icon: Users, label: "Rolê", color: "bg-muted text-muted-foreground" };
     }
   };
 
@@ -141,20 +252,54 @@ export default function Dashboard() {
             totalRecipients: stats?.totalRecipients || 0,
             upcomingEvents: stats?.upcomingEvents || 0,
             giftsPurchased: stats?.giftsPurchased || 0,
+            totalSpent: stats?.totalSpent || 0,
+            upcomingRoles: getUpcomingRoles().length,
+            invitationsReceived: invitationsData?.count || 0,
           }}
           onCreateRecipient={() => setLocation("/presenteados")}
           onExploreSuggestions={() => setLocation("/sugestoes")}
+          onRecipientsClick={() => setLocation("/presenteados")}
+          onEventsClick={() => {
+            const eventsSection = document.getElementById("events-section");
+            if (eventsSection) {
+              eventsSection.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+          onGiftsClick={() => setLocation("/presentes")}
+          onRolesClick={() => {
+            const vemAiSection = document.getElementById("vem-ai-section");
+            if (vemAiSection) {
+              vemAiSection.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+          onInvitationsClick={() => setLocation("/convites")}
         />
 
-        <section>
+        {(upcomingEvents && upcomingEvents.length > 0) || (roles && getUpcomingRoles().length > 0) ? (
+          <UpcomingAlert 
+            events={upcomingEvents || []} 
+            roles={roles || []} 
+          />
+        ) : null}
+
+        {(!recipients || recipients.length === 0) || (!upcomingEvents || upcomingEvents.length === 0) ? (
+          <GettingStartedWizard
+            hasRecipients={Boolean(recipients && recipients.length > 0)}
+            hasEvents={Boolean(upcomingEvents && upcomingEvents.length > 0)}
+            hasPurchasedGifts={Boolean(stats && stats.giftsPurchased > 0)}
+            onAddRecipient={() => setLocation("/presenteados")}
+            onAddEvent={() => setLocation("/eventos")}
+            onExploreSuggestions={() => setLocation("/sugestoes")}
+          />
+        ) : null}
+
+        <section id="events-section">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading font-semibold text-3xl text-foreground">
                 Eventos Próximos
               </h2>
-              <p className="text-muted-foreground mt-1">
-                Não perca as datas importantes
-              </p>
+              <p className="text-muted-foreground mt-1">Eventos nos próximos 30 dias</p>
             </div>
             <Button
               size="sm"
@@ -167,30 +312,71 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {eventsLoading ? (
+          {eventsLoading || rolesLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-40 bg-card rounded-lg animate-pulse" />
               ))}
             </div>
-          ) : upcomingEvents && upcomingEvents.length > 0 ? (
+          ) : getDisplayedItemsIn30Days().length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.slice(0, 6).map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  daysUntil={calculateDaysUntil(event.eventDate)}
-                  date={formatEventDate(event.eventDate)}
-                  onViewSuggestions={() => setLocation("/sugestoes")}
-                  onEdit={() => setLocation("/eventos")}
-                  onDelete={() => {}}
-                />
-              ))}
+              {getDisplayedItemsIn30Days().map((item) => {
+                if (item.type === 'event') {
+                  const event = item.data as EventWithRecipients;
+                  return (
+                    <EventCard
+                      key={`event-${item.id}`}
+                      event={event}
+                      daysUntil={item.daysUntil}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onDelete={() => {}}
+                      hasGiftPurchased={event.hasWishlistItems}
+                    />
+                  );
+                } else {
+                  const role = item.data as CollaborativeEvent;
+                  const typeInfo = getRoleTypeInfo(role.eventType);
+                  const TypeIcon = typeInfo.icon;
+                  return (
+                    <Card
+                      key={`role-${item.id}`}
+                      className="cursor-pointer hover-elevate transition-all"
+                      onClick={() => setLocation(`/role/${role.id}`)}
+                      data-testid={`card-role-${role.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-foreground truncate">
+                              {role.name}
+                            </h3>
+                            <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3 mr-1" />
+                              {typeInfo.label}
+                            </Badge>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`shrink-0 ${item.daysUntil <= 7 ? 'bg-destructive/10 text-destructive border-destructive/20' : ''}`}
+                          >
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {item.daysUntil === 0 ? 'Hoje' : item.daysUntil === 1 ? 'Amanhã' : `${item.daysUntil} dias`}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {formatRoleDate(role.eventDate)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+              })}
             </div>
           ) : (
             <EmptyState
               image={emptyEventsImage}
-              title="Nenhum evento próximo"
+              title="Nenhum evento nos próximos 30 dias"
               description="Cadastre aniversários, formaturas e outras datas especiais para nunca esquecer de presentear."
               actionLabel="Criar Evento"
               onAction={() => setLocation("/eventos")}
@@ -198,146 +384,96 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Rolês Planejados
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Seus encontros e celebrações em grupo
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/roles")}
-              data-testid="button-add-role"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Rolê
-            </Button>
-          </div>
-
-          {rolesLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-card rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : getUpcomingRoles().length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getUpcomingRoles().slice(0, 6).map((role) => {
-                const typeInfo = getRoleTypeInfo(role.eventType);
-                const TypeIcon = typeInfo.icon;
-                return (
-                  <Card
-                    key={role.id}
-                    className="cursor-pointer hover-elevate transition-all"
-                    onClick={() => setLocation(`/roles/${role.id}`)}
-                    data-testid={`card-role-${role.id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate">
-                            {role.name}
-                          </h3>
-                          <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
-                            <TypeIcon className="w-3 h-3 mr-1" />
-                            {typeInfo.label}
-                          </Badge>
-                        </div>
-                        <Badge variant={role.status === "active" ? "default" : "secondary"} className="text-xs shrink-0">
-                          {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{formatRoleDate(role.eventDate)}</span>
-                        </div>
-                        {role.location && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span className="truncate">{role.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium text-foreground mb-1">Nenhum rolê planejado</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  Organize amigo secreto, noites temáticas ou presentes coletivos com amigos e família.
-                </p>
+        {getUpcomingItemsForVemAi().length > 0 && (
+          <section id="vem-ai-section">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-heading font-semibold text-3xl text-foreground">
+                  Vem aí!
+                </h2>
+                <p className="text-muted-foreground mt-1">Seus próximos eventos e rolês</p>
+              </div>
+              {getUpcomingItemsForVemAi().length > 9 && (
                 <Button
                   size="sm"
-                  onClick={() => setLocation("/roles")}
-                  data-testid="button-create-first-role"
+                  variant="outline"
+                  onClick={() => setLocation("/eventos")}
+                  data-testid="button-view-all-events"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Primeiro Rolê
+                  Ver todos os eventos
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-        </section>
+              )}
+            </div>
 
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Sugestões Recentes
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Ideias personalizadas para você
-              </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {getUpcomingItemsForVemAi().slice(0, 9).map((item) => {
+                if (item.type === 'event') {
+                  const event = item.data as EventWithRecipients;
+                  return (
+                    <EventCard
+                      key={`event-${item.id}`}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onDelete={() => {}}
+                      hasGiftPurchased={event.hasWishlistItems}
+                    />
+                  );
+                } else {
+                  const role = item.data as CollaborativeEvent;
+                  const typeInfo = getRoleTypeInfo(role.eventType);
+                  const TypeIcon = typeInfo.icon;
+                  return (
+                    <Card
+                      key={`role-${item.id}`}
+                      className="cursor-pointer hover-elevate transition-all"
+                      onClick={() => setLocation(`/role/${role.id}`)}
+                      data-testid={`card-role-${role.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-foreground truncate">
+                              {role.name}
+                            </h3>
+                            <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3 mr-1" />
+                              {typeInfo.label}
+                            </Badge>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs shrink-0 ${
+                              role.status === "active" 
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" 
+                                : "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700"
+                            }`}
+                          >
+                            {role.status === "active" ? "Ativo" : role.status === "draft" ? "Rascunho" : role.status}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{formatRoleDate(role.eventDate)}</span>
+                          </div>
+                          {role.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span className="truncate">{role.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+              })}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/sugestoes")}
-              data-testid="button-view-all-suggestions"
-            >
-              Ver Todas
-            </Button>
-          </div>
+          </section>
+        )}
 
-          {suggestionsLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-64 bg-card rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : suggestions && suggestions.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {suggestions.slice(0, 8).map((gift) => (
-                <GiftCard
-                  key={gift.id}
-                  id={gift.id}
-                  name={gift.name}
-                  description={gift.description}
-                  imageUrl={gift.imageUrl}
-                  priceRange={formatPrice(gift.price)}
-                  onViewDetails={() => setLocation("/sugestoes")}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              image={emptySuggestionsImage}
-              title="Nenhuma sugestão ainda"
-              description="Adicione presenteados e eventos para receber sugestões personalizadas."
-            />
-          )}
-        </section>
       </div>
     </div>
   );

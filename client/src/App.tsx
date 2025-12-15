@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,13 +18,21 @@ import UserList from "@/pages/UserList";
 import ThemedNightCategories from "@/pages/ThemedNightCategories";
 import AdminGiftSuggestions from "@/pages/AdminGiftSuggestions";
 import AdminGiftCategoriesTypes from "@/pages/AdminGiftCategoriesTypes";
+import AdminOccasions from "@/pages/AdminOccasions";
 import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
 import SerpApiTest from "@/pages/SerpApiTest";
+import ResetPassword from "@/pages/ResetPassword";
+import BirthdayManage from "@/pages/BirthdayManage";
+import PublicBirthday from "@/pages/PublicBirthday";
+import ReceivedInvitations from "@/pages/ReceivedInvitations";
+import AcceptInvitation from "@/pages/AcceptInvitation";
+import FAQ from "@/pages/FAQ";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("theme");
@@ -42,6 +50,33 @@ function AuthenticatedApp() {
       localStorage.setItem("theme", "light");
     }
   }, [isDark]);
+
+  // Allow password reset page without authentication
+  if (location.startsWith("/redefinir-senha/")) {
+    return (
+      <Switch>
+        <Route path="/redefinir-senha/:token" component={ResetPassword} />
+      </Switch>
+    );
+  }
+
+  // Allow public birthday page without authentication
+  if (location.startsWith("/aniversario/")) {
+    return (
+      <Switch>
+        <Route path="/aniversario/:token" component={PublicBirthday} />
+      </Switch>
+    );
+  }
+
+  // Allow invitation acceptance page (handles both logged in and logged out users)
+  if (location.startsWith("/convite/")) {
+    return (
+      <Switch>
+        <Route path="/convite/:token" component={AcceptInvitation} />
+      </Switch>
+    );
+  }
 
   if (isLoading || !isAuthenticated) {
     return <Landing />;
@@ -63,11 +98,15 @@ function AuthenticatedApp() {
         <Route path="/perfil" component={Profile} />
         <Route path="/role" component={CollaborativeEvents} />
         <Route path="/role/:id" component={RoleDetail} />
+        <Route path="/eventos/:id/aniversario" component={BirthdayManage} />
+        <Route path="/convites" component={ReceivedInvitations} />
+        <Route path="/faq" component={FAQ} />
         <Route path="/admin" component={Admin} />
         <Route path="/admin/usuarios" component={UserList} />
         <Route path="/admin/cadastro-roles" component={ThemedNightCategories} />
         <Route path="/admin/sugestoes" component={AdminGiftSuggestions} />
         <Route path="/admin/categorias-tipos" component={AdminGiftCategoriesTypes} />
+        <Route path="/admin/datas-comemorativas" component={AdminOccasions} />
         <Route path="/admin/serpapi-test" component={SerpApiTest} />
         <Route component={NotFound} />
       </Switch>

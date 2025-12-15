@@ -1,0 +1,44 @@
+Feature Especial: “Meu Aniversário” com Convidados, Perfil e Wishlist
+Objetivo: Implementar uma funcionalidade especial que ativa um conjunto de recursos exclusivos quando o usuário cria uma data comemorativa do tipo “Meu Aniversário”. Esses recursos incluem:
+1. Cadastro de convidados por e-mail
+2. Exibição de um mini perfil público com base no questionário
+3. Criação de uma wishlist com até 15 sugestões de presentes
+Escopo de Desenvolvimento:
+1. Detectar evento do tipo “Meu Aniversário”
+* Adicionar no formulário de criação de eventos o tipo "meu_aniversario"
+* Quando o tipo de data comemorativa “meu aniversario” for selecionado, exibir novas seções exclusivas:
+    * Lista de convidados
+    * Mini perfil “Sobre mim”
+    * Wishlist pessoal
+2. Módulo: Lista de Convidados
+Utilizar lógica similar aos rolês para convidar participantes
+Funcionalidades:
+* Permitir ao usuário adicionar convidados pelo nome e email
+* Enviar convite por e-mail com link único
+* O convidado após a criação do usuário, deve ter acesso aos detalhes do evento e opção de confirmar presença: “sim”,  “não” ou “talvez”
+3. Módulo: Mini Perfil “Sobre Mim”
+Descrição:
+Criar uma visualização pública com dados extraídos do questionário do usuário, incluindo:
+* Nome 
+* Data de nascimento e signo (calculado)
+* Interesses ou hobbies
+* Tipos de presente que não deseja ganhar
+* Frase ou emoji personalizado
+Requisitos:
+* Página acessível via link único
+* Dados extraídos de respostas previamente cadastradas
+* Apenas leitura para convidados
+4. Módulo: Wishlist Pessoal
+Criar uma wishlist onde o usuário poderá indicar alguns presentes que gostaria de ganhar, através do algoritmo de busca existente 
+Funcionalidades:
+* Usuário organizador pode adicionar até 15 itens
+* Cada item pode ter título, descrição, link de compra e imagem
+* Visualização pública para convidados
+* Marcar item como “já ganhei” (opcional)
+5. E-mail de convite
+Criar template de e-mail com:
+* Nome do aniversariante
+* Data e local do evento
+* Link para acessar o sistema e ver mais detalhes
+* Mensagem bem humorada para o convite
+* CTA: “Confirme sua presença” e “Escolha um presente que a pessoa realmente vai amar!”

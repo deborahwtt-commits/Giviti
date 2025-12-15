@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
+import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 
 interface UserWithStats {
   id: string;
@@ -168,7 +169,10 @@ export default function UserList() {
                     {user.purchasedGiftsCount}
                   </TableCell>
                   <TableCell className="text-center">
-                    <EditUserDialog user={user} />
+                    <div className="flex items-center justify-center gap-1">
+                      <EditUserDialog user={user} />
+                      <ResetPasswordButton user={user} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

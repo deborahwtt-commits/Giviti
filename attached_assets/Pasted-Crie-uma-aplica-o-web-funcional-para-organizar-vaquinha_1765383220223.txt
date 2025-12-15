@@ -1,0 +1,68 @@
+Crie uma aplicação web funcional para organizar vaquinhas de presente compartilhado. O sistema deve permitir que um organizador crie uma vaquinha, informe os dados do presente e dos participantes, e que esses participantes possam aceitar ou recusar o convite, contribuir com o valor, deixar mensagens, e gerar um cartão virtual ao final.
+
+⸻
+
+🎯 Funcionalidades obrigatórias
+
+1. Criação da vaquinha
+	•	Inputs:
+	•	Nome do presente
+	•	Link do item
+	•	Valor total do presente
+	•	Nome do presenteado
+	•	Motivo do presente (ex: aniversário, despedida, etc.)
+	•	Data limite de contribuição
+	•	Nome e e-mail do organizador
+	•	Lista de participantes (nome e e-mail)
+	•	Geração de ID único da vaquinha
+
+2. Envio de convite por e-mail
+	•	Enviar e-mail para cada participante com:
+	•	Nome do presenteado e motivo do presente
+	•	Nome/link do presente
+	•	Valor total
+	•	Data limite
+	•	Botões de “Aceitar” ou “Recusar”
+	•	Campo opcional para deixar mensagem para o presenteado
+
+3. Confirmação de participação
+	•	Participantes podem aceitar ou recusar
+	•	Ao aceitar:
+	•	Sistema recalcula o valor por pessoa: valor_total / número de confirmados
+	•	Exibe dados de pagamento
+	•	Ao recusar:
+	•	Atualiza status para “Recusado”
+
+4. Gestão de pagamentos
+	•	Participante pode marcar “Paguei”
+	•	Organizador pode marcar manualmente “Recebido” por participante
+
+5. Encerramento da vaquinha
+	•	Encerramento automático (após data limite) ou manual (botão)
+	•	Após encerramento, impedir novas participações
+
+6. Cartão virtual
+	•	Após encerramento, gerar cartão virtual com:
+	•	Nome do presente
+	•	Nome do presenteado
+	•	Motivo do presente
+	•	Participantes confirmados
+	•	Mensagens dos participantes
+	•	Valor arrecadado
+
+⸻
+
+💾 Tecnologias sugeridas (mas não obrigatórias)
+	•	Frontend: HTML, CSS, JavaScript ou React
+	•	Backend: Node.js (Express) ou Python (Flask)
+	•	Banco de dados: SQLite ou PostgreSQL
+	•	Envio de e-mails: Nodemailer, SendGrid ou outro serviço de SMTP
+	•	Geração de cartão virtual: HTML2Canvas ou PDFMake
+
+⸻
+
+📌 Requisitos extras
+	•	Interface simples, mas funcional
+	•	Possibilidade de listar vaquinhas criadas
+	•	Painel de controle do organizador
+	•	Código limpo, modular e comentado

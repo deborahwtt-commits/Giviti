@@ -71,6 +71,20 @@ export type User = typeof users.$inferSelect;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
 
+// Password reset tokens table
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
 // Recipients table (presenteados)
 export const recipients = pgTable("recipients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -109,6 +123,10 @@ export const events = pgTable("events", {
   eventName: varchar("event_name"),
   eventDate: date("event_date").notNull(),
   archived: boolean("archived").default(false).notNull(),
+  isBirthday: boolean("is_birthday").default(false).notNull(),
+  birthdayShareToken: varchar("birthday_share_token"),
+  eventLocation: varchar("event_location"),
+  eventDescription: text("event_description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -148,6 +166,7 @@ export type EventRecipient = typeof eventRecipients.$inferSelect;
 // Extended event type with recipients array
 export type EventWithRecipients = Event & {
   recipients: Recipient[];
+  hasWishlistItems?: boolean;
 };
 
 // Google Product Categories table (Google Shopping Taxonomy)
@@ -315,7 +334,6 @@ export const userGifts = pgTable("user_gifts", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   recipientId: varchar("recipient_id")
-    .notNull()
     .references(() => recipients.id, { onDelete: "cascade" }),
   eventId: varchar("event_id").references(() => events.id, {
     onDelete: "set null",
@@ -327,7 +345,9 @@ export const userGifts = pgTable("user_gifts", {
   description: text("description"),
   imageUrl: text("image_url"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  currencyCode: varchar("currency_code").default("BRL"),
   purchaseUrl: text("purchase_url"),
+  externalSource: varchar("external_source"),
   isFavorite: boolean("is_favorite").default(false),
   isPurchased: boolean("is_purchased").default(false),
   purchasedAt: timestamp("purchased_at"),
@@ -547,6 +567,32 @@ export const insertThemedNightCategorySchema = createInsertSchema(themedNightCat
 export type InsertThemedNightCategory = z.infer<typeof insertThemedNightCategorySchema>;
 export type ThemedNightCategory = typeof themedNightCategories.$inferSelect;
 
+// Themed night suggestions table - personalized suggestions per themed night category
+export const themedNightSuggestions = pgTable("themed_night_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id")
+    .notNull()
+    .references(() => themedNightCategories.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  suggestionType: varchar("suggestion_type").notNull().default("produto"), // produto, ambiente, atividade, playlist
+  content: text("content"), // detailed description
+  mediaUrl: varchar("media_url"), // optional link (image, Spotify, YouTube)
+  priority: integer("priority").default(0),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertThemedNightSuggestionSchema = createInsertSchema(themedNightSuggestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertThemedNightSuggestion = z.infer<typeof insertThemedNightSuggestionSchema>;
+export type ThemedNightSuggestion = typeof themedNightSuggestions.$inferSelect;
+
 // Collaborative events table - main table for hangout planning
 export const collaborativeEvents = pgTable("collaborative_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -555,24 +601,29 @@ export const collaborativeEvents = pgTable("collaborative_events", {
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   eventType: varchar("event_type").notNull(), // secret_santa, themed_night, collective_gift, creative_challenge
-  eventDate: timestamp("event_date"),
-  location: varchar("location"),
+  eventDate: timestamp("event_date").notNull(),
+  location: varchar("location").notNull(),
   description: text("description"),
   themedNightCategoryId: varchar("themed_night_category_id")
     .references(() => themedNightCategories.id, { onDelete: "set null" }),
   isPublic: boolean("is_public").default(false).notNull(),
   status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
   typeSpecificData: jsonb("type_specific_data"), // JSON for type-specific settings
+  confirmationDeadline: timestamp("confirmation_deadline").notNull(), // Deadline for participants to confirm attendance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertCollaborativeEventSchema = createInsertSchema(collaborativeEvents, {
-  eventDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
-    if (!val) return null;
+  eventDate: z.union([z.string(), z.date()]).transform(val => {
     if (val instanceof Date) return val;
     return new Date(val);
   }),
+  confirmationDeadline: z.union([z.string(), z.date()]).transform(val => {
+    if (val instanceof Date) return val;
+    return new Date(val);
+  }),
+  location: z.string().min(1, "Local é obrigatório"),
 }).omit({
   id: true,
   ownerId: true,  // Omit ownerId - will be set from authenticated user
@@ -595,6 +646,7 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
   name: varchar("name"),
   role: varchar("role").notNull().default("participant"), // owner, participant
   status: varchar("status").notNull().default("invited"), // invited, pending, accepted, declined
+  emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
   inviteToken: varchar("invite_token").unique(),
   participantData: jsonb("participant_data"), // For wishlists, preferences, etc.
   joinedAt: timestamp("joined_at"),
@@ -604,19 +656,14 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
 
 export const insertCollaborativeEventParticipantSchema = createInsertSchema(collaborativeEventParticipants, {
   status: z.enum(["invited", "pending", "accepted", "declined"]).default("pending"),
+  email: z.string().email("Email inválido"),
+  name: z.string().min(1, "Nome é obrigatório").max(255, "Nome muito longo"),
 })
   .omit({
     id: true,
     createdAt: true,
     updatedAt: true,
-  })
-  .refine(
-    (data) => !!(data.userId || (data.email && data.name)),
-    {
-      message: "Either userId or both email and name must be provided",
-      path: ["userId"],
-    }
-  );
+  });
 
 export type InsertCollaborativeEventParticipant = z.infer<typeof insertCollaborativeEventParticipantSchema>;
 export type CollaborativeEventParticipant = typeof collaborativeEventParticipants.$inferSelect;
@@ -674,6 +721,29 @@ export const insertSecretSantaPairSchema = createInsertSchema(secretSantaPairs).
 export type InsertSecretSantaPair = z.infer<typeof insertSecretSantaPairSchema>;
 export type SecretSantaPair = typeof secretSantaPairs.$inferSelect;
 
+// Secret Santa restrictions table - for forbidden pairs
+export const secretSantaRestrictions = pgTable("secret_santa_restrictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  blockerParticipantId: varchar("blocker_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  blockedParticipantId: varchar("blocked_participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecretSantaRestrictionSchema = createInsertSchema(secretSantaRestrictions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSecretSantaRestriction = z.infer<typeof insertSecretSantaRestrictionSchema>;
+export type SecretSantaRestriction = typeof secretSantaRestrictions.$inferSelect;
+
 // Collective gift contributions table
 export const collectiveGiftContributions = pgTable("collective_gift_contributions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -730,3 +800,148 @@ export const insertCollaborativeEventTaskSchema = createInsertSchema(collaborati
 
 export type InsertCollaborativeEventTask = z.infer<typeof insertCollaborativeEventTaskSchema>;
 export type CollaborativeEventTask = typeof collaborativeEventTasks.$inferSelect;
+
+// ========== Astrology Module ==========
+
+// Zodiac signs table
+export const signos = pgTable("signos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: varchar("nome").notNull().unique(),
+  diaInicio: integer("dia_inicio").notNull(),
+  mesInicio: integer("mes_inicio").notNull(),
+  diaFim: integer("dia_fim").notNull(),
+  mesFim: integer("mes_fim").notNull(),
+  emoji: varchar("emoji"),
+});
+
+export const insertSignoSchema = createInsertSchema(signos).omit({
+  id: true,
+});
+
+export type InsertSigno = z.infer<typeof insertSignoSchema>;
+export type Signo = typeof signos.$inferSelect;
+
+// Weekly messages for each zodiac sign
+export const mensagensSemanais = pgTable("mensagens_semanais", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  signoId: varchar("signo_id")
+    .notNull()
+    .references(() => signos.id, { onDelete: "cascade" }),
+  numeroSemana: integer("numero_semana").notNull(),
+  mensagem: text("mensagem").notNull(),
+});
+
+export const insertMensagemSemanalSchema = createInsertSchema(mensagensSemanais).omit({
+  id: true,
+});
+
+export type InsertMensagemSemanal = z.infer<typeof insertMensagemSemanalSchema>;
+export type MensagemSemanal = typeof mensagensSemanais.$inferSelect;
+
+// ========== Birthday Special Feature ==========
+
+// Birthday guests table - for "Meu Aniversário" events
+export const birthdayGuests = pgTable("birthday_guests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  rsvpStatus: varchar("rsvp_status").default("pending"), // pending, yes, no, maybe
+  emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
+  invitedAt: timestamp("invited_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBirthdayGuestSchema = createInsertSchema(birthdayGuests).omit({
+  id: true,
+  invitedAt: true,
+  respondedAt: true,
+  createdAt: true,
+});
+
+export type InsertBirthdayGuest = z.infer<typeof insertBirthdayGuestSchema>;
+export type BirthdayGuest = typeof birthdayGuests.$inferSelect;
+
+// Birthday wishlist items table
+export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  purchaseUrl: varchar("purchase_url"),
+  price: varchar("price"),
+  category: varchar("category").default("paid"), // "paid" or "free"
+  priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  isReceived: boolean("is_received").default(false).notNull(),
+  receivedFrom: varchar("received_from"),
+  displayOrder: integer("display_order").default(0),
+  clickCount: integer("click_count").default(0).notNull(),
+  lastClickedAt: timestamp("last_clicked_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBirthdayWishlistItemSchema = createInsertSchema(birthdayWishlistItems).omit({
+  id: true,
+  isReceived: true,
+  receivedFrom: true,
+  displayOrder: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBirthdayWishlistItem = z.infer<typeof insertBirthdayWishlistItemSchema>;
+export type BirthdayWishlistItem = typeof birthdayWishlistItems.$inferSelect;
+
+// Free gift options table - pre-defined free gift suggestions
+export const freeGiftOptions = pgTable("free_gift_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFreeGiftOptionSchema = createInsertSchema(freeGiftOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFreeGiftOption = z.infer<typeof insertFreeGiftOptionSchema>;
+export type FreeGiftOption = typeof freeGiftOptions.$inferSelect;
+
+// ========== Secret Santa Wishlist Feature ==========
+
+// Secret Santa wishlist items - for participants to share gift ideas (max 10 items)
+export const secretSantaWishlistItems = pgTable("secret_santa_wishlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  participantId: varchar("participant_id")
+    .notNull()
+    .references(() => collaborativeEventParticipants.id, { onDelete: "cascade" }),
+  eventId: varchar("event_id")
+    .notNull()
+    .references(() => collaborativeEvents.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  purchaseUrl: varchar("purchase_url"),
+  price: varchar("price"),
+  priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecretSantaWishlistItemSchema = createInsertSchema(secretSantaWishlistItems).omit({
+  id: true,
+  displayOrder: true,
+  createdAt: true,
+});
+
+export type InsertSecretSantaWishlistItem = z.infer<typeof insertSecretSantaWishlistItemSchema>;
+export type SecretSantaWishlistItem = typeof secretSantaWishlistItems.$inferSelect;

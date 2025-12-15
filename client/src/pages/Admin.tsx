@@ -53,6 +53,7 @@ interface AdvancedStats {
     newEventsToday: number;
     giftsMarkedTodayAsPurchased: number;
   };
+  totalEvents: number;
 }
 
 interface TopClickedLink {
@@ -62,6 +63,17 @@ interface TopClickedLink {
   updatedAt: string | null;
   suggestionName: string | null;
   suggestionId: string | null;
+}
+
+interface WishlistClickedItem {
+  id: string;
+  title: string;
+  purchaseUrl: string | null;
+  price: string | null;
+  clickCount: number;
+  lastClickedAt: string | null;
+  eventTitle: string;
+  ownerName: string;
 }
 
 export default function Admin() {
@@ -94,6 +106,11 @@ export default function Admin() {
 
   const { data: topClicks } = useQuery<TopClickedLink[]>({
     queryKey: ["/api/admin/top-clicks"],
+    enabled: hasAdminAccess,
+  });
+
+  const { data: wishlistClicks } = useQuery<WishlistClickedItem[]>({
+    queryKey: ["/api/admin/wishlist-clicks"],
     enabled: hasAdminAccess,
   });
 
@@ -150,7 +167,7 @@ export default function Admin() {
             <TrendingUp className="w-5 h-5" />
             Atividade de Hoje
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <AdminStatsCard
               title="Novos Usuários Hoje"
               value={advancedStats?.recentActivity.newUsersToday || 0}
@@ -160,11 +177,18 @@ export default function Admin() {
               title="Novos Eventos Hoje"
               value={advancedStats?.recentActivity.newEventsToday || 0}
               icon={CalendarPlus}
+              description="Datas Comemorativas + Rolês"
             />
             <AdminStatsCard
               title="Presentes Comprados Hoje"
               value={advancedStats?.recentActivity.giftsMarkedTodayAsPurchased || 0}
               icon={ShoppingCart}
+            />
+            <AdminStatsCard
+              title="Total de Eventos"
+              value={advancedStats?.totalEvents || 0}
+              icon={Calendar}
+              description="Datas Comemorativas + Rolês"
             />
           </div>
         </div>
@@ -204,11 +228,11 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Gestão de Rolês */}
+        {/* Gestão de Eventos */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
-            Gestão de Rolês Temáticos
+            Gestão de Eventos
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AdminStatsCard
@@ -217,6 +241,13 @@ export default function Admin() {
               icon={Sparkles}
               description="Configurar categorias de Noite Temática"
               onClick={() => setLocation("/admin/cadastro-roles")}
+            />
+            <AdminStatsCard
+              title="Tipos de Datas Comemorativas"
+              value="Gerenciar"
+              icon={Calendar}
+              description="Cadastrar tipos (Aniversário, Natal, etc.)"
+              onClick={() => setLocation("/admin/datas-comemorativas")}
             />
           </div>
         </div>
@@ -351,6 +382,98 @@ export default function Admin() {
                 <MousePointerClick className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Nenhum clique registrado ainda</p>
                 <p className="text-sm mt-1">Os cliques nos links de produtos aparecerão aqui</p>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Links de Wishlist Mais Clicados */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Gift className="w-5 h-5" />
+            Links de Wishlist Mais Clicados
+          </h2>
+          <Card className="p-6" data-testid="wishlist-clicks-section">
+            {wishlistClicks && wishlistClicks.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground w-12">#</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Item</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Evento/Dono</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Preço</th>
+                      <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">Cliques</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">Último Clique</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wishlistClicks.map((item, index) => (
+                      <tr 
+                        key={item.id} 
+                        className="border-b last:border-0 hover-elevate"
+                        data-testid={`wishlist-click-row-${index}`}
+                      >
+                        <td className="py-3 px-2">
+                          <Badge variant={index < 3 ? "default" : "secondary"} className="w-8 justify-center">
+                            {index + 1}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium" data-testid={`wishlist-item-title-${index}`}>
+                              {item.title}
+                            </span>
+                            {item.purchaseUrl && (
+                              <a 
+                                href={item.purchaseUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1 max-w-[250px] truncate"
+                              >
+                                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{item.purchaseUrl}</span>
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm">{item.eventTitle}</span>
+                            <span className="text-xs text-muted-foreground">{item.ownerName}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-sm">{item.price || "—"}</span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <Badge variant="outline" className="font-semibold" data-testid={`wishlist-click-count-${index}`}>
+                            {item.clickCount}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {item.lastClickedAt ? (
+                            <span className="text-sm text-muted-foreground flex items-center justify-end gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(item.lastClickedAt), { 
+                                addSuffix: true, 
+                                locale: ptBR 
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Gift className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhum clique em wishlist registrado ainda</p>
+                <p className="text-sm mt-1">Os cliques nos links de produtos da wishlist aparecerão aqui</p>
               </div>
             )}
           </Card>

@@ -4,16 +4,20 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import type { CollaborativeEvent } from "@shared/schema";
 import type { LucideIcon } from "lucide-react";
 
+interface EnrichedCollaborativeEvent extends CollaborativeEvent {
+  isDrawPerformed?: boolean;
+}
+
 export default function CollaborativeEvents() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [, setLocation] = useLocation();
-  const { data: events, isLoading } = useQuery<CollaborativeEvent[]>({
+  const { data: events, isLoading } = useQuery<EnrichedCollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
   });
 
@@ -26,12 +30,28 @@ export default function CollaborativeEvents() {
   // Create a map for quick category lookup
   const categoryMap = new Map(categories?.map(cat => [cat.id, cat]) || []);
 
-  // Event type display information
-  const eventTypeInfo: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
-    secret_santa: { label: "Amigo Secreto", color: "destructive", Icon: Gift },
-    themed_night: { label: "Noite Temática", color: "default", Icon: PartyPopper },
-    collective_gift: { label: "Presente Coletivo", color: "secondary", Icon: Heart },
-    creative_challenge: { label: "Desafio Criativo", color: "outline", Icon: Sparkles },
+  // Event type display information with distinct colors
+  const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
+    secret_santa: { 
+      label: "Amigo Secreto", 
+      className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
+      Icon: Gift 
+    },
+    themed_night: { 
+      label: "Noite Temática", 
+      className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
+      Icon: PartyPopper 
+    },
+    collective_gift: { 
+      label: "Presente Coletivo", 
+      className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
+      Icon: Heart 
+    },
+    creative_challenge: { 
+      label: "Desafio Criativo", 
+      className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
+      Icon: Sparkles 
+    },
   };
 
   if (isLoading) {
@@ -63,7 +83,9 @@ export default function CollaborativeEvents() {
   const sortedEvents = events ? [...events].sort((a, b) => {
     if (!a.eventDate) return 1;
     if (!b.eventDate) return -1;
-    return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+    const dateA = typeof a.eventDate === 'string' ? parseISO(a.eventDate) : a.eventDate;
+    const dateB = typeof b.eventDate === 'string' ? parseISO(b.eventDate) : b.eventDate;
+    return dateA.getTime() - dateB.getTime();
   }) : [];
 
   return (
@@ -110,7 +132,7 @@ export default function CollaborativeEvents() {
           {sortedEvents.map((event) => {
             const typeInfo = eventTypeInfo[event.eventType] || {
               label: event.eventType,
-              color: "default",
+              className: "",
               Icon: Calendar,
             };
             const IconComponent = typeInfo.Icon;
@@ -132,9 +154,21 @@ export default function CollaborativeEvents() {
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <IconComponent className="w-6 h-6 text-primary" />
-                    <Badge variant={typeInfo.color as any} data-testid="badge-event-type">
-                      {typeInfo.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {event.eventType === "secret_santa" && event.isDrawPerformed && (
+                        <Badge 
+                          variant="outline" 
+                          className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
+                          data-testid="badge-draw-performed"
+                        >
+                          <Check className="w-3 h-3 mr-1" />
+                          Sorteado
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className={typeInfo.className} data-testid="badge-event-type">
+                        {typeInfo.label}
+                      </Badge>
+                    </div>
                   </div>
                   <CardTitle className="text-xl" data-testid="text-event-name">
                     {event.name}
@@ -150,7 +184,7 @@ export default function CollaborativeEvents() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
                       <span data-testid="text-event-date">
-                        {format(new Date(event.eventDate), "dd/MM/yyyy 'às' HH:mm")}
+                        {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy 'às' HH:mm")}
                       </span>
                     </div>
                   )}

@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ExternalLink, Trash2, Eye } from "lucide-react";
+// Temporarily hidden
+// import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, Eye } from "lucide-react";
 
 interface GiftListItemProps {
   id: string;
@@ -31,6 +32,11 @@ export default function GiftListItem({
   onViewDetails,
   onRemove,
 }: GiftListItemProps) {
+  // Temporarily suppress unused parameter warnings
+  void isPurchased;
+  void purchaseDate;
+  void onTogglePurchased;
+
   return (
     <Card className="p-4 hover-elevate">
       <div className="flex gap-4">
@@ -57,6 +63,7 @@ export default function GiftListItem({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Temporarily hidden - purchased options
             {!isPurchased && onTogglePurchased && (
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -78,6 +85,7 @@ export default function GiftListItem({
                 Comprado em {purchaseDate}
               </span>
             )}
+            */}
 
             <div className="flex gap-2 ml-auto">
               <Button
