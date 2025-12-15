@@ -458,6 +458,83 @@ export default function FAQ() {
                   </AccordionContent>
                 </AccordionItem>
 
+                <AccordionItem value="wishlist-amigo-secreto">
+                  <AccordionTrigger>O que é a lista de desejos do Amigo Secreto?</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground mb-3">
+                      A lista de desejos é uma forma de ajudar quem te tirou a escolher o presente perfeito! 
+                      Cada participante pode adicionar até 10 itens que gostaria de ganhar.
+                    </p>
+                    <div className="space-y-3 mb-3">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Heart className="w-5 h-5 text-rose-500 mt-0.5" />
+                        <div>
+                          <strong>Crie sua lista</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Adicione itens com nome, descrição, preço estimado e até link de onde comprar. 
+                            Marque os mais desejados como prioridade alta!
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Gift className="w-5 h-5 text-green-500 mt-0.5" />
+                        <div>
+                          <strong>Veja a lista de quem você tirou</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Após o sorteio, no card "Seu Amigo Secreto" aparece a seção "O que seu amigo quer ganhar" 
+                            com todos os itens da wishlist da pessoa.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
+                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">
+                        <strong>Dica esperta:</strong> Adicione itens de diferentes faixas de preço - 
+                        assim você dá opções pro seu amigo secreto sem colocar pressão!
+                      </span>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="organizador-indicadores">
+                  <AccordionTrigger>Como o organizador acompanha os participantes?</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground mb-3">
+                      O organizador tem uma visão especial com indicadores visuais ao lado de cada participante:
+                    </p>
+                    <div className="space-y-3 mb-3">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Users className="w-5 h-5 text-green-500 mt-0.5" />
+                        <div>
+                          <strong>Ícone de perfil</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Prancheta verde = perfil preenchido (clique para ver as preferências). 
+                            Documento cinza = perfil ainda não preenchido.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Heart className="w-5 h-5 text-rose-500 mt-0.5" />
+                        <div>
+                          <strong>Ícone de lista de desejos</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Coração rosa preenchido = tem itens na wishlist (passe o mouse para ver quantos). 
+                            Coração cinza = wishlist vazia.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
+                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">
+                        <strong>Dica de organização:</strong> Use esses indicadores para lembrar os participantes 
+                        de completarem o perfil e adicionarem itens à wishlist antes do sorteio!
+                      </span>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
                 <AccordionItem value="noite-tematica">
                   <AccordionTrigger>Como organizo uma Noite Temática?</AccordionTrigger>
                   <AccordionContent>
