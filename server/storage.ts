@@ -119,6 +119,7 @@ export type ReceivedInvitation = {
 // Enriched participant type with profile data
 export type ParticipantWithProfile = CollaborativeEventParticipant & {
   hasFilledProfile: boolean;
+  wishlistItemsCount: number;
   userProfile: {
     ageRange: string | null;
     gender: string | null;
@@ -2108,9 +2109,22 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(userProfiles, eq(collaborativeEventParticipants.userId, userProfiles.userId))
       .where(eq(collaborativeEventParticipants.eventId, eventId));
 
+    // Get wishlist counts for all participants in this event
+    const wishlistCounts = await db
+      .select({
+        participantId: secretSantaWishlistItems.participantId,
+        count: sql<number>`count(*)::int`.as('count'),
+      })
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.eventId, eventId))
+      .groupBy(secretSantaWishlistItems.participantId);
+
+    const wishlistCountMap = new Map(wishlistCounts.map(w => [w.participantId, w.count]));
+
     return results.map(({ participant, profile }) => ({
       ...participant,
       hasFilledProfile: profile?.isCompleted === true,
+      wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
       userProfile: profile ? {
         ageRange: profile.ageRange,
         gender: profile.gender,

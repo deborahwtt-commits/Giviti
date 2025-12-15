@@ -146,6 +146,7 @@ interface ParticipantUserProfile {
 
 interface ParticipantWithProfile extends CollaborativeEventParticipant {
   hasFilledProfile: boolean;
+  wishlistItemsCount: number;
   userProfile: ParticipantUserProfile | null;
 }
 
@@ -1955,7 +1956,8 @@ export default function RoleDetail() {
                           <p className="font-medium" data-testid={`text-participant-name-${participant.id}`}>
                             {participant.name || participant.email}
                           </p>
-                          {participant.hasFilledProfile && (
+                          {/* Profile status icon */}
+                          {participant.hasFilledProfile ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
@@ -1968,6 +1970,34 @@ export default function RoleDetail() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Ver preferências</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-muted-foreground">
+                                  <FileText className="w-4 h-4" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Perfil não preenchido</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* Wishlist status icon (only for secret_santa) */}
+                          {event.eventType === "secret_santa" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={participant.wishlistItemsCount > 0 ? "text-rose-500" : "text-muted-foreground"}>
+                                  <Heart className={`w-4 h-4 ${participant.wishlistItemsCount > 0 ? "fill-current" : ""}`} />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {participant.wishlistItemsCount > 0
+                                    ? `${participant.wishlistItemsCount} ${participant.wishlistItemsCount === 1 ? "item" : "itens"} na lista de desejos`
+                                    : "Lista de desejos vazia"}
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           )}
