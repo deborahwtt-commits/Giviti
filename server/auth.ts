@@ -357,13 +357,17 @@ export async function setupAuth(app: Express): Promise<void> {
         return res.status(400).json({ message: "Senha incorreta" });
       }
 
-      // Deactivate the account (soft delete)
-      const updated = await storage.updateUser(user.id, { isActive: false });
+      // Deactivate the account (soft delete) - deactivatedBy is null for self-deactivation
+      const updated = await storage.updateUser(user.id, { 
+        isActive: false,
+        deactivatedBy: null,
+        deactivatedAt: new Date(),
+      });
       if (!updated) {
         return res.status(500).json({ message: "Erro ao desativar conta" });
       }
 
-      console.log(`[DeactivateAccount] Account deactivated for user ${user.id} (${user.email})`);
+      console.log(`[DeactivateAccount] Account self-deactivated for user ${user.id} (${user.email})`);
 
       // Destroy session
       req.session.destroy((err) => {
