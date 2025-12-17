@@ -343,6 +343,46 @@ export function registerCollabEventsRoutes(app: Express) {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
+      const notifyParticipants = req.query.notifyParticipants === 'true';
+      
+      // Get event details before deletion for notification
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found or access denied" });
+      }
+      
+      // Get organizer details
+      const organizer = await storage.getUser(userId);
+      const organizerName = organizer 
+        ? `${organizer.firstName || ''} ${organizer.lastName || ''}`.trim() || organizer.email 
+        : 'O organizador';
+      
+      // Send notification emails to participants (excluding owner)
+      if (notifyParticipants) {
+        const participants = await storage.getParticipants(id);
+        const participantsToNotify = participants.filter(p => p.role !== 'owner' && p.email);
+        
+        console.log(`[DeleteEvent] Sending cancellation emails to ${participantsToNotify.length} participants`);
+        
+        for (const participant of participantsToNotify) {
+          if (participant.email) {
+            try {
+              const { sendEventCancellationEmail } = await import('./emailService');
+              await sendEventCancellationEmail({
+                to: participant.email,
+                participantName: participant.name,
+                eventName: event.name,
+                eventType: event.eventType,
+                organizerName,
+                eventDate: event.eventDate ? event.eventDate.toString() : null
+              });
+              console.log(`[DeleteEvent] Cancellation email sent to ${participant.email}`);
+            } catch (emailError) {
+              console.error(`[DeleteEvent] Failed to send cancellation email to ${participant.email}:`, emailError);
+            }
+          }
+        }
+      }
       
       const success = await storage.deleteCollaborativeEvent(id, userId);
       

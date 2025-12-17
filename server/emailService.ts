@@ -1133,3 +1133,97 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
     `
   });
 }
+
+export interface EventCancellationEmailOptions {
+  to: string;
+  participantName: string;
+  eventName: string;
+  eventType: string;
+  organizerName: string;
+  eventDate?: string | null;
+}
+
+export async function sendEventCancellationEmail(options: EventCancellationEmailOptions) {
+  const {
+    to,
+    participantName,
+    eventName,
+    eventType,
+    organizerName,
+    eventDate
+  } = options;
+
+  const eventTypeLabels: Record<string, string> = {
+    secret_santa: 'Amigo Secreto',
+    themed_night: 'Noite Temática',
+    collective_gift: 'Presente Coletivo'
+  };
+  
+  const typeLabel = eventTypeLabels[eventType] || 'Evento';
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formattedDate = formatDate(eventDate);
+  const dateHtml = formattedDate ? `
+    <p style="color: #6b7280; font-size: 14px; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+      <strong>Data prevista:</strong> ${formattedDate}
+    </p>
+  ` : '';
+
+  return sendEmail({
+    to,
+    subject: `${typeLabel} "${eventName}" foi cancelado`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9fafb;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; max-width: 600px;">
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h1 style="color: #dc2626; margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 28px; font-weight: bold;">
+                Evento Cancelado
+              </h1>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+                Olá ${participantName},
+              </p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+                Infelizmente, o ${typeLabel} <strong>"${eventName}"</strong> organizado por <strong>${organizerName}</strong> foi cancelado.
+              </p>
+              ${dateHtml}
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0; font-family: Arial, sans-serif;">
+                Se você tiver dúvidas, entre em contato com o organizador.
+              </p>
+              <p style="color: #6b7280; font-size: 14px; margin: 24px 0 0 0; font-family: Arial, sans-serif;">
+                Equipe Giviti
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `
+  });
+}
