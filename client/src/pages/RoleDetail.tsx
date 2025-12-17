@@ -2046,25 +2046,27 @@ export default function RoleDetail() {
                           <Badge variant="outline">
                             {participant.role === "owner" ? "Organizador" : "Participante"}
                           </Badge>
-                          <Badge
-                            variant="outline"
-                            className={
-                              participant.status === "accepted"
-                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                          {event.eventType !== "secret_santa" && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                participant.status === "accepted"
+                                  ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                                  : participant.status === "pending"
+                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                                  : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+                              }
+                              data-testid={`badge-participant-status-${participant.id}`}
+                            >
+                              {participant.status === "accepted"
+                                ? "Confirmado"
                                 : participant.status === "pending"
-                                ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                                : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
-                            }
-                            data-testid={`badge-participant-status-${participant.id}`}
-                          >
-                            {participant.status === "accepted"
-                              ? "Confirmado"
-                              : participant.status === "pending"
-                              ? "Pendente"
-                              : "Recusado"}
-                          </Badge>
-                          {/* Email status indicator */}
-                          {participant.email && participant.role !== "owner" && (
+                                ? "Pendente"
+                                : "Recusado"}
+                            </Badge>
+                          )}
+                          {/* Email status indicator - hidden for secret_santa (no invite emails) */}
+                          {event.eventType !== "secret_santa" && participant.email && participant.role !== "owner" && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span 
