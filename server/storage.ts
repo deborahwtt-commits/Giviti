@@ -2709,7 +2709,7 @@ export class DatabaseStorage implements IStorage {
         lastClickedAt: birthdayWishlistItems.lastClickedAt,
         createdAt: birthdayWishlistItems.createdAt,
         updatedAt: birthdayWishlistItems.updatedAt,
-        eventTitle: events.title,
+        eventTitle: events.eventName,
         ownerName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email}, 'Unknown')`.as('ownerName'),
       })
       .from(birthdayWishlistItems)
