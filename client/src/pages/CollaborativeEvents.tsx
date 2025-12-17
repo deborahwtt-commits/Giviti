@@ -34,7 +34,7 @@ export default function CollaborativeEvents() {
   
   const cancelEventMutation = useMutation({
     mutationFn: async (eventId: string) => {
-      const response = await apiRequest("POST", `/api/collab-events/${eventId}/cancel`);
+      const response = await apiRequest(`/api/collab-events/${eventId}/cancel`, "POST");
       return response.json();
     },
     onSuccess: (data) => {
