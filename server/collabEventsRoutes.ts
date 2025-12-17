@@ -422,14 +422,17 @@ export function registerCollabEventsRoutes(app: Express) {
       const participant = await storage.addParticipant(id, validatedData);
       
       // Send invite email if participant has an email and invite token
+      // Note: secret_santa events skip email invites - participants are added directly without invitation flow
       let emailSent = false;
       console.log('[AddParticipant] Checking email conditions:', {
         email: validatedData.email,
         hasInviteToken: !!validatedData.inviteToken,
-        status: validatedData.status
+        status: validatedData.status,
+        eventType: event.eventType
       });
       
-      if (validatedData.email && validatedData.inviteToken) {
+      // Skip email invites for secret_santa events (simplified flow - logic preserved for future use)
+      if (validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa') {
         try {
           // Build invite link with token - normalize environment variables
           let baseUrl = 'http://localhost:5000';
