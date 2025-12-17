@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -205,6 +205,7 @@ interface SecretSantaWishlistItem {
 
 export default function RoleDetail() {
   const { id } = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
@@ -362,6 +363,9 @@ export default function RoleDetail() {
   const [wishlistUrl, setWishlistUrl] = useState("");
   const [wishlistPrice, setWishlistPrice] = useState("");
   const [wishlistPriority, setWishlistPriority] = useState<string>("3");
+  
+  // State for delete event dialog
+  const [deleteEventDialogOpen, setDeleteEventDialogOpen] = useState(false);
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -585,6 +589,36 @@ export default function RoleDetail() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao remover restrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}?notifyParticipants=true`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao excluir evento");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events"] });
+      toast({
+        title: "Evento excluído",
+        description: "O evento foi excluído e os participantes foram notificados.",
+      });
+      setLocation("/roles");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir evento",
         description: error.message,
         variant: "destructive",
       });
@@ -2440,10 +2474,28 @@ export default function RoleDetail() {
                 Ajuste as configurações do seu rolê
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <p className="text-sm text-muted-foreground">
                 Outras configurações em desenvolvimento
               </p>
+              
+              {isOwner && (
+                <div className="pt-4 border-t">
+                  <h4 className="text-sm font-medium text-destructive mb-2">Zona de Perigo</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Excluir este evento irá remover todos os dados e notificar os participantes por email.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setDeleteEventDialogOpen(true)}
+                    data-testid="button-delete-event"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir Evento
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -2677,6 +2729,33 @@ export default function RoleDetail() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Adicionar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteEventDialogOpen} onOpenChange={setDeleteEventDialogOpen}>
+        <AlertDialogContent data-testid="dialog-confirm-delete-event">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Evento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.
+              <br /><br />
+              <strong>Todos os participantes serão notificados por email sobre o cancelamento.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-event">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteEventMutation.mutate()}
+              disabled={deleteEventMutation.isPending}
+              data-testid="button-confirm-delete-event"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteEventMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Excluir Evento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
