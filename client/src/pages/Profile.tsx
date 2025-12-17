@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, User, Sparkles, ChevronDown, X, KeyRound } from "lucide-react";
+import { Loader2, User, Sparkles, ChevronDown, X, KeyRound, Trash2, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,8 @@ export default function Profile() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState("");
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -146,6 +148,41 @@ export default function Profile() {
       return;
     }
     changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (password: string) => {
+      return await apiRequest("/api/auth/deactivate-account", "POST", { password });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Conta excluída",
+        description: "Sua conta foi desativada com sucesso. Você será redirecionado.",
+      });
+      setDeleteAccountOpen(false);
+      setDeleteAccountPassword("");
+      // Redirect to login
+      setTimeout(() => setLocation("/login"), 1500);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir conta",
+        description: error?.message || "Senha incorreta ou erro no servidor.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteAccount = () => {
+    if (!deleteAccountPassword) {
+      toast({
+        title: "Senha obrigatória",
+        description: "Digite sua senha para confirmar a exclusão.",
+        variant: "destructive",
+      });
+      return;
+    }
+    deleteAccountMutation.mutate(deleteAccountPassword);
   };
 
   if (isLoading) {
@@ -672,6 +709,78 @@ export default function Profile() {
             </Button>
           </div>
         </form>
+
+        {/* Danger Zone */}
+        <Card className="mt-12 p-6 border-destructive/50">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <h2 className="text-lg font-semibold text-destructive">Zona de Perigo</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Ações irreversíveis que afetam permanentemente sua conta.
+          </p>
+          
+          <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="destructive" 
+                data-testid="button-delete-account"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir minha conta
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-destructive">Excluir conta</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja excluir sua conta? Esta ação desativará seu acesso ao sistema.
+                  Seus dados serão mantidos para preservar o histórico, mas você não poderá mais fazer login.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-password">Digite sua senha para confirmar</Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    value={deleteAccountPassword}
+                    onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                    placeholder="Digite sua senha"
+                    data-testid="input-delete-password"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteAccountOpen(false);
+                    setDeleteAccountPassword("");
+                  }}
+                  data-testid="button-cancel-delete"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteAccountMutation.isPending || !deleteAccountPassword}
+                  data-testid="button-confirm-delete"
+                >
+                  {deleteAccountMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    "Excluir minha conta"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </Card>
       </main>
     </div>
   );
