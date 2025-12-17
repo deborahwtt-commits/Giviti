@@ -237,7 +237,7 @@ export interface IStorage {
   
   // User Management (Admin)
   getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
-  updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>): Promise<User | undefined>;
+  updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>): Promise<User | undefined>;
   updateUserLastLogin(userId: string): Promise<void>;
   
   // Occasions Management
@@ -1386,7 +1386,7 @@ export class DatabaseStorage implements IStorage {
   
   async updateUser(
     userId: string,
-    updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>
+    updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>
   ): Promise<User | undefined> {
     const [updated] = await db
       .update(users)

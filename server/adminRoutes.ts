@@ -139,11 +139,28 @@ export function registerAdminRoutes(app: Express) {
         }
       }
       
+      // Get current user state to detect deactivation
+      const currentUser = await storage.getUser(id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const updates: any = {};
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
       if (role !== undefined) updates.role = role;
       if (isActive !== undefined) updates.isActive = isActive;
+      
+      // Track deactivation source when admin deactivates a user
+      if (isActive === false && currentUser.isActive === true) {
+        updates.deactivatedBy = req.user!.id;
+        updates.deactivatedAt = new Date();
+      }
+      // Clear deactivation info when reactivating
+      if (isActive === true && currentUser.isActive === false) {
+        updates.deactivatedBy = null;
+        updates.deactivatedAt = null;
+      }
       
       const updatedUser = await storage.updateUser(id, updates);
       
