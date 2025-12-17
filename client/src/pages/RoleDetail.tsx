@@ -364,8 +364,8 @@ export default function RoleDetail() {
   const [wishlistPrice, setWishlistPrice] = useState("");
   const [wishlistPriority, setWishlistPriority] = useState<string>("3");
   
-  // State for delete event dialog
-  const [deleteEventDialogOpen, setDeleteEventDialogOpen] = useState(false);
+  // State for cancel event dialog
+  const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -595,30 +595,31 @@ export default function RoleDetail() {
     },
   });
   
-  // Delete event mutation
-  const deleteEventMutation = useMutation({
+  // Cancel event mutation
+  const cancelEventMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/collab-events/${id}?notifyParticipants=true`, {
-        method: "DELETE",
+      const response = await fetch(`/api/collab-events/${id}/cancel`, {
+        method: "POST",
         credentials: "include",
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Erro ao excluir evento");
+        throw new Error(errorData.error || "Erro ao cancelar evento");
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
       toast({
-        title: "Evento excluído",
-        description: "O evento foi excluído e os participantes foram notificados.",
+        title: "Evento cancelado",
+        description: data.message || "O evento foi cancelado e os participantes foram notificados.",
       });
-      setLocation("/roles");
+      setCancelEventDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao excluir evento",
+        title: "Erro ao cancelar evento",
         description: error.message,
         variant: "destructive",
       });
@@ -2479,20 +2480,20 @@ export default function RoleDetail() {
                 Outras configurações em desenvolvimento
               </p>
               
-              {isOwner && (
+              {isOwner && event?.status !== "cancelled" && (
                 <div className="pt-4 border-t">
                   <h4 className="text-sm font-medium text-destructive mb-2">Zona de Perigo</h4>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Excluir este evento irá remover todos os dados e notificar os participantes por email.
+                    Cancelar este evento notificará todos os participantes por email.
                   </p>
                   <Button
                     variant="outline"
                     className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setDeleteEventDialogOpen(true)}
-                    data-testid="button-delete-event"
+                    onClick={() => setCancelEventDialogOpen(true)}
+                    data-testid="button-cancel-event"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir Evento
+                    <Ban className="w-4 h-4 mr-2" />
+                    Cancelar Evento
                   </Button>
                 </div>
               )}
@@ -2734,28 +2735,29 @@ export default function RoleDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteEventDialogOpen} onOpenChange={setDeleteEventDialogOpen}>
-        <AlertDialogContent data-testid="dialog-confirm-delete-event">
+      <AlertDialog open={cancelEventDialogOpen} onOpenChange={setCancelEventDialogOpen}>
+        <AlertDialogContent data-testid="dialog-confirm-cancel-event">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Evento</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar Evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.
+              Tem certeza que deseja cancelar "{event?.name}"?
               <br /><br />
-              <strong>Todos os participantes serão notificados por email sobre o cancelamento.</strong>
+              Todos os participantes serão notificados por email sobre o cancelamento.
+              Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-event">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-go-back-cancel-event">Voltar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteEventMutation.mutate()}
-              disabled={deleteEventMutation.isPending}
-              data-testid="button-confirm-delete-event"
+              onClick={() => cancelEventMutation.mutate()}
+              disabled={cancelEventMutation.isPending}
+              data-testid="button-confirm-cancel-event"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteEventMutation.isPending && (
+              {cancelEventMutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
-              Excluir Evento
+              Confirmar Cancelamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
