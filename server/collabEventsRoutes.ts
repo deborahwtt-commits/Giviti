@@ -338,17 +338,26 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
-  // DELETE /api/collab-events/:id - Delete a collaborative event
-  app.delete("/api/collab-events/:id", isAuthenticated, async (req: Request, res: Response) => {
+  // POST /api/collab-events/:id/cancel - Cancel a collaborative event (changes status and notifies participants)
+  app.post("/api/collab-events/:id/cancel", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
-      const notifyParticipants = req.query.notifyParticipants === 'true';
       
-      // Get event details before deletion for notification
+      // Get event details - only owner can cancel
       const event = await storage.getCollaborativeEvent(id, userId);
       if (!event) {
-        return res.status(404).json({ error: "Event not found or access denied" });
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      // Check if user is the owner
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Apenas o organizador pode cancelar o evento" });
+      }
+      
+      // Check if event is already cancelled
+      if (event.status === 'cancelled') {
+        return res.status(400).json({ error: "Este evento já foi cancelado" });
       }
       
       // Get organizer details
@@ -358,31 +367,55 @@ export function registerCollabEventsRoutes(app: Express) {
         : 'O organizador';
       
       // Send notification emails to participants (excluding owner)
-      if (notifyParticipants) {
-        const participants = await storage.getParticipants(id);
-        const participantsToNotify = participants.filter(p => p.role !== 'owner' && p.email);
-        
-        console.log(`[DeleteEvent] Sending cancellation emails to ${participantsToNotify.length} participants`);
-        
-        for (const participant of participantsToNotify) {
-          if (participant.email) {
-            try {
-              const { sendEventCancellationEmail } = await import('./emailService');
-              await sendEventCancellationEmail({
-                to: participant.email,
-                participantName: participant.name || 'Participante',
-                eventName: event.name,
-                eventType: event.eventType,
-                organizerName,
-                eventDate: event.eventDate ? event.eventDate.toString() : null
-              });
-              console.log(`[DeleteEvent] Cancellation email sent to ${participant.email}`);
-            } catch (emailError) {
-              console.error(`[DeleteEvent] Failed to send cancellation email to ${participant.email}:`, emailError);
-            }
+      const participants = await storage.getParticipants(id);
+      const participantsToNotify = participants.filter(p => p.role !== 'owner' && p.email);
+      
+      console.log(`[CancelEvent] Sending cancellation emails to ${participantsToNotify.length} participants`);
+      
+      let emailsSent = 0;
+      for (const participant of participantsToNotify) {
+        if (participant.email) {
+          try {
+            const { sendEventCancellationEmail } = await import('./emailService');
+            await sendEventCancellationEmail({
+              to: participant.email,
+              participantName: participant.name || 'Participante',
+              eventName: event.name,
+              eventType: event.eventType,
+              organizerName,
+              eventDate: event.eventDate ? event.eventDate.toString() : null
+            });
+            emailsSent++;
+            console.log(`[CancelEvent] Cancellation email sent to ${participant.email}`);
+          } catch (emailError) {
+            console.error(`[CancelEvent] Failed to send cancellation email to ${participant.email}:`, emailError);
           }
         }
       }
+      
+      // Update event status to cancelled
+      const updatedEvent = await storage.updateCollaborativeEvent(id, userId, { status: 'cancelled' });
+      
+      if (!updatedEvent) {
+        return res.status(500).json({ error: "Falha ao cancelar evento" });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Evento cancelado. ${emailsSent} participante(s) notificado(s).`,
+        event: updatedEvent
+      });
+    } catch (error) {
+      console.error("Error cancelling collaborative event:", error);
+      res.status(500).json({ error: "Falha ao cancelar evento" });
+    }
+  });
+
+  // DELETE /api/collab-events/:id - Delete a collaborative event
+  app.delete("/api/collab-events/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
       
       const success = await storage.deleteCollaborativeEvent(id, userId);
       
