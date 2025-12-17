@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -288,6 +288,7 @@ export interface IStorage {
   // Advanced Admin Stats & Reports
   getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
+    inactiveStats: { total: number; byAdmin: number; bySelf: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1658,6 +1659,7 @@ export class DatabaseStorage implements IStorage {
   // Advanced Admin Stats & Reports
   async getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
+    inactiveStats: { total: number; byAdmin: number; bySelf: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1688,6 +1690,28 @@ export class DatabaseStorage implements IStorage {
     usersByRole.forEach((r) => {
       byRole[r.role] = r.count;
     });
+    
+    // Inactive user stats
+    const inactiveUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.isActive, false));
+    
+    const inactiveByAdmin = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(and(
+        eq(users.isActive, false),
+        isNotNull(users.deactivatedBy)
+      ));
+    
+    const inactiveBySelf = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(and(
+        eq(users.isActive, false),
+        isNull(users.deactivatedBy)
+      ));
     
     // Gift stats
     const totalSuggestions = await db
@@ -1755,6 +1779,11 @@ export class DatabaseStorage implements IStorage {
         total: totalUsers[0]?.count || 0,
         active: activeUsers[0]?.count || 0,
         byRole,
+      },
+      inactiveStats: {
+        total: inactiveUsers[0]?.count || 0,
+        byAdmin: inactiveByAdmin[0]?.count || 0,
+        bySelf: inactiveBySelf[0]?.count || 0,
       },
       giftStats: {
         totalSuggestions: totalSuggestions[0]?.count || 0,
