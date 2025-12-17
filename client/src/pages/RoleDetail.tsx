@@ -1931,7 +1931,7 @@ export default function RoleDetail() {
                             data-testid="button-invite-participants"
                           >
                             <UserPlus className="w-4 h-4 mr-2" />
-                            Convidar
+                            Adicionar
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -1947,7 +1947,7 @@ export default function RoleDetail() {
                       data-testid="button-invite-participants"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
-                      Convidar
+                      {event?.eventType === "secret_santa" ? "Adicionar" : "Convidar"}
                     </Button>
                   )
                 )}
