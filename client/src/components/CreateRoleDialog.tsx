@@ -48,7 +48,7 @@ const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge"]),
   eventDate: z.date({ required_error: "Data e hora são obrigatórios" }),
-  confirmationDeadline: z.date({ required_error: "Data limite para confirmação é obrigatória" }),
+  confirmationDeadline: z.date().optional(), // Optional for secret_santa
   location: z.string().min(1, "Local é obrigatório").max(200),
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
@@ -68,7 +68,9 @@ const createRoleSchema = z.object({
   message: "A data do rolê deve ser hoje ou no futuro",
   path: ["eventDate"],
 }).refine((data) => {
-  // Confirmation deadline must be today or in the future
+  // Confirmation deadline validation only for non-secret_santa types
+  if (data.eventType === "secret_santa") return true;
+  if (!data.confirmationDeadline) return false;
   const today = startOfDay(new Date());
   const deadline = startOfDay(data.confirmationDeadline);
   return deadline >= today;
@@ -76,10 +78,21 @@ const createRoleSchema = z.object({
   message: "A data limite deve ser hoje ou no futuro",
   path: ["confirmationDeadline"],
 }).refine((data) => {
-  // Confirmation deadline must be before or equal to event date
+  // Confirmation deadline validation only for non-secret_santa types
+  if (data.eventType === "secret_santa") return true;
+  if (!data.confirmationDeadline) return false;
   return data.confirmationDeadline <= data.eventDate;
 }, {
   message: "A data limite de confirmação deve ser antes da data do evento",
+  path: ["confirmationDeadline"],
+}).refine((data) => {
+  // Require confirmationDeadline for non-secret_santa types
+  if (data.eventType !== "secret_santa" && !data.confirmationDeadline) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Data limite para confirmação é obrigatória",
   path: ["confirmationDeadline"],
 }).refine((data) => {
   // Require targetAmount for collective gift
@@ -190,11 +203,16 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         }
       }
 
+      // For secret_santa, use event date as confirmation deadline (hidden from UI but logic preserved)
+      const effectiveDeadline = data.eventType === "secret_santa" 
+        ? data.eventDate 
+        : data.confirmationDeadline!;
+
       const payload = {
         name: data.name,
         eventType: data.eventType,
         eventDate: data.eventDate.toISOString(),
-        confirmationDeadline: data.confirmationDeadline.toISOString(),
+        confirmationDeadline: effectiveDeadline.toISOString(),
         location: data.location,
         description: data.description || null,
         isPublic: data.isPublic,
@@ -582,57 +600,60 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="confirmationDeadline"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data limite para confirmação *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                          data-testid="button-select-deadline"
-                        >
-                          <Clock className="mr-2 h-4 w-4" />
-                          {field.value ? (
-                            format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                          ) : (
-                            <span>Selecione a data limite</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <div className="p-3">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              date.setHours(23, 59, 59);
-                              field.onChange(date);
-                            }
-                          }}
-                          initialFocus
-                          locale={ptBR}
-                          data-testid="calendar-deadline"
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <FormDescription>
-                    Participantes não poderão confirmar presença após esta data
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Hide confirmation deadline for secret_santa - logic preserved for future use */}
+            {selectedType !== "secret_santa" && (
+              <FormField
+                control={form.control}
+                name="confirmationDeadline"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data limite para confirmação *</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            data-testid="button-select-deadline"
+                          >
+                            <Clock className="mr-2 h-4 w-4" />
+                            {field.value ? (
+                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione a data limite</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <div className="p-3">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                date.setHours(23, 59, 59);
+                                field.onChange(date);
+                              }
+                            }}
+                            initialFocus
+                            locale={ptBR}
+                            data-testid="calendar-deadline"
+                          />
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                      Participantes não poderão confirmar presença após esta data
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -675,27 +696,30 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="isPublic"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Rolê Público</FormLabel>
-                    <FormDescription>
-                      Qualquer pessoa com o link pode visualizar (ainda não pode participar sem convite)
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      data-testid="switch-public"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            {/* Hide public link option for secret_santa - logic preserved for future use */}
+            {selectedType !== "secret_santa" && (
+              <FormField
+                control={form.control}
+                name="isPublic"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Rolê Público</FormLabel>
+                      <FormDescription>
+                        Qualquer pessoa com o link pode visualizar (ainda não pode participar sem convite)
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-public"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex justify-end gap-3">
               <Button

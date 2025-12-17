@@ -15,7 +15,8 @@ import {
   Tag,
   MousePointerClick,
   ExternalLink,
-  Clock
+  Clock,
+  UserX
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -41,6 +42,11 @@ interface AdvancedStats {
     total: number;
     active: number;
     byRole: Record<string, number>;
+  };
+  inactiveStats: {
+    total: number;
+    byAdmin: number;
+    bySelf: number;
   };
   giftStats: {
     totalSuggestions: number;
@@ -199,7 +205,7 @@ export default function Admin() {
             <Users className="w-5 h-5" />
             Usuários da Plataforma
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <AdminStatsCard
               title="Total de Usuários"
               value={advancedStats?.userStats.total || 0}
@@ -212,6 +218,29 @@ export default function Admin() {
               icon={Users}
               description={`${Math.round(((advancedStats?.userStats.active || 0) / (advancedStats?.userStats.total || 1)) * 100)}% ativos`}
             />
+            <Card className="p-6" data-testid="card-inactive-users">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Usuários Inativos
+                </h3>
+                <div className="p-2 rounded-full bg-muted">
+                  <UserX className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold mb-3" data-testid="text-inactive-total">
+                {advancedStats?.inactiveStats.total || 0}
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Por administrador</span>
+                  <span className="font-medium" data-testid="text-inactive-by-admin">{advancedStats?.inactiveStats.byAdmin || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Contas excluídas</span>
+                  <span className="font-medium" data-testid="text-inactive-by-self">{advancedStats?.inactiveStats.bySelf || 0}</span>
+                </div>
+              </div>
+            </Card>
             <Card className="p-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-3">
                 Usuários por Perfil

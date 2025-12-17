@@ -101,8 +101,8 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(404).json({ error: "Evento não encontrado" });
       }
       
-      // Check if confirmation deadline has passed
-      if (event.confirmationDeadline) {
+      // Check if confirmation deadline has passed (skip for secret_santa - simplified flow)
+      if (event.confirmationDeadline && event.eventType !== 'secret_santa') {
         const deadline = new Date(event.confirmationDeadline);
         const now = new Date();
         if (now > deadline) {
@@ -338,6 +338,79 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // POST /api/collab-events/:id/cancel - Cancel a collaborative event (changes status and notifies participants)
+  app.post("/api/collab-events/:id/cancel", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { id } = req.params;
+      
+      // Get event details - only owner can cancel
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      // Check if user is the owner
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Apenas o organizador pode cancelar o evento" });
+      }
+      
+      // Check if event is already cancelled
+      if (event.status === 'cancelled') {
+        return res.status(400).json({ error: "Este evento já foi cancelado" });
+      }
+      
+      // Get organizer details
+      const organizer = await storage.getUser(userId);
+      const organizerName = organizer 
+        ? `${organizer.firstName || ''} ${organizer.lastName || ''}`.trim() || organizer.email 
+        : 'O organizador';
+      
+      // Send notification emails to participants (excluding owner)
+      const participants = await storage.getParticipants(id);
+      const participantsToNotify = participants.filter(p => p.role !== 'owner' && p.email);
+      
+      console.log(`[CancelEvent] Sending cancellation emails to ${participantsToNotify.length} participants`);
+      
+      let emailsSent = 0;
+      for (const participant of participantsToNotify) {
+        if (participant.email) {
+          try {
+            const { sendEventCancellationEmail } = await import('./emailService');
+            await sendEventCancellationEmail({
+              to: participant.email,
+              participantName: participant.name || 'Participante',
+              eventName: event.name,
+              eventType: event.eventType,
+              organizerName,
+              eventDate: event.eventDate ? event.eventDate.toString() : null
+            });
+            emailsSent++;
+            console.log(`[CancelEvent] Cancellation email sent to ${participant.email}`);
+          } catch (emailError) {
+            console.error(`[CancelEvent] Failed to send cancellation email to ${participant.email}:`, emailError);
+          }
+        }
+      }
+      
+      // Update event status to cancelled
+      const updatedEvent = await storage.updateCollaborativeEvent(id, userId, { status: 'cancelled' });
+      
+      if (!updatedEvent) {
+        return res.status(500).json({ error: "Falha ao cancelar evento" });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Evento cancelado. ${emailsSent} participante(s) notificado(s).`,
+        event: updatedEvent
+      });
+    } catch (error) {
+      console.error("Error cancelling collaborative event:", error);
+      res.status(500).json({ error: "Falha ao cancelar evento" });
+    }
+  });
+
   // DELETE /api/collab-events/:id - Delete a collaborative event
   app.delete("/api/collab-events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -422,14 +495,17 @@ export function registerCollabEventsRoutes(app: Express) {
       const participant = await storage.addParticipant(id, validatedData);
       
       // Send invite email if participant has an email and invite token
+      // Note: secret_santa events skip email invites - participants are added directly without invitation flow
       let emailSent = false;
       console.log('[AddParticipant] Checking email conditions:', {
         email: validatedData.email,
         hasInviteToken: !!validatedData.inviteToken,
-        status: validatedData.status
+        status: validatedData.status,
+        eventType: event.eventType
       });
       
-      if (validatedData.email && validatedData.inviteToken) {
+      // Skip email invites for secret_santa events (simplified flow - logic preserved for future use)
+      if (validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa') {
         try {
           // Build invite link with token - normalize environment variables
           let baseUrl = 'http://localhost:5000';

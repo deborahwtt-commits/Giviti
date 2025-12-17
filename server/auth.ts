@@ -330,6 +330,58 @@ export async function setupAuth(app: Express): Promise<void> {
       res.status(500).json({ message: "Erro ao alterar senha" });
     }
   });
+
+  // Deactivate account endpoint - marks account as inactive (soft delete)
+  app.post("/api/auth/deactivate-account", async (req: Request, res: Response) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Não autenticado" });
+      }
+
+      const { password } = req.body;
+      
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ message: "Senha é obrigatória para confirmar a exclusão" });
+      }
+
+      // Get user
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Senha incorreta" });
+      }
+
+      // Deactivate the account (soft delete) - deactivatedBy is null for self-deactivation
+      const updated = await storage.updateUser(user.id, { 
+        isActive: false,
+        deactivatedBy: null,
+        deactivatedAt: new Date(),
+      });
+      if (!updated) {
+        return res.status(500).json({ message: "Erro ao desativar conta" });
+      }
+
+      console.log(`[DeactivateAccount] Account self-deactivated for user ${user.id} (${user.email})`);
+
+      // Destroy session
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session after account deactivation:", err);
+        }
+        res.clearCookie("giviti.sid");
+        res.json({ message: "Conta excluída com sucesso" });
+      });
+    } catch (error) {
+      console.error("Error in deactivate-account:", error);
+      res.status(500).json({ message: "Erro ao excluir conta" });
+    }
+  });
 }
 
 // Middleware to check if user is authenticated

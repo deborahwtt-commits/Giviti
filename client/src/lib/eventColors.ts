@@ -7,11 +7,11 @@ export const EVENT_CANDY_COLORS = {
     gradient: "from-pink-500/10 to-pink-500/5 border-pink-500/30"
   },
   secret_santa: {
-    bg: "bg-emerald-100 dark:bg-emerald-950",
-    border: "border-emerald-300 dark:border-emerald-700",
-    icon: "text-emerald-500 dark:text-emerald-400",
-    badge: "bg-emerald-500 text-white",
-    gradient: "from-emerald-500/10 to-emerald-500/5 border-emerald-500/30"
+    bg: "bg-yellow-100 dark:bg-yellow-950",
+    border: "border-yellow-300 dark:border-yellow-700",
+    icon: "text-yellow-600 dark:text-yellow-400",
+    badge: "bg-yellow-500 text-white",
+    gradient: "from-yellow-500/10 to-yellow-500/5 border-yellow-500/30"
   },
   themed_night: {
     bg: "bg-violet-100 dark:bg-violet-950",

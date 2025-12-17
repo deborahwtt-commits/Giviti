@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -120,6 +120,7 @@ export type ReceivedInvitation = {
 export type ParticipantWithProfile = CollaborativeEventParticipant & {
   hasFilledProfile: boolean;
   wishlistItemsCount: number;
+  userIsActive: boolean;
   userProfile: {
     ageRange: string | null;
     gender: string | null;
@@ -236,7 +237,7 @@ export interface IStorage {
   
   // User Management (Admin)
   getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
-  updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>): Promise<User | undefined>;
+  updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>): Promise<User | undefined>;
   updateUserLastLogin(userId: string): Promise<void>;
   
   // Occasions Management
@@ -287,6 +288,7 @@ export interface IStorage {
   // Advanced Admin Stats & Reports
   getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
+    inactiveStats: { total: number; byAdmin: number; bySelf: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1385,7 +1387,7 @@ export class DatabaseStorage implements IStorage {
   
   async updateUser(
     userId: string,
-    updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive'>>
+    updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>
   ): Promise<User | undefined> {
     const [updated] = await db
       .update(users)
@@ -1657,6 +1659,7 @@ export class DatabaseStorage implements IStorage {
   // Advanced Admin Stats & Reports
   async getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
+    inactiveStats: { total: number; byAdmin: number; bySelf: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1687,6 +1690,28 @@ export class DatabaseStorage implements IStorage {
     usersByRole.forEach((r) => {
       byRole[r.role] = r.count;
     });
+    
+    // Inactive user stats
+    const inactiveUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.isActive, false));
+    
+    const inactiveByAdmin = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(and(
+        eq(users.isActive, false),
+        isNotNull(users.deactivatedBy)
+      ));
+    
+    const inactiveBySelf = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(and(
+        eq(users.isActive, false),
+        isNull(users.deactivatedBy)
+      ));
     
     // Gift stats
     const totalSuggestions = await db
@@ -1754,6 +1779,11 @@ export class DatabaseStorage implements IStorage {
         total: totalUsers[0]?.count || 0,
         active: activeUsers[0]?.count || 0,
         byRole,
+      },
+      inactiveStats: {
+        total: inactiveUsers[0]?.count || 0,
+        byAdmin: inactiveByAdmin[0]?.count || 0,
+        bySelf: inactiveBySelf[0]?.count || 0,
       },
       giftStats: {
         totalSuggestions: totalSuggestions[0]?.count || 0,
@@ -2104,9 +2134,11 @@ export class DatabaseStorage implements IStorage {
       .select({
         participant: collaborativeEventParticipants,
         profile: userProfiles,
+        userIsActive: users.isActive,
       })
       .from(collaborativeEventParticipants)
       .leftJoin(userProfiles, eq(collaborativeEventParticipants.userId, userProfiles.userId))
+      .leftJoin(users, eq(collaborativeEventParticipants.userId, users.id))
       .where(eq(collaborativeEventParticipants.eventId, eventId));
 
     // Get wishlist counts for all participants in this event
@@ -2121,10 +2153,11 @@ export class DatabaseStorage implements IStorage {
 
     const wishlistCountMap = new Map(wishlistCounts.map(w => [w.participantId, w.count]));
 
-    return results.map(({ participant, profile }) => ({
+    return results.map(({ participant, profile, userIsActive }) => ({
       ...participant,
       hasFilledProfile: profile?.isCompleted === true,
       wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
+      userIsActive: userIsActive ?? true, // Default to true if no user linked (email-only participant)
       userProfile: profile ? {
         ageRange: profile.ageRange,
         gender: profile.gender,
@@ -2676,7 +2709,7 @@ export class DatabaseStorage implements IStorage {
         lastClickedAt: birthdayWishlistItems.lastClickedAt,
         createdAt: birthdayWishlistItems.createdAt,
         updatedAt: birthdayWishlistItems.updatedAt,
-        eventTitle: events.title,
+        eventTitle: events.eventName,
         ownerName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email}, 'Unknown')`.as('ownerName'),
       })
       .from(birthdayWishlistItems)

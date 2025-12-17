@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,7 @@ import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/
 const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
   secret_santa: { 
     label: "Amigo Secreto", 
-    className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
+    className: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800", 
     Icon: Gift 
   },
   themed_night: { 
@@ -147,6 +147,7 @@ interface ParticipantUserProfile {
 interface ParticipantWithProfile extends CollaborativeEventParticipant {
   hasFilledProfile: boolean;
   wishlistItemsCount: number;
+  userIsActive: boolean;
   userProfile: ParticipantUserProfile | null;
 }
 
@@ -205,6 +206,7 @@ interface SecretSantaWishlistItem {
 
 export default function RoleDetail() {
   const { id } = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
@@ -362,6 +364,9 @@ export default function RoleDetail() {
   const [wishlistUrl, setWishlistUrl] = useState("");
   const [wishlistPrice, setWishlistPrice] = useState("");
   const [wishlistPriority, setWishlistPriority] = useState<string>("3");
+  
+  // State for cancel event dialog
+  const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -585,6 +590,37 @@ export default function RoleDetail() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao remover restrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Cancel event mutation
+  const cancelEventMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao cancelar evento");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      toast({
+        title: "Evento cancelado",
+        description: data.message || "O evento foi cancelado e os participantes foram notificados.",
+      });
+      setCancelEventDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao cancelar evento",
         description: error.message,
         variant: "destructive",
       });
@@ -1895,7 +1931,7 @@ export default function RoleDetail() {
                             data-testid="button-invite-participants"
                           >
                             <UserPlus className="w-4 h-4 mr-2" />
-                            Convidar
+                            Adicionar
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -1911,7 +1947,7 @@ export default function RoleDetail() {
                       data-testid="button-invite-participants"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
-                      Convidar
+                      {event?.eventType === "secret_santa" ? "Adicionar" : "Convidar"}
                     </Button>
                   )
                 )}
@@ -2011,23 +2047,25 @@ export default function RoleDetail() {
                           <Badge variant="outline">
                             {participant.role === "owner" ? "Organizador" : "Participante"}
                           </Badge>
-                          <Badge
-                            variant="outline"
-                            className={
-                              participant.status === "accepted"
-                                ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                          {event.eventType !== "secret_santa" && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                participant.status === "accepted"
+                                  ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                                  : participant.status === "pending"
+                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                                  : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+                              }
+                              data-testid={`badge-participant-status-${participant.id}`}
+                            >
+                              {participant.status === "accepted"
+                                ? "Confirmado"
                                 : participant.status === "pending"
-                                ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                                : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
-                            }
-                            data-testid={`badge-participant-status-${participant.id}`}
-                          >
-                            {participant.status === "accepted"
-                              ? "Confirmado"
-                              : participant.status === "pending"
-                              ? "Pendente"
-                              : "Recusado"}
-                          </Badge>
+                                ? "Pendente"
+                                : "Recusado"}
+                            </Badge>
+                          )}
                           {/* Email status indicator */}
                           {participant.email && participant.role !== "owner" && (
                             <Tooltip>
@@ -2057,9 +2095,19 @@ export default function RoleDetail() {
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          {/* Inactive user indicator */}
+                          {participant.userIsActive === false && (
+                            <Badge
+                              variant="outline"
+                              className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                              data-testid={`badge-user-inactive-${participant.id}`}
+                            >
+                              Inativo
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      {isOwner ? (
+                      {isOwner && participant.userIsActive !== false ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -2071,48 +2119,53 @@ export default function RoleDetail() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "accepted"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
-                              data-testid={`menu-item-accept-${participant.id}`}
-                            >
-                              <Check className="w-4 h-4 mr-2" />
-                              Confirmar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "pending"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
-                              data-testid={`menu-item-pending-${participant.id}`}
-                            >
-                              <Clock className="w-4 h-4 mr-2" />
-                              Marcar Pendente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "declined"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
-                              data-testid={`menu-item-decline-${participant.id}`}
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Recusar
-                            </DropdownMenuItem>
-                            {participant.email && (
-                              <DropdownMenuItem
-                                onClick={() => resendInviteMutation.mutate(participant.id)}
-                                disabled={resendInviteMutation.isPending}
-                                data-testid={`menu-item-resend-invite-${participant.id}`}
-                              >
-                                <Mail className="w-4 h-4 mr-2" />
-                                Reenviar convite
-                              </DropdownMenuItem>
+                            {/* Hide status/confirmation options for secret_santa - simplified flow */}
+                            {event.eventType !== "secret_santa" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "accepted"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
+                                  data-testid={`menu-item-accept-${participant.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Confirmar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "pending"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
+                                  data-testid={`menu-item-pending-${participant.id}`}
+                                >
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Marcar Pendente
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "declined"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
+                                  data-testid={`menu-item-decline-${participant.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Recusar
+                                </DropdownMenuItem>
+                                {participant.email && (
+                                  <DropdownMenuItem
+                                    onClick={() => resendInviteMutation.mutate(participant.id)}
+                                    disabled={resendInviteMutation.isPending}
+                                    data-testid={`menu-item-resend-invite-${participant.id}`}
+                                  >
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Reenviar convite
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                             {participant.role !== "owner" && (
                               <>
@@ -2435,10 +2488,28 @@ export default function RoleDetail() {
                 Ajuste as configurações do seu rolê
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <p className="text-sm text-muted-foreground">
                 Outras configurações em desenvolvimento
               </p>
+              
+              {isOwner && event?.status !== "cancelled" && (
+                <div className="pt-4 border-t">
+                  <h4 className="text-sm font-medium text-destructive mb-2">Zona de Perigo</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Cancelar este evento notificará todos os participantes por email.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setCancelEventDialogOpen(true)}
+                    data-testid="button-cancel-event"
+                  >
+                    <Ban className="w-4 h-4 mr-2" />
+                    Cancelar Evento
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -2446,6 +2517,7 @@ export default function RoleDetail() {
 
       <AddParticipantDialog
         eventId={id!}
+        eventType={event?.eventType}
         open={addParticipantOpen}
         onOpenChange={setAddParticipantOpen}
       />
@@ -2672,6 +2744,34 @@ export default function RoleDetail() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Adicionar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelEventDialogOpen} onOpenChange={setCancelEventDialogOpen}>
+        <AlertDialogContent data-testid="dialog-confirm-cancel-event">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar "{event?.name}"?
+              <br /><br />
+              Todos os participantes serão notificados por email sobre o cancelamento.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-go-back-cancel-event">Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelEventMutation.mutate()}
+              disabled={cancelEventMutation.isPending}
+              data-testid="button-confirm-cancel-event"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelEventMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Confirmar Cancelamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
