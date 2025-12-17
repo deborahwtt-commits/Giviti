@@ -74,7 +74,7 @@ import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/
 const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
   secret_santa: { 
     label: "Amigo Secreto", 
-    className: "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800", 
+    className: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800", 
     Icon: Gift 
   },
   themed_night: { 

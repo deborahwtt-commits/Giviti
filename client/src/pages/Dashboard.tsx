@@ -194,7 +194,7 @@ export default function Dashboard() {
   const getRoleTypeInfo = (eventType: string) => {
     switch (eventType) {
       case "secret_santa":
-        return { icon: Gift, label: "Amigo Secreto", color: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800" };
+        return { icon: Gift, label: "Amigo Secreto", color: "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800" };
       case "themed_night":
         return { icon: Palette, label: "Noite Temática", color: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800" };
       case "collective_gift":
