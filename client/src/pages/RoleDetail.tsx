@@ -2071,48 +2071,53 @@ export default function RoleDetail() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "accepted"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
-                              data-testid={`menu-item-accept-${participant.id}`}
-                            >
-                              <Check className="w-4 h-4 mr-2" />
-                              Confirmar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "pending"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
-                              data-testid={`menu-item-pending-${participant.id}`}
-                            >
-                              <Clock className="w-4 h-4 mr-2" />
-                              Marcar Pendente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateParticipantStatusMutation.mutate({
-                                participantId: participant.id,
-                                status: "declined"
-                              })}
-                              disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
-                              data-testid={`menu-item-decline-${participant.id}`}
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Recusar
-                            </DropdownMenuItem>
-                            {participant.email && (
-                              <DropdownMenuItem
-                                onClick={() => resendInviteMutation.mutate(participant.id)}
-                                disabled={resendInviteMutation.isPending}
-                                data-testid={`menu-item-resend-invite-${participant.id}`}
-                              >
-                                <Mail className="w-4 h-4 mr-2" />
-                                Reenviar convite
-                              </DropdownMenuItem>
+                            {/* Hide status/confirmation options for secret_santa - simplified flow */}
+                            {event.eventType !== "secret_santa" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "accepted"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "accepted"}
+                                  data-testid={`menu-item-accept-${participant.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Confirmar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "pending"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "pending"}
+                                  data-testid={`menu-item-pending-${participant.id}`}
+                                >
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Marcar Pendente
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateParticipantStatusMutation.mutate({
+                                    participantId: participant.id,
+                                    status: "declined"
+                                  })}
+                                  disabled={updateParticipantStatusMutation.isPending || participant.status === "declined"}
+                                  data-testid={`menu-item-decline-${participant.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Recusar
+                                </DropdownMenuItem>
+                                {participant.email && (
+                                  <DropdownMenuItem
+                                    onClick={() => resendInviteMutation.mutate(participant.id)}
+                                    disabled={resendInviteMutation.isPending}
+                                    data-testid={`menu-item-resend-invite-${participant.id}`}
+                                  >
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Reenviar convite
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                             {participant.role !== "owner" && (
                               <>
