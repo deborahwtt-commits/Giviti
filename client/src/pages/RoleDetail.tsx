@@ -2065,8 +2065,8 @@ export default function RoleDetail() {
                                 : "Recusado"}
                             </Badge>
                           )}
-                          {/* Email status indicator - hidden for secret_santa (no invite emails) */}
-                          {event.eventType !== "secret_santa" && participant.email && participant.role !== "owner" && (
+                          {/* Email status indicator */}
+                          {participant.email && participant.role !== "owner" && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span 
