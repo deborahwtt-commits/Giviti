@@ -11,10 +11,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 
@@ -25,6 +30,8 @@ interface UserWithStats {
   lastName: string;
   role: string;
   isActive: boolean;
+  deactivatedBy: string | null;
+  deactivatedAt: string | null;
   createdAt: string;
   eventsCount: number;
   recipientsCount: number;
@@ -156,17 +163,43 @@ export default function UserList() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        user.isActive
-                          ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
-                      }
-                      data-testid={`badge-status-${user.id}`}
-                    >
-                      {user.isActive ? "Ativo" : "Inativo"}
-                    </Badge>
+                    {!user.isActive && user.deactivatedAt ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 cursor-help"
+                            data-testid={`badge-status-${user.id}`}
+                          >
+                            Inativo
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-sm">
+                            <p>
+                              {user.deactivatedBy 
+                                ? `Inativado por administrador` 
+                                : "Auto-desativado pelo usuário"}
+                            </p>
+                            <p className="text-muted-foreground">
+                              em {format(new Date(user.deactivatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={
+                          user.isActive
+                            ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                        }
+                        data-testid={`badge-status-${user.id}`}
+                      >
+                        {user.isActive ? "Ativo" : "Inativo"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(user.createdAt), "dd/MM/yyyy", {
