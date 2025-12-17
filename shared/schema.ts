@@ -38,6 +38,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("user"),
   isActive: boolean("is_active").default(true).notNull(),
+  deactivatedBy: varchar("deactivated_by"),
+  deactivatedAt: timestamp("deactivated_at"),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -46,6 +48,8 @@ export const users = pgTable("users", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   role: true,
+  deactivatedBy: true,
+  deactivatedAt: true,
   createdAt: true,
   updatedAt: true,
 });
