@@ -101,8 +101,8 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(404).json({ error: "Evento não encontrado" });
       }
       
-      // Check if confirmation deadline has passed
-      if (event.confirmationDeadline) {
+      // Check if confirmation deadline has passed (skip for secret_santa - simplified flow)
+      if (event.confirmationDeadline && event.eventType !== 'secret_santa') {
         const deadline = new Date(event.confirmationDeadline);
         const now = new Date();
         if (now > deadline) {
