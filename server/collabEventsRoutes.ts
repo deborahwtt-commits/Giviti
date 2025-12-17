@@ -370,7 +370,7 @@ export function registerCollabEventsRoutes(app: Express) {
               const { sendEventCancellationEmail } = await import('./emailService');
               await sendEventCancellationEmail({
                 to: participant.email,
-                participantName: participant.name,
+                participantName: participant.name || 'Participante',
                 eventName: event.name,
                 eventType: event.eventType,
                 organizerName,
