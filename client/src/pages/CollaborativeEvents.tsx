@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
-import type { CollaborativeEvent } from "@shared/schema";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { CollaborativeEvent, User } from "@shared/schema";
 import type { LucideIcon } from "lucide-react";
 
 interface EnrichedCollaborativeEvent extends CollaborativeEvent {
@@ -16,9 +19,40 @@ interface EnrichedCollaborativeEvent extends CollaborativeEvent {
 
 export default function CollaborativeEvents() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [eventToCancel, setEventToCancel] = useState<EnrichedCollaborativeEvent | null>(null);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["/api/user"],
+  });
+  
   const { data: events, isLoading } = useQuery<EnrichedCollaborativeEvent[]>({
     queryKey: ["/api/collab-events"],
+  });
+  
+  const cancelEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const response = await apiRequest("POST", `/api/collab-events/${eventId}/cancel`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Evento cancelado",
+        description: data.message || "O evento foi cancelado e os participantes foram notificados.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events"] });
+      setCancelDialogOpen(false);
+      setEventToCancel(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message || "Não foi possível cancelar o evento.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Fetch themed night categories
@@ -208,7 +242,7 @@ export default function CollaborativeEvents() {
                     <Users className="w-4 h-4" />
                     <span>Ver participantes</span>
                   </div>
-                  <div className="pt-2 border-t">
+                  <div className="pt-2 border-t flex items-center justify-between gap-2">
                     <Badge
                       variant={event.status === "active" ? "default" : "secondary"}
                       data-testid="badge-event-status"
@@ -218,6 +252,22 @@ export default function CollaborativeEvents() {
                       {event.status === "completed" && "Concluído"}
                       {event.status === "cancelled" && "Cancelado"}
                     </Badge>
+                    {currentUser?.id === event.ownerId && event.status !== "cancelled" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-cancel-event-${event.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEventToCancel(event);
+                          setCancelDialogOpen(true);
+                        }}
+                      >
+                        <Ban className="w-4 h-4 mr-1" />
+                        Cancelar
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -230,6 +280,35 @@ export default function CollaborativeEvents() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
+      
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar "{eventToCancel?.name}"?
+              <br /><br />
+              Todos os participantes serão notificados por email sobre o cancelamento.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (eventToCancel) {
+                  cancelEventMutation.mutate(eventToCancel.id);
+                }
+              }}
+              disabled={cancelEventMutation.isPending}
+              data-testid="button-confirm-cancel"
+            >
+              {cancelEventMutation.isPending ? "Cancelando..." : "Confirmar Cancelamento"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
