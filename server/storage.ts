@@ -120,6 +120,7 @@ export type ReceivedInvitation = {
 export type ParticipantWithProfile = CollaborativeEventParticipant & {
   hasFilledProfile: boolean;
   wishlistItemsCount: number;
+  userIsActive: boolean;
   userProfile: {
     ageRange: string | null;
     gender: string | null;
@@ -2104,9 +2105,11 @@ export class DatabaseStorage implements IStorage {
       .select({
         participant: collaborativeEventParticipants,
         profile: userProfiles,
+        userIsActive: users.isActive,
       })
       .from(collaborativeEventParticipants)
       .leftJoin(userProfiles, eq(collaborativeEventParticipants.userId, userProfiles.userId))
+      .leftJoin(users, eq(collaborativeEventParticipants.userId, users.id))
       .where(eq(collaborativeEventParticipants.eventId, eventId));
 
     // Get wishlist counts for all participants in this event
@@ -2121,10 +2124,11 @@ export class DatabaseStorage implements IStorage {
 
     const wishlistCountMap = new Map(wishlistCounts.map(w => [w.participantId, w.count]));
 
-    return results.map(({ participant, profile }) => ({
+    return results.map(({ participant, profile, userIsActive }) => ({
       ...participant,
       hasFilledProfile: profile?.isCompleted === true,
       wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
+      userIsActive: userIsActive ?? true, // Default to true if no user linked (email-only participant)
       userProfile: profile ? {
         ageRange: profile.ageRange,
         gender: profile.gender,

@@ -2094,9 +2094,19 @@ export default function RoleDetail() {
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          {/* Inactive user indicator */}
+                          {participant.userIsActive === false && (
+                            <Badge
+                              variant="outline"
+                              className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                              data-testid={`badge-user-inactive-${participant.id}`}
+                            >
+                              Inativo
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      {isOwner ? (
+                      {isOwner && participant.userIsActive !== false ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
