@@ -147,6 +147,7 @@ interface ParticipantUserProfile {
 interface ParticipantWithProfile extends CollaborativeEventParticipant {
   hasFilledProfile: boolean;
   wishlistItemsCount: number;
+  userIsActive: boolean;
   userProfile: ParticipantUserProfile | null;
 }
 

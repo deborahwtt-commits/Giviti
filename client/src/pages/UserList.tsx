@@ -126,6 +126,7 @@ export default function UserList() {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Perfil</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Data de Criação</TableHead>
               <TableHead className="text-center">Eventos</TableHead>
               <TableHead className="text-center">Presenteados</TableHead>
@@ -154,6 +155,19 @@ export default function UserList() {
                       {roleLabels[user.role] || user.role}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        user.isActive
+                          ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                      }
+                      data-testid={`badge-status-${user.id}`}
+                    >
+                      {user.isActive ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(user.createdAt), "dd/MM/yyyy", {
                       locale: ptBR,
@@ -178,7 +192,7 @@ export default function UserList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   <p className="text-muted-foreground">
                     Nenhum usuário encontrado
                   </p>
