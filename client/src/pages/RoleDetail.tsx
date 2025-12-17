@@ -2517,6 +2517,7 @@ export default function RoleDetail() {
 
       <AddParticipantDialog
         eventId={id!}
+        eventType={event?.eventType}
         open={addParticipantOpen}
         onOpenChange={setAddParticipantOpen}
       />

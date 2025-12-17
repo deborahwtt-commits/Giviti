@@ -33,12 +33,14 @@ type AddParticipantFormValues = z.infer<typeof addParticipantSchema>;
 
 interface AddParticipantDialogProps {
   eventId: string;
+  eventType?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function AddParticipantDialog({
   eventId,
+  eventType,
   open,
   onOpenChange,
 }: AddParticipantDialogProps) {
@@ -88,7 +90,9 @@ export function AddParticipantDialog({
         <DialogHeader>
           <DialogTitle>Adicionar Participante</DialogTitle>
           <DialogDescription>
-            Adicione um participante a este rolê. A pessoa poderá acessar o evento ao fazer login.
+            {eventType === "secret_santa" 
+              ? "Adicione um participante a este rolê. A pessoa poderá acessar o evento ao fazer login."
+              : "Convide alguém para participar deste rolê. Enviaremos um convite por email."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
