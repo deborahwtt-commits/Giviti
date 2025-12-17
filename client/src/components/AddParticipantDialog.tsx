@@ -88,7 +88,7 @@ export function AddParticipantDialog({
         <DialogHeader>
           <DialogTitle>Adicionar Participante</DialogTitle>
           <DialogDescription>
-            Convide alguém para participar deste rolê. Enviaremos um convite por email.
+            Adicione um participante a este rolê. A pessoa poderá acessar o evento ao fazer login.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
