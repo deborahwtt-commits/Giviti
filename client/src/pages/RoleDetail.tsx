@@ -1564,9 +1564,9 @@ export default function RoleDetail() {
 
           </div>
 
-          {/* Grid for My Wishlist + Seu Amigo Secreto side by side (for participants) */}
+          {/* Grid for My Wishlist + Seu Amigo Secreto side by side */}
           {event.eventType === "secret_santa" && (
-            <div className={`grid gap-6 ${!isOwner ? 'grid-cols-1 lg:grid-cols-2' : ''}`}>
+            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
               {/* My Wishlist Card */}
               <Card>
                 <CardHeader>
@@ -1668,9 +1668,8 @@ export default function RoleDetail() {
               </CardContent>
             </Card>
 
-              {/* Participant view: Seu Amigo Secreto Card - side by side with My Wishlist */}
-              {!isOwner && (
-                <Card>
+              {/* Seu Amigo Secreto Card - side by side with My Wishlist (for all participants including owner) */}
+              <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Gift className="w-5 h-5" />
@@ -1819,7 +1818,6 @@ export default function RoleDetail() {
                 )}
               </CardContent>
               </Card>
-              )}
             </div>
           )}
 
