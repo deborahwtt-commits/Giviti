@@ -208,8 +208,10 @@ export async function setupAuth(app: Express): Promise<void> {
       await storage.createPasswordResetToken(user.id, token, expiresAt);
 
       // Build reset URL - use REPLIT_DEPLOYMENT_URL if available for production
+      // Note: REPLIT_DEPLOYMENT_URL already includes protocol (https://...)
+      // REPLIT_DEV_DOMAIN is just the domain without protocol
       const baseUrl = process.env.REPLIT_DEPLOYMENT_URL 
-        ? `https://${process.env.REPLIT_DEPLOYMENT_URL}`
+        ? process.env.REPLIT_DEPLOYMENT_URL
         : process.env.REPLIT_DEV_DOMAIN 
           ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : "http://localhost:5000";
