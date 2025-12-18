@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -2009,9 +2009,11 @@ export class DatabaseStorage implements IStorage {
           OR ${collaborativeEventParticipants.userId} = ${userId}
           ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
         )`
-      );
+      )
+      .orderBy(desc(collaborativeEvents.createdAt));
 
     // Deduplicate (since LEFT JOIN can return multiple rows per event)
+    // Use Map to preserve order (first occurrence wins, which is most recent due to ORDER BY)
     const uniqueEvents = Array.from(
       new Map(events.map(event => [event.id, event])).values()
     );
