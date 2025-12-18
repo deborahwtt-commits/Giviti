@@ -2056,13 +2056,13 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Get user email for email-only participant matching
+    // Get user email for email-only participant matching (normalized to lowercase)
     const [user] = await db
       .select({ email: users.email })
       .from(users)
       .where(eq(users.id, userId));
     
-    const userEmail = user?.email;
+    const userEmail = user?.email?.toLowerCase();
 
     // Single optimized query: fetch events where user is owner OR participant (by userId or email)
     const events = await db
@@ -2090,7 +2090,7 @@ export class DatabaseStorage implements IStorage {
         sql`(
           ${collaborativeEvents.ownerId} = ${userId}
           OR ${collaborativeEventParticipants.userId} = ${userId}
-          ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+          ${userEmail ? sql`OR LOWER(${collaborativeEventParticipants.email}) = ${userEmail}` : sql``}
         )`
       )
       .orderBy(desc(collaborativeEvents.createdAt));
@@ -2114,13 +2114,13 @@ export class DatabaseStorage implements IStorage {
       return event;
     }
 
-    // Get user email for email-only participant matching
+    // Get user email for email-only participant matching (normalized to lowercase)
     const [user] = await db
       .select({ email: users.email })
       .from(users)
       .where(eq(users.id, userId));
     
-    const userEmail = user?.email;
+    const userEmail = user?.email?.toLowerCase();
 
     // Single optimized query: check owner OR participant (by userId or email)
     const [event] = await db
@@ -2150,7 +2150,7 @@ export class DatabaseStorage implements IStorage {
           sql`(
             ${collaborativeEvents.ownerId} = ${userId}
             OR ${collaborativeEventParticipants.userId} = ${userId}
-            ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+            ${userEmail ? sql`OR LOWER(${collaborativeEventParticipants.email}) = ${userEmail}` : sql``}
           )`
         )
       );
