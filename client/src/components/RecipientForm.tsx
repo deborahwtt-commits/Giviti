@@ -361,7 +361,7 @@ export default function RecipientForm({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="age">Idade</Label>
             <Input
@@ -411,6 +411,35 @@ export default function RecipientForm({
               </SelectContent>
             </Select>
             {autoFilledFields.has('gender') && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Preenchido do perfil Giviti
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="zodiacSign" className="flex items-center gap-1.5">
+              Signo
+              {autoFilledFields.has('zodiacSign') && <Lock className="w-3 h-3 text-green-600" />}
+            </Label>
+            <Select value={zodiacSign} onValueChange={setZodiacSign} disabled={autoFilledFields.has('zodiacSign')}>
+              <SelectTrigger 
+                id="zodiacSign" 
+                data-testid="select-zodiac"
+                className={autoFilledFields.has('zodiacSign') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
+              >
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {zodiacSigns.map((sign) => (
+                  <SelectItem key={sign} value={sign}>
+                    {sign}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {autoFilledFields.has('zodiacSign') && (
               <p className="text-xs text-green-600 flex items-center gap-1">
                 <Lock className="w-3 h-3" />
                 Preenchido do perfil Giviti
