@@ -2183,7 +2183,8 @@ export default function RoleDetail() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       ) : (
-                        user?.email && participant.email === user.email && participant.status === "pending" && (
+                        /* Hide accept/reject buttons for Secret Santa - simplified flow without confirmation */
+                        event.eventType !== "secret_santa" && user?.email && participant.email === user.email && participant.status === "pending" && (
                           <div className="flex gap-1">
                             <Tooltip>
                               <TooltipTrigger asChild>
