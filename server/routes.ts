@@ -1718,16 +1718,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/wishlist-click/:itemId - Track click on wishlist item (public endpoint)
+  // Supports both birthday wishlist items and secret santa wishlist items
   app.post("/api/wishlist-click/:itemId", async (req: any, res) => {
     try {
       const { itemId } = req.params;
       
-      const updated = await storage.incrementWishlistItemClick(itemId);
+      // Try birthday wishlist first
+      let updated = await storage.incrementWishlistItemClick(itemId);
+      
+      // If not found in birthday, try secret santa wishlist
       if (!updated) {
+        const secretSantaUpdated = await storage.incrementSecretSantaWishlistItemClick(itemId);
+        if (secretSantaUpdated) {
+          return res.json({ success: true, clickCount: secretSantaUpdated.clickCount, type: 'secret_santa' });
+        }
         return res.status(404).json({ message: "Item not found" });
       }
       
-      res.json({ success: true, clickCount: updated.clickCount });
+      res.json({ success: true, clickCount: updated.clickCount, type: 'birthday' });
     } catch (error) {
       console.error("Error tracking wishlist click:", error);
       res.status(500).json({ message: "Failed to track click" });
