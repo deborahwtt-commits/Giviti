@@ -1151,10 +1151,18 @@ export function registerCollabEventsRoutes(app: Express) {
             signupLink,
             receiverProfile,
           });
+          
+          // Update email status to 'sent' after successful send
+          await storage.updateParticipantEmailStatus(giver.id, 'sent');
+          
           emailsSent++;
           console.log(`[Draw] Email sent to ${giver.email}${receiverProfile ? ' (with profile)' : ''}`);
         } catch (emailError) {
           console.error(`[Draw] Failed to send email to ${giver.email}:`, emailError);
+          
+          // Update email status to 'failed' when send fails
+          await storage.updateParticipantEmailStatus(giver.id, 'failed');
+          
           emailsFailed++;
         } finally {
           // Wait 600ms between emails to respect Resend rate limit (2 requests/second)
