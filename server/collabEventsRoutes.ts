@@ -180,6 +180,12 @@ export function registerCollabEventsRoutes(app: Express) {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
       
+      // Auto-repair: link orphan participants to existing users by email
+      const linkedCount = await storage.repairParticipantLinksForEvent(id);
+      if (linkedCount > 0) {
+        console.log(`[Event ${id}] Auto-linked ${linkedCount} participant(s) to existing users`);
+      }
+      
       const event = await storage.getCollaborativeEvent(id, userId);
       
       if (!event) {
@@ -442,6 +448,9 @@ export function registerCollabEventsRoutes(app: Express) {
       if (!hasAccess) {
         return res.status(403).json({ error: "Access denied" });
       }
+      
+      // Auto-repair: link orphan participants to existing users by email
+      await storage.repairParticipantLinksForEvent(id);
       
       const participants = await storage.getParticipantsWithProfiles(id);
       res.json(participants);
