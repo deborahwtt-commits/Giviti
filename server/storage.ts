@@ -1359,12 +1359,13 @@ export class DatabaseStorage implements IStorage {
 
   async syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number> {
     // Find all recipients that have this email but are not yet linked to this user
+    const normalizedEmail = normalizeEmail(userEmail);
     const recipientsToUpdate = await db
       .select()
       .from(recipients)
       .where(
         and(
-          eq(recipients.email, userEmail),
+          sql`LOWER(${recipients.email}) = ${normalizedEmail}`,
           or(
             isNull(recipients.linkedUserId),
             not(eq(recipients.linkedUserId, userId))
