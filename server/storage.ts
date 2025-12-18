@@ -395,6 +395,7 @@ export interface IStorage {
   countSecretSantaWishlistItems(participantId: string): Promise<number>;
   incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined>;
   getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined>;
+  getMostClickedSecretSantaWishlistItems(limit?: number): Promise<Array<SecretSantaWishlistItem & { eventTitle: string; participantName: string }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2829,6 +2830,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(secretSantaWishlistItems.id, id))
       .returning();
     return updated;
+  }
+
+  async getMostClickedSecretSantaWishlistItems(limit: number = 20): Promise<Array<SecretSantaWishlistItem & { eventTitle: string; participantName: string }>> {
+    const result = await db
+      .select({
+        id: secretSantaWishlistItems.id,
+        participantId: secretSantaWishlistItems.participantId,
+        eventId: secretSantaWishlistItems.eventId,
+        title: secretSantaWishlistItems.title,
+        description: secretSantaWishlistItems.description,
+        imageUrl: secretSantaWishlistItems.imageUrl,
+        purchaseUrl: secretSantaWishlistItems.purchaseUrl,
+        price: secretSantaWishlistItems.price,
+        priority: secretSantaWishlistItems.priority,
+        displayOrder: secretSantaWishlistItems.displayOrder,
+        clickCount: secretSantaWishlistItems.clickCount,
+        lastClickedAt: secretSantaWishlistItems.lastClickedAt,
+        createdAt: secretSantaWishlistItems.createdAt,
+        eventTitle: sql<string>`COALESCE(${collaborativeEvents.name}, 'Amigo Secreto')`.as('eventTitle'),
+        participantName: sql<string>`COALESCE(${collaborativeEventParticipants.name}, 'Participante')`.as('participantName'),
+      })
+      .from(secretSantaWishlistItems)
+      .leftJoin(collaborativeEvents, eq(secretSantaWishlistItems.eventId, collaborativeEvents.id))
+      .leftJoin(collaborativeEventParticipants, eq(secretSantaWishlistItems.participantId, collaborativeEventParticipants.id))
+      .where(sql`${secretSantaWishlistItems.clickCount} > 0`)
+      .orderBy(sql`${secretSantaWishlistItems.clickCount} DESC`, sql`${secretSantaWishlistItems.lastClickedAt} DESC NULLS LAST`)
+      .limit(limit);
+    return result;
   }
 }
 

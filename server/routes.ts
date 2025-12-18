@@ -1743,10 +1743,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/admin/wishlist-clicks - Get most clicked wishlist items (admin only)
+  // Returns combined results from both birthday wishlists and secret santa wishlists
   app.get("/api/admin/wishlist-clicks", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const items = await storage.getMostClickedWishlistItems(20);
-      res.json(items);
+      // Get clicks from both types of wishlists
+      const [birthdayItems, secretSantaItems] = await Promise.all([
+        storage.getMostClickedWishlistItems(20),
+        storage.getMostClickedSecretSantaWishlistItems(20)
+      ]);
+      
+      // Normalize items to a common format
+      const normalizedBirthday = birthdayItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        purchaseUrl: item.purchaseUrl,
+        price: item.price,
+        clickCount: item.clickCount,
+        lastClickedAt: item.lastClickedAt,
+        eventTitle: item.eventTitle || 'Aniversário',
+        ownerName: item.ownerName,
+        type: 'birthday' as const
+      }));
+      
+      const normalizedSecretSanta = secretSantaItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        purchaseUrl: item.purchaseUrl,
+        price: item.price,
+        clickCount: item.clickCount,
+        lastClickedAt: item.lastClickedAt,
+        eventTitle: item.eventTitle || 'Amigo Secreto',
+        ownerName: item.participantName,
+        type: 'secret_santa' as const
+      }));
+      
+      // Combine and sort by clickCount descending
+      const combined = [...normalizedBirthday, ...normalizedSecretSanta]
+        .sort((a, b) => b.clickCount - a.clickCount)
+        .slice(0, 20);
+      
+      res.json(combined);
     } catch (error) {
       console.error("Error fetching wishlist clicks:", error);
       res.status(500).json({ message: "Failed to fetch wishlist clicks" });
