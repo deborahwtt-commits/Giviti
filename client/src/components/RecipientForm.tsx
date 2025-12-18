@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { X, ChevronDown, Loader2 } from "lucide-react";
+import { X, ChevronDown, Loader2, Check, UserCheck, UserX, Lock } from "lucide-react";
 import RecipientProfileQuestionnaire from "./RecipientProfileQuestionnaire";
 import type { GoogleProductCategory } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface RecipientFormProps {
   initialData?: {
     name: string;
+    email?: string;
+    linkedUserId?: string;
     age: number;
     gender: string;
     zodiacSign: string;
@@ -33,6 +36,30 @@ interface RecipientFormProps {
   onSubmit: (data: any, profile?: any) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+}
+
+interface UserLookupResult {
+  found: boolean;
+  user?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  profile?: {
+    zodiacSign: string | null;
+    gender: string | null;
+    giftPreference: string | null;
+    freeTimeActivity: string | null;
+    musicalStyle: string | null;
+    monthlyGiftPreference: string | null;
+    surpriseReaction: string | null;
+    giftPriority: string | null;
+    giftGivingStyle: string | null;
+    specialTalent: string | null;
+    giftsToAvoid: string | null;
+    interests: string[] | null;
+    isCompleted: boolean | null;
+  } | null;
 }
 
 const zodiacSigns = [
@@ -71,6 +98,8 @@ export default function RecipientForm({
   isSubmitting = false,
 }: RecipientFormProps) {
   const [name, setName] = useState(initialData?.name || "");
+  const [email, setEmail] = useState(initialData?.email || "");
+  const [linkedUserId, setLinkedUserId] = useState(initialData?.linkedUserId || "");
   const [age, setAge] = useState(initialData?.age?.toString() || "");
   const [gender, setGender] = useState(initialData?.gender || "");
   const [zodiacSign, setZodiacSign] = useState(initialData?.zodiacSign || "");
@@ -84,6 +113,14 @@ export default function RecipientForm({
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [profileData, setProfileData] = useState<any>({});
   const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
+  
+  // Email lookup state
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupResult, setLookupResult] = useState<'found' | 'not_found' | null>(null);
+  const [lookupDebounceTimer, setLookupDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Track which fields were auto-filled from profile (read-only)
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   // Fetch Google product categories from API to use as interest options
   const { data: googleCategories, isLoading: categoriesLoading } = useQuery<GoogleProductCategory[]>({
@@ -102,6 +139,132 @@ export default function RecipientForm({
       setShowQuestionnaire(true);
     }
   }, [initialProfileData]);
+
+  // If recipient is already linked to a Giviti user, mark fields as auto-filled (from profile)
+  useEffect(() => {
+    if (initialData?.linkedUserId) {
+      const filledFields = new Set<string>();
+      if (initialData.name) filledFields.add('name');
+      if (initialData.gender) filledFields.add('gender');
+      if (initialData.zodiacSign) filledFields.add('zodiacSign');
+      if (initialData.interests && initialData.interests.length > 0) filledFields.add('interests');
+      setAutoFilledFields(filledFields);
+      setLookupResult('found');
+    }
+  }, [initialData?.linkedUserId, initialData?.name, initialData?.gender, initialData?.zodiacSign, initialData?.interests]);
+
+  // Email lookup function
+  const lookupUserByEmail = useCallback(async (emailToLookup: string) => {
+    if (!emailToLookup || !emailToLookup.includes('@')) {
+      setLookupResult(null);
+      setLinkedUserId("");
+      return;
+    }
+    
+    setIsLookingUp(true);
+    try {
+      const response = await fetch(`/api/users/lookup-by-email?email=${encodeURIComponent(emailToLookup)}`);
+      const data: UserLookupResult = await response.json();
+      
+      if (data.found && data.user) {
+        setLookupResult('found');
+        setLinkedUserId(data.user.id);
+        
+        const filledFields = new Set<string>();
+        
+        // Auto-fill name if empty and user has name
+        if (data.user.firstName || data.user.lastName) {
+          setName(`${data.user.firstName || ''} ${data.user.lastName || ''}`.trim());
+          filledFields.add('name');
+        }
+        
+        // Auto-fill profile data if available
+        if (data.profile) {
+          if (data.profile.zodiacSign) {
+            // Zodiac sign from profile is already in correct format (Áries, Touro, etc.)
+            // Verify it's a valid zodiac sign
+            const validZodiacSigns = [
+              'Áries', 'Touro', 'Gêmeos', 'Câncer', 'Leão', 'Virgem',
+              'Libra', 'Escorpião', 'Sagitário', 'Capricórnio', 'Aquário', 'Peixes'
+            ];
+            if (validZodiacSigns.includes(data.profile.zodiacSign)) {
+              setZodiacSign(data.profile.zodiacSign);
+              filledFields.add('zodiacSign');
+            }
+          }
+          if (data.profile.gender) {
+            // Map profile gender (Mulher, Homem, Não-binárie) to recipient format (Feminino, Masculino, Outro)
+            const genderMap: Record<string, string> = {
+              'Mulher': 'Feminino',
+              'Homem': 'Masculino',
+              'Não-binárie': 'Outro',
+            };
+            const mappedGender = genderMap[data.profile.gender];
+            if (mappedGender) {
+              setGender(mappedGender);
+              filledFields.add('gender');
+            }
+          }
+          if (data.profile.interests && data.profile.interests.length > 0) {
+            setInterests(data.profile.interests);
+            filledFields.add('interests');
+          }
+          
+          // Fill questionnaire data
+          const newProfileData: any = {};
+          if (data.profile.giftPreference) newProfileData.giftPreference = data.profile.giftPreference;
+          if (data.profile.freeTimeActivity) newProfileData.freeTimeActivity = data.profile.freeTimeActivity;
+          if (data.profile.musicalStyle) newProfileData.musicalStyle = data.profile.musicalStyle;
+          if (data.profile.monthlyGiftPreference) newProfileData.monthlyGiftPreference = data.profile.monthlyGiftPreference;
+          if (data.profile.surpriseReaction) newProfileData.surpriseReaction = data.profile.surpriseReaction;
+          if (data.profile.giftPriority) newProfileData.giftPriority = data.profile.giftPriority;
+          if (data.profile.giftGivingStyle) newProfileData.giftGivingStyle = data.profile.giftGivingStyle;
+          if (data.profile.specialTalent) newProfileData.specialTalent = data.profile.specialTalent;
+          if (data.profile.giftsToAvoid) newProfileData.giftsToAvoid = data.profile.giftsToAvoid;
+          
+          if (Object.keys(newProfileData).length > 0) {
+            setProfileData(newProfileData);
+            setShowQuestionnaire(true);
+            filledFields.add('questionnaire');
+          }
+        }
+        
+        setAutoFilledFields(filledFields);
+      } else {
+        setLookupResult('not_found');
+        setLinkedUserId("");
+        setAutoFilledFields(new Set());
+      }
+    } catch (error) {
+      console.error("Error looking up user:", error);
+      setLookupResult(null);
+      setLinkedUserId("");
+    } finally {
+      setIsLookingUp(false);
+    }
+  }, [name]);
+
+  // Handle email change with debounce
+  const handleEmailChange = (newEmail: string) => {
+    setEmail(newEmail);
+    setLookupResult(null);
+    setAutoFilledFields(new Set());
+    
+    // Clear previous timer
+    if (lookupDebounceTimer) {
+      clearTimeout(lookupDebounceTimer);
+    }
+    
+    // Set new timer for debounced lookup
+    if (newEmail && newEmail.includes('@')) {
+      const timer = setTimeout(() => {
+        lookupUserByEmail(newEmail);
+      }, 500);
+      setLookupDebounceTimer(timer);
+    } else {
+      setLinkedUserId("");
+    }
+  };
 
   const handleAddInterest = (interest: string) => {
     if (interest && !interests.includes(interest)) {
@@ -128,6 +291,8 @@ export default function RecipientForm({
     
     const data = {
       name,
+      email: email || null,
+      linkedUserId: linkedUserId || null,
       age: parseInt(age),
       gender: gender || null,
       zodiacSign: zodiacSign || null,
@@ -153,18 +318,70 @@ export default function RecipientForm({
         </h3>
 
         <div className="space-y-2">
-          <Label htmlFor="name">Nome completo</Label>
+          <Label htmlFor="email">Email (opcional)</Label>
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              placeholder="Ex: pessoa@email.com"
+              data-testid="input-email"
+              className={lookupResult === 'found' ? 'pr-10 border-green-500' : lookupResult === 'not_found' ? 'pr-10' : ''}
+            />
+            {isLookingUp && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLookingUp && lookupResult === 'found' && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <UserCheck className="w-4 h-4 text-green-500" />
+              </div>
+            )}
+            {!isLookingUp && lookupResult === 'not_found' && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <UserX className="w-4 h-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          {lookupResult === 'found' && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <Check className="w-3 h-3" />
+              Usuário Giviti encontrado! Preferências preenchidas automaticamente.
+            </p>
+          )}
+          {lookupResult === 'not_found' && (
+            <p className="text-xs text-muted-foreground">
+              Email não cadastrado no Giviti.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="name" className="flex items-center gap-1.5">
+            Nome completo
+            {autoFilledFields.has('name') && <Lock className="w-3 h-3 text-green-600" />}
+          </Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: João Silva"
             required
+            disabled={autoFilledFields.has('name')}
             data-testid="input-name"
+            className={autoFilledFields.has('name') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
           />
+          {autoFilledFields.has('name') && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Preenchido do perfil Giviti
+            </p>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="age">Idade</Label>
             <Input
@@ -195,9 +412,16 @@ export default function RecipientForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gender">Sexo</Label>
-            <Select value={gender} onValueChange={setGender} required>
-              <SelectTrigger id="gender" data-testid="select-gender">
+            <Label htmlFor="gender" className="flex items-center gap-1.5">
+              Sexo
+              {autoFilledFields.has('gender') && <Lock className="w-3 h-3 text-green-600" />}
+            </Label>
+            <Select value={gender} onValueChange={setGender} disabled={autoFilledFields.has('gender')}>
+              <SelectTrigger 
+                id="gender" 
+                data-testid="select-gender"
+                className={autoFilledFields.has('gender') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
+              >
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -206,63 +430,116 @@ export default function RecipientForm({
                 <SelectItem value="Outro">Outro</SelectItem>
               </SelectContent>
             </Select>
+            {autoFilledFields.has('gender') && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Preenchido do perfil Giviti
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="zodiacSign" className="flex items-center gap-1.5">
+              Signo
+              {autoFilledFields.has('zodiacSign') && <Lock className="w-3 h-3 text-green-600" />}
+            </Label>
+            <Select value={zodiacSign} onValueChange={setZodiacSign} disabled={autoFilledFields.has('zodiacSign')}>
+              <SelectTrigger 
+                id="zodiacSign" 
+                data-testid="select-zodiac"
+                className={autoFilledFields.has('zodiacSign') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
+              >
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {zodiacSigns.map((sign) => (
+                  <SelectItem key={sign} value={sign}>
+                    {sign}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {autoFilledFields.has('zodiacSign') && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Preenchido do perfil Giviti
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-semibold text-lg text-foreground">Interesses</h3>
+        <h3 className="font-semibold text-lg text-foreground flex items-center gap-1.5">
+          Interesses
+          {autoFilledFields.has('interests') && <Lock className="w-3.5 h-3.5 text-green-600" />}
+        </h3>
 
-        <div className="space-y-2">
-          <Label htmlFor="interests">Adicionar interesse</Label>
-          <Select
-            value={newInterest}
-            onValueChange={(value) => {
-              handleAddInterest(value);
-            }}
-            disabled={categoriesLoading}
-          >
-            <SelectTrigger id="interests" data-testid="select-interests">
-              <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
-            </SelectTrigger>
-            <SelectContent>
-              {categoriesLoading ? (
-                <div className="p-2 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Carregando...
-                </div>
-              ) : interestOptions.length === 0 ? (
-                <div className="p-2 text-sm text-muted-foreground text-center">
-                  Nenhuma categoria disponível
-                </div>
-              ) : (
-                interestOptions
-                  .filter((opt) => !interests.includes(opt))
-                  .map((interest) => (
-                    <SelectItem key={interest} value={interest}>
-                      {interest}
-                    </SelectItem>
-                  ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+        {!autoFilledFields.has('interests') && (
+          <div className="space-y-2">
+            <Label htmlFor="interests">Adicionar interesse</Label>
+            <Select
+              value={newInterest}
+              onValueChange={(value) => {
+                handleAddInterest(value);
+              }}
+              disabled={categoriesLoading}
+            >
+              <SelectTrigger id="interests" data-testid="select-interests">
+                <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
+              </SelectTrigger>
+              <SelectContent>
+                {categoriesLoading ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Carregando...
+                  </div>
+                ) : interestOptions.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    Nenhuma categoria disponível
+                  </div>
+                ) : (
+                  interestOptions
+                    .filter((opt) => !interests.includes(opt))
+                    .map((interest) => (
+                      <SelectItem key={interest} value={interest}>
+                        {interest}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {interests.map((interest) => (
-            <Badge key={interest} variant="secondary" className="gap-1">
+            <Badge 
+              key={interest} 
+              variant="secondary" 
+              className={`gap-1 ${autoFilledFields.has('interests') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}`}
+            >
+              {autoFilledFields.has('interests') && <Lock className="w-3 h-3" />}
               {interest}
-              <button
-                type="button"
-                onClick={() => handleRemoveInterest(interest)}
-                className="hover-elevate rounded-full"
-                data-testid={`button-remove-interest-${interest}`}
-              >
-                <X className="w-3 h-3" />
-              </button>
+              {!autoFilledFields.has('interests') && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveInterest(interest)}
+                  className="hover-elevate rounded-full"
+                  data-testid={`button-remove-interest-${interest}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </Badge>
           ))}
         </div>
+        {autoFilledFields.has('interests') && (
+          <p className="text-xs text-green-600 flex items-center gap-1">
+            <Lock className="w-3 h-3" />
+            Interesses do perfil Giviti
+          </p>
+        )}
       </div>
 
       <div className="space-y-4">

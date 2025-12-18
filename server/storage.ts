@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -230,6 +230,7 @@ export interface IStorage {
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   upsertUserProfile(userId: string, profile: InsertUserProfile): Promise<UserProfile>;
+  syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number>;
   
   // Recipient Profile operations
   getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined>;
@@ -393,6 +394,9 @@ export interface IStorage {
   createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem>;
   deleteSecretSantaWishlistItem(id: string): Promise<boolean>;
   countSecretSantaWishlistItems(participantId: string): Promise<number>;
+  incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined>;
+  getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined>;
+  getMostClickedSecretSantaWishlistItems(limit?: number): Promise<Array<SecretSantaWishlistItem & { eventTitle: string; participantName: string }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1342,6 +1346,85 @@ export class DatabaseStorage implements IStorage {
     return profile;
   }
 
+  async syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number> {
+    // Find all recipients that have this email but are not yet linked to this user
+    const recipientsToUpdate = await db
+      .select()
+      .from(recipients)
+      .where(
+        and(
+          eq(recipients.email, userEmail),
+          or(
+            isNull(recipients.linkedUserId),
+            not(eq(recipients.linkedUserId, userId))
+          )
+        )
+      );
+
+    if (recipientsToUpdate.length === 0) {
+      return 0;
+    }
+
+    // Get user info and profile
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    const userProfile = await this.getUserProfile(userId);
+
+    if (!user) {
+      return 0;
+    }
+
+    // Map profile values to recipient format
+    // User profile stores gender as "Mulher", "Homem", "Não-binárie" etc.
+    // Recipients use "Feminino", "Masculino", "Outro"
+    const genderMap: Record<string, string> = {
+      'Mulher': 'Feminino',
+      'Homem': 'Masculino',
+      'Não-binárie': 'Outro',
+      'Prefiro não informar': '',
+    };
+
+    // Build update data from user profile
+    const updateData: Partial<typeof recipients.$inferSelect> = {
+      linkedUserId: userId,
+      updatedAt: new Date(),
+    };
+
+    // Update name from user
+    if (user.firstName || user.lastName) {
+      updateData.name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    }
+
+    // Update from profile if available
+    if (userProfile) {
+      // Zodiac sign is already in the correct format (Áries, Touro, etc.)
+      if (userProfile.zodiacSign) {
+        updateData.zodiacSign = userProfile.zodiacSign;
+      }
+      // Gender needs mapping from profile format to recipient format
+      if (userProfile.gender) {
+        const mappedGender = genderMap[userProfile.gender];
+        if (mappedGender) {
+          updateData.gender = mappedGender;
+        }
+      }
+      if (userProfile.interests && userProfile.interests.length > 0) {
+        updateData.interests = userProfile.interests;
+      }
+    }
+
+    // Update all matching recipients
+    let updatedCount = 0;
+    for (const recipient of recipientsToUpdate) {
+      await db
+        .update(recipients)
+        .set(updateData)
+        .where(eq(recipients.id, recipient.id));
+      updatedCount++;
+    }
+
+    return updatedCount;
+  }
+
   // ========== Recipient Profile ==========
 
   async getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined> {
@@ -1973,13 +2056,13 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Get user email for email-only participant matching
+    // Get user email for email-only participant matching (normalized to lowercase)
     const [user] = await db
       .select({ email: users.email })
       .from(users)
       .where(eq(users.id, userId));
     
-    const userEmail = user?.email;
+    const userEmail = user?.email?.toLowerCase();
 
     // Single optimized query: fetch events where user is owner OR participant (by userId or email)
     const events = await db
@@ -2007,7 +2090,7 @@ export class DatabaseStorage implements IStorage {
         sql`(
           ${collaborativeEvents.ownerId} = ${userId}
           OR ${collaborativeEventParticipants.userId} = ${userId}
-          ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+          ${userEmail ? sql`OR LOWER(${collaborativeEventParticipants.email}) = ${userEmail}` : sql``}
         )`
       )
       .orderBy(desc(collaborativeEvents.createdAt));
@@ -2031,13 +2114,13 @@ export class DatabaseStorage implements IStorage {
       return event;
     }
 
-    // Get user email for email-only participant matching
+    // Get user email for email-only participant matching (normalized to lowercase)
     const [user] = await db
       .select({ email: users.email })
       .from(users)
       .where(eq(users.id, userId));
     
-    const userEmail = user?.email;
+    const userEmail = user?.email?.toLowerCase();
 
     // Single optimized query: check owner OR participant (by userId or email)
     const [event] = await db
@@ -2067,7 +2150,7 @@ export class DatabaseStorage implements IStorage {
           sql`(
             ${collaborativeEvents.ownerId} = ${userId}
             OR ${collaborativeEventParticipants.userId} = ${userId}
-            ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
+            ${userEmail ? sql`OR LOWER(${collaborativeEventParticipants.email}) = ${userEmail}` : sql``}
           )`
         )
       );
@@ -2264,6 +2347,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async linkParticipantsByEmail(email: string, userId: string): Promise<number> {
+    const normalizedEmail = email.toLowerCase();
     const result = await db
       .update(collaborativeEventParticipants)
       .set({
@@ -2272,7 +2356,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(
         and(
-          eq(collaborativeEventParticipants.email, email.toLowerCase()),
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
           sql`${collaborativeEventParticipants.userId} IS NULL`
         )
       )
@@ -2807,6 +2891,54 @@ export class DatabaseStorage implements IStorage {
       .from(secretSantaWishlistItems)
       .where(eq(secretSantaWishlistItems.participantId, participantId));
     return result[0]?.count || 0;
+  }
+
+  async getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.id, id));
+    return item;
+  }
+
+  async incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined> {
+    const [updated] = await db
+      .update(secretSantaWishlistItems)
+      .set({
+        clickCount: sql`${secretSantaWishlistItems.clickCount} + 1`,
+        lastClickedAt: new Date(),
+      })
+      .where(eq(secretSantaWishlistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getMostClickedSecretSantaWishlistItems(limit: number = 20): Promise<Array<SecretSantaWishlistItem & { eventTitle: string; participantName: string }>> {
+    const result = await db
+      .select({
+        id: secretSantaWishlistItems.id,
+        participantId: secretSantaWishlistItems.participantId,
+        eventId: secretSantaWishlistItems.eventId,
+        title: secretSantaWishlistItems.title,
+        description: secretSantaWishlistItems.description,
+        imageUrl: secretSantaWishlistItems.imageUrl,
+        purchaseUrl: secretSantaWishlistItems.purchaseUrl,
+        price: secretSantaWishlistItems.price,
+        priority: secretSantaWishlistItems.priority,
+        displayOrder: secretSantaWishlistItems.displayOrder,
+        clickCount: secretSantaWishlistItems.clickCount,
+        lastClickedAt: secretSantaWishlistItems.lastClickedAt,
+        createdAt: secretSantaWishlistItems.createdAt,
+        eventTitle: sql<string>`COALESCE(${collaborativeEvents.name}, 'Amigo Secreto')`.as('eventTitle'),
+        participantName: sql<string>`COALESCE(${collaborativeEventParticipants.name}, 'Participante')`.as('participantName'),
+      })
+      .from(secretSantaWishlistItems)
+      .leftJoin(collaborativeEvents, eq(secretSantaWishlistItems.eventId, collaborativeEvents.id))
+      .leftJoin(collaborativeEventParticipants, eq(secretSantaWishlistItems.participantId, collaborativeEventParticipants.id))
+      .where(sql`${secretSantaWishlistItems.clickCount} > 0`)
+      .orderBy(sql`${secretSantaWishlistItems.clickCount} DESC`, sql`${secretSantaWishlistItems.lastClickedAt} DESC NULLS LAST`)
+      .limit(limit);
+    return result;
   }
 }
 

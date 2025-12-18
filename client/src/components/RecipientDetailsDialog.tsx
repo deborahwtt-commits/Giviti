@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Edit, User, Cake, Users, Star, Heart, MapPin } from "lucide-react";
+import { Edit, User, Cake, Users, Star, Heart, MapPin, Mail } from "lucide-react";
 import type { Recipient, RecipientProfile } from "@shared/schema";
 import AutoSuggestions from "./AutoSuggestions";
 
@@ -113,6 +113,16 @@ export default function RecipientDetailsDialog({
                   <span className="text-sm">
                     <span className="text-muted-foreground">Relacionamento:</span>{" "}
                     <span className="font-medium">{recipient.relationship}</span>
+                  </span>
+                </div>
+              )}
+
+              {recipient.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    <span className="font-medium">{recipient.email}</span>
                   </span>
                 </div>
               )}

@@ -1562,86 +1562,36 @@ export default function RoleDetail() {
               );
             })()}
 
-            {event.eventType === "secret_santa" && (() => {
-              const rules = event.typeSpecificData as SecretSantaRules | null;
-              const hasRules = rules && (rules.minGiftValue || rules.maxGiftValue || rules.rulesDescription);
-              
-              if (!hasRules && !isOwner) return null;
-              
-              return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Gift className="w-5 h-5" />
-                      Regras do Amigo Secreto
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {(rules?.minGiftValue || rules?.maxGiftValue) && (
-                      <div className="flex items-start gap-3">
-                        <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Faixa de Valor do Presente</p>
-                          <p className="text-lg font-semibold text-primary" data-testid="text-gift-value-range">
-                            {rules?.minGiftValue && rules?.maxGiftValue ? (
-                              <>R$ {rules.minGiftValue} - R$ {rules.maxGiftValue}</>
-                            ) : rules?.minGiftValue ? (
-                              <>A partir de R$ {rules.minGiftValue}</>
-                            ) : (
-                              <>Até R$ {rules?.maxGiftValue}</>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {rules?.rulesDescription && (
-                      <div className="flex items-start gap-3">
-                        <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Regras</p>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-rules-description">
-                            {rules.rulesDescription}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {!hasRules && (
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma regra definida ainda. {isOwner && "Vá em Configurações para definir as regras."}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })()}
           </div>
 
-          {/* Participant/Owner view: My Wishlist */}
+          {/* Grid for My Wishlist + Seu Amigo Secreto side by side (for participants) */}
           {event.eventType === "secret_santa" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="w-5 h-5" />
-                      Minha Lista de Desejos
-                    </CardTitle>
-                    <CardDescription>
-                      Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
-                    </CardDescription>
+            <div className={`grid gap-6 ${!isOwner ? 'grid-cols-1 lg:grid-cols-2' : ''}`}>
+              {/* My Wishlist Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Heart className="w-5 h-5" />
+                        Minha Lista de Desejos
+                      </CardTitle>
+                      <CardDescription>
+                        Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWishlistDialogOpen(true)}
+                      disabled={(myWishlist?.length || 0) >= 10}
+                      data-testid="button-add-wishlist-item"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWishlistDialogOpen(true)}
-                    disabled={(myWishlist?.length || 0) >= 10}
-                    data-testid="button-add-wishlist-item"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent>
                 {wishlistLoading ? (
                   <div className="flex items-center justify-center py-4">
@@ -1717,7 +1667,215 @@ export default function RoleDetail() {
                 )}
               </CardContent>
             </Card>
+
+              {/* Participant view: Seu Amigo Secreto Card - side by side with My Wishlist */}
+              {!isOwner && (
+                <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="w-5 h-5" />
+                  Seu Amigo Secreto
+                </CardTitle>
+                <CardDescription>
+                  Descubra quem você tirou no sorteio
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {myPairLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : myPair && myPair.receiver ? (
+                  <>
+                    <div className="flex items-center gap-4 p-4 rounded-lg border bg-primary/5">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="text-lg">
+                          {getInitials(myPair.receiver.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold" data-testid="text-my-pair-name">
+                          {myPair.receiver.name || "Participante"}
+                        </p>
+                        {myPair.receiver.email && (
+                          <p className="text-sm text-muted-foreground" data-testid="text-my-pair-email">
+                            {myPair.receiver.email}
+                          </p>
+                        )}
+                      </div>
+                      {/* Quick access icons */}
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const receiverParticipant = participants?.find(p => p.id === myPair.receiver.id);
+                          return (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => receiverParticipant && setSelectedParticipantForProfile(receiverParticipant)}
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                                      receiverParticipant?.hasFilledProfile 
+                                        ? 'text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-green-950' 
+                                        : 'text-muted-foreground cursor-default'
+                                    }`}
+                                    disabled={!receiverParticipant?.hasFilledProfile}
+                                    data-testid="button-view-receiver-preferences"
+                                  >
+                                    <ClipboardCheck className="w-5 h-5" />
+                                    <span className="text-xs">Preferências</span>
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{receiverParticipant?.hasFilledProfile ? 'Ver preferências' : 'Perfil não preenchido'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                                      receiverWishlist && receiverWishlist.length > 0
+                                        ? 'text-pink-600 dark:text-pink-500'
+                                        : 'text-muted-foreground'
+                                    }`}
+                                    data-testid="icon-receiver-wishlist-status"
+                                  >
+                                    <Heart className="w-5 h-5" />
+                                    <span className="text-xs">Wishlist</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{receiverWishlist && receiverWishlist.length > 0 
+                                    ? `${receiverWishlist.length} item(s) na lista` 
+                                    : 'Lista de desejos vazia'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Receiver's Wishlist */}
+                    {receiverWishlistLoading ? (
+                      <div className="flex items-center justify-center py-4 mt-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : receiverWishlist && receiverWishlist.length > 0 ? (
+                      <div className="mt-4 pt-4 border-t" data-testid="receiver-wishlist-section">
+                        <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Heart className="w-4 h-4 text-pink-600 dark:text-pink-500" />
+                          Lista de Desejos
+                        </p>
+                        <div className="space-y-2">
+                          {receiverWishlist.map((item) => (
+                            <div key={item.id} className="p-3 rounded-lg border bg-background" data-testid={`receiver-wishlist-item-${item.id}`}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <p className="font-medium">{item.title}</p>
+                                {item.priority === 1 && (
+                                  <Badge variant="outline" className="text-xs">Muito desejado</Badge>
+                                )}
+                              </div>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                {item.price && (
+                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <DollarSign className="w-3 h-3" />
+                                    {formatCurrency(item.price)}
+                                  </span>
+                                )}
+                                {item.purchaseUrl && (
+                                  <a
+                                    href={item.purchaseUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                                    data-testid={`link-receiver-wishlist-${item.id}`}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    Ver produto
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Seu amigo ainda não adicionou itens à lista de desejos
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center py-4">
+                    <p className="text-sm text-muted-foreground">
+                      O sorteio ainda não foi realizado. Aguarde o organizador.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+              </Card>
+              )}
+            </div>
           )}
+
+          {/* Secret Santa Rules - positioned after "Seu Amigo Secreto" for participants */}
+          {event.eventType === "secret_santa" && (() => {
+            const rules = event.typeSpecificData as SecretSantaRules | null;
+            const hasRules = rules && (rules.minGiftValue || rules.maxGiftValue || rules.rulesDescription);
+            
+            if (!hasRules && !isOwner) return null;
+            
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Regras do Amigo Secreto
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(rules?.minGiftValue || rules?.maxGiftValue) && (
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Faixa de Valor do Presente</p>
+                        <p className="text-lg font-semibold text-primary" data-testid="text-gift-value-range">
+                          {rules?.minGiftValue && rules?.maxGiftValue ? (
+                            <>R$ {rules.minGiftValue} - R$ {rules.maxGiftValue}</>
+                          ) : rules?.minGiftValue ? (
+                            <>A partir de R$ {rules.minGiftValue}</>
+                          ) : (
+                            <>Até R$ {rules?.maxGiftValue}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {rules?.rulesDescription && (
+                    <div className="flex items-start gap-3">
+                      <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Regras</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-rules-description">
+                          {rules.rulesDescription}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {!hasRules && (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma regra definida ainda. {isOwner && "Vá em Configurações para definir as regras."}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {event.eventType === "secret_santa" && isOwner && (
             <Card>
@@ -1843,109 +2001,6 @@ export default function RoleDetail() {
                         )}
                       </>
                     )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Participant view: show their assigned pair */}
-          {event.eventType === "secret_santa" && !isOwner && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gift className="w-5 h-5" />
-                  Seu Amigo Secreto
-                </CardTitle>
-                <CardDescription>
-                  Descubra quem você tirou no sorteio
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {myPairLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : myPair && myPair.receiver ? (
-                  <>
-                    <div className="flex items-center gap-4 p-4 rounded-lg border bg-primary/5">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="text-lg">
-                          {getInitials(myPair.receiver.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-lg font-semibold" data-testid="text-my-pair-name">
-                          {myPair.receiver.name || "Participante"}
-                        </p>
-                        {myPair.receiver.email && (
-                          <p className="text-sm text-muted-foreground" data-testid="text-my-pair-email">
-                            {myPair.receiver.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Receiver's Wishlist */}
-                    {receiverWishlistLoading ? (
-                      <div className="flex items-center justify-center py-4 mt-4">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : receiverWishlist && receiverWishlist.length > 0 ? (
-                      <div className="mt-4 pt-4 border-t" data-testid="receiver-wishlist-section">
-                        <p className="text-sm font-medium mb-3 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4" />
-                          O que seu amigo quer ganhar
-                        </p>
-                        <div className="space-y-2">
-                          {receiverWishlist.map((item) => (
-                            <div key={item.id} className="p-3 rounded-lg border bg-background" data-testid={`receiver-wishlist-item-${item.id}`}>
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <p className="font-medium">{item.title}</p>
-                                {item.priority === 1 && (
-                                  <Badge variant="outline" className="text-xs">Muito desejado</Badge>
-                                )}
-                              </div>
-                              {item.description && (
-                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                              )}
-                              <div className="flex items-center gap-3 mt-2 flex-wrap">
-                                {item.price && (
-                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <DollarSign className="w-3 h-3" />
-                                    {formatCurrency(item.price)}
-                                  </span>
-                                )}
-                                {item.purchaseUrl && (
-                                  <a
-                                    href={item.purchaseUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                                    data-testid={`link-receiver-wishlist-${item.id}`}
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                    Ver produto
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-sm text-muted-foreground text-center py-2">
-                          Seu amigo ainda não adicionou itens à lista de desejos
-                        </p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex items-center justify-center py-4">
-                    <p className="text-sm text-muted-foreground">
-                      O sorteio ainda não foi realizado. Aguarde o organizador.
-                    </p>
                   </div>
                 )}
               </CardContent>

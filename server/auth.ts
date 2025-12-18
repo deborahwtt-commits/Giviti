@@ -69,6 +69,12 @@ export async function setupAuth(app: Express): Promise<void> {
         console.log(`[Register] Linked ${linkedCount} participant invitation(s) to new user ${newUser.id}`);
       }
 
+      // Sync any recipients that have this user's email with the new user data
+      const syncedRecipientsCount = await storage.syncRecipientsFromUserProfile(newUser.id, validatedData.email);
+      if (syncedRecipientsCount > 0) {
+        console.log(`[Register] Synced ${syncedRecipientsCount} recipient(s) to new user ${newUser.id}`);
+      }
+
       // Regenerate session to prevent session fixation
       req.session.regenerate((err) => {
         if (err) {
@@ -124,6 +130,12 @@ export async function setupAuth(app: Express): Promise<void> {
       const isPasswordValid = await bcrypt.compare(validatedData.password, user.passwordHash);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "E-mail ou senha incorretos" });
+      }
+
+      // Link any pending participant invitations to this user (case-insensitive email match)
+      const linkedCount = await storage.linkParticipantsByEmail(validatedData.email, user.id);
+      if (linkedCount > 0) {
+        console.log(`[Login] Linked ${linkedCount} participant invitation(s) to user ${user.id}`);
       }
 
       // Regenerate session to prevent session fixation

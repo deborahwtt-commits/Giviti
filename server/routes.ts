@@ -187,6 +187,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== Recipient Routes ==========
 
+  // GET /api/users/lookup-by-email - Lookup user and profile by email for recipient linking
+  app.get("/api/users/lookup-by-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(normalizedEmail);
+      
+      if (!user) {
+        return res.json({ found: false });
+      }
+      
+      // Get user profile if exists
+      const profile = await storage.getUserProfile(user.id);
+      
+      res.json({
+        found: true,
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        profile: profile ? {
+          zodiacSign: profile.zodiacSign,
+          gender: profile.gender,
+          giftPreference: profile.giftPreference,
+          freeTimeActivity: profile.freeTimeActivity,
+          musicalStyle: profile.musicalStyle,
+          monthlyGiftPreference: profile.monthlyGiftPreference,
+          surpriseReaction: profile.surpriseReaction,
+          giftPriority: profile.giftPriority,
+          giftGivingStyle: profile.giftGivingStyle,
+          specialTalent: profile.specialTalent,
+          giftsToAvoid: profile.giftsToAvoid,
+          interests: profile.interests,
+          isCompleted: profile.isCompleted,
+        } : null
+      });
+    } catch (error) {
+      console.error("Error looking up user by email:", error);
+      res.status(500).json({ message: "Failed to lookup user" });
+    }
+  });
+
   // GET /api/recipients - Get all recipients for authenticated user
   app.get("/api/recipients", isAuthenticated, async (req: any, res) => {
     try {
@@ -1306,8 +1356,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user!.id;
+      const userEmail = req.user!.email;
       const validatedData = insertUserProfileSchema.parse(req.body);
       const profile = await storage.upsertUserProfile(userId, validatedData);
+      
+      // Sync recipients that have this user's email with the updated profile data
+      const syncedCount = await storage.syncRecipientsFromUserProfile(userId, userEmail);
+      if (syncedCount > 0) {
+        console.log(`Synced ${syncedCount} recipients with user profile for ${userEmail}`);
+      }
+      
       res.json(profile);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -1718,16 +1776,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/wishlist-click/:itemId - Track click on wishlist item (public endpoint)
+  // Supports both birthday wishlist items and secret santa wishlist items
   app.post("/api/wishlist-click/:itemId", async (req: any, res) => {
     try {
       const { itemId } = req.params;
       
-      const updated = await storage.incrementWishlistItemClick(itemId);
+      // Try birthday wishlist first
+      let updated = await storage.incrementWishlistItemClick(itemId);
+      
+      // If not found in birthday, try secret santa wishlist
       if (!updated) {
+        const secretSantaUpdated = await storage.incrementSecretSantaWishlistItemClick(itemId);
+        if (secretSantaUpdated) {
+          return res.json({ success: true, clickCount: secretSantaUpdated.clickCount, type: 'secret_santa' });
+        }
         return res.status(404).json({ message: "Item not found" });
       }
       
-      res.json({ success: true, clickCount: updated.clickCount });
+      res.json({ success: true, clickCount: updated.clickCount, type: 'birthday' });
     } catch (error) {
       console.error("Error tracking wishlist click:", error);
       res.status(500).json({ message: "Failed to track click" });
@@ -1735,10 +1801,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/admin/wishlist-clicks - Get most clicked wishlist items (admin only)
+  // Returns combined results from both birthday wishlists and secret santa wishlists
   app.get("/api/admin/wishlist-clicks", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const items = await storage.getMostClickedWishlistItems(20);
-      res.json(items);
+      // Get clicks from both types of wishlists
+      const [birthdayItems, secretSantaItems] = await Promise.all([
+        storage.getMostClickedWishlistItems(20),
+        storage.getMostClickedSecretSantaWishlistItems(20)
+      ]);
+      
+      // Normalize items to a common format
+      const normalizedBirthday = birthdayItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        purchaseUrl: item.purchaseUrl,
+        price: item.price,
+        clickCount: item.clickCount,
+        lastClickedAt: item.lastClickedAt,
+        eventTitle: item.eventTitle || 'Aniversário',
+        ownerName: item.ownerName,
+        type: 'birthday' as const
+      }));
+      
+      const normalizedSecretSanta = secretSantaItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        purchaseUrl: item.purchaseUrl,
+        price: item.price,
+        clickCount: item.clickCount,
+        lastClickedAt: item.lastClickedAt,
+        eventTitle: item.eventTitle || 'Amigo Secreto',
+        ownerName: item.participantName,
+        type: 'secret_santa' as const
+      }));
+      
+      // Combine and sort by clickCount descending
+      const combined = [...normalizedBirthday, ...normalizedSecretSanta]
+        .sort((a, b) => b.clickCount - a.clickCount)
+        .slice(0, 20);
+      
+      res.json(combined);
     } catch (error) {
       console.error("Error fetching wishlist clicks:", error);
       res.status(500).json({ message: "Failed to fetch wishlist clicks" });

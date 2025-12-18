@@ -96,6 +96,8 @@ export const recipients = pgTable("recipients", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
+  email: varchar("email"),
+  linkedUserId: varchar("linked_user_id").references(() => users.id, { onDelete: "set null" }),
   age: integer("age").notNull(),
   gender: varchar("gender"),
   zodiacSign: varchar("zodiac_sign"),
@@ -938,12 +940,16 @@ export const secretSantaWishlistItems = pgTable("secret_santa_wishlist_items", {
   price: varchar("price"),
   priority: integer("priority").default(0), // 0 = normal, 1 = high priority
   displayOrder: integer("display_order").default(0),
+  clickCount: integer("click_count").default(0).notNull(),
+  lastClickedAt: timestamp("last_clicked_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertSecretSantaWishlistItemSchema = createInsertSchema(secretSantaWishlistItems).omit({
   id: true,
   displayOrder: true,
+  clickCount: true,
+  lastClickedAt: true,
   createdAt: true,
 });
 
