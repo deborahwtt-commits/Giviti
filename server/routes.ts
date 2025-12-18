@@ -187,6 +187,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== Recipient Routes ==========
 
+  // GET /api/users/lookup-by-email - Lookup user and profile by email for recipient linking
+  app.get("/api/users/lookup-by-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(normalizedEmail);
+      
+      if (!user) {
+        return res.json({ found: false });
+      }
+      
+      // Get user profile if exists
+      const profile = await storage.getUserProfile(user.id);
+      
+      res.json({
+        found: true,
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        profile: profile ? {
+          zodiacSign: profile.zodiacSign,
+          gender: profile.gender,
+          giftPreference: profile.giftPreference,
+          freeTimeActivity: profile.freeTimeActivity,
+          musicalStyle: profile.musicalStyle,
+          monthlyGiftPreference: profile.monthlyGiftPreference,
+          surpriseReaction: profile.surpriseReaction,
+          giftPriority: profile.giftPriority,
+          giftGivingStyle: profile.giftGivingStyle,
+          specialTalent: profile.specialTalent,
+          giftsToAvoid: profile.giftsToAvoid,
+          interests: profile.interests,
+          isCompleted: profile.isCompleted,
+        } : null
+      });
+    } catch (error) {
+      console.error("Error looking up user by email:", error);
+      res.status(500).json({ message: "Failed to lookup user" });
+    }
+  });
+
   // GET /api/recipients - Get all recipients for authenticated user
   app.get("/api/recipients", isAuthenticated, async (req: any, res) => {
     try {
