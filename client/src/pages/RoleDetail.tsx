@@ -2431,7 +2431,7 @@ export default function RoleDetail() {
                           <SelectValue placeholder="Selecione quem..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                          {participants?.map((participant) => (
                             <SelectItem 
                               key={participant.id} 
                               value={participant.id}
@@ -2456,7 +2456,7 @@ export default function RoleDetail() {
                           <SelectValue placeholder="Selecione quem não pode tirar..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                          {participants?.map((participant) => (
                             <SelectItem 
                               key={participant.id} 
                               value={participant.id}
