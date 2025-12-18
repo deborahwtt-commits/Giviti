@@ -16,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { X, ChevronDown, Loader2, Check, UserCheck, UserX } from "lucide-react";
+import { X, ChevronDown, Loader2, Check, UserCheck, UserX, Lock } from "lucide-react";
 import RecipientProfileQuestionnaire from "./RecipientProfileQuestionnaire";
 import type { GoogleProductCategory } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -335,15 +335,26 @@ export default function RecipientForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name">Nome completo</Label>
+          <Label htmlFor="name" className="flex items-center gap-1.5">
+            Nome completo
+            {autoFilledFields.has('name') && <Lock className="w-3 h-3 text-green-600" />}
+          </Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: João Silva"
             required
+            disabled={autoFilledFields.has('name')}
             data-testid="input-name"
+            className={autoFilledFields.has('name') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
           />
+          {autoFilledFields.has('name') && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Preenchido do perfil Giviti
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -377,9 +388,16 @@ export default function RecipientForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gender">Sexo</Label>
-            <Select value={gender} onValueChange={setGender} required>
-              <SelectTrigger id="gender" data-testid="select-gender">
+            <Label htmlFor="gender" className="flex items-center gap-1.5">
+              Sexo
+              {autoFilledFields.has('gender') && <Lock className="w-3 h-3 text-green-600" />}
+            </Label>
+            <Select value={gender} onValueChange={setGender} disabled={autoFilledFields.has('gender')}>
+              <SelectTrigger 
+                id="gender" 
+                data-testid="select-gender"
+                className={autoFilledFields.has('gender') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}
+              >
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -388,63 +406,87 @@ export default function RecipientForm({
                 <SelectItem value="Outro">Outro</SelectItem>
               </SelectContent>
             </Select>
+            {autoFilledFields.has('gender') && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Preenchido do perfil Giviti
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-semibold text-lg text-foreground">Interesses</h3>
+        <h3 className="font-semibold text-lg text-foreground flex items-center gap-1.5">
+          Interesses
+          {autoFilledFields.has('interests') && <Lock className="w-3.5 h-3.5 text-green-600" />}
+        </h3>
 
-        <div className="space-y-2">
-          <Label htmlFor="interests">Adicionar interesse</Label>
-          <Select
-            value={newInterest}
-            onValueChange={(value) => {
-              handleAddInterest(value);
-            }}
-            disabled={categoriesLoading}
-          >
-            <SelectTrigger id="interests" data-testid="select-interests">
-              <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
-            </SelectTrigger>
-            <SelectContent>
-              {categoriesLoading ? (
-                <div className="p-2 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Carregando...
-                </div>
-              ) : interestOptions.length === 0 ? (
-                <div className="p-2 text-sm text-muted-foreground text-center">
-                  Nenhuma categoria disponível
-                </div>
-              ) : (
-                interestOptions
-                  .filter((opt) => !interests.includes(opt))
-                  .map((interest) => (
-                    <SelectItem key={interest} value={interest}>
-                      {interest}
-                    </SelectItem>
-                  ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+        {!autoFilledFields.has('interests') && (
+          <div className="space-y-2">
+            <Label htmlFor="interests">Adicionar interesse</Label>
+            <Select
+              value={newInterest}
+              onValueChange={(value) => {
+                handleAddInterest(value);
+              }}
+              disabled={categoriesLoading}
+            >
+              <SelectTrigger id="interests" data-testid="select-interests">
+                <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
+              </SelectTrigger>
+              <SelectContent>
+                {categoriesLoading ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Carregando...
+                  </div>
+                ) : interestOptions.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    Nenhuma categoria disponível
+                  </div>
+                ) : (
+                  interestOptions
+                    .filter((opt) => !interests.includes(opt))
+                    .map((interest) => (
+                      <SelectItem key={interest} value={interest}>
+                        {interest}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {interests.map((interest) => (
-            <Badge key={interest} variant="secondary" className="gap-1">
+            <Badge 
+              key={interest} 
+              variant="secondary" 
+              className={`gap-1 ${autoFilledFields.has('interests') ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100' : ''}`}
+            >
+              {autoFilledFields.has('interests') && <Lock className="w-3 h-3" />}
               {interest}
-              <button
-                type="button"
-                onClick={() => handleRemoveInterest(interest)}
-                className="hover-elevate rounded-full"
-                data-testid={`button-remove-interest-${interest}`}
-              >
-                <X className="w-3 h-3" />
-              </button>
+              {!autoFilledFields.has('interests') && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveInterest(interest)}
+                  className="hover-elevate rounded-full"
+                  data-testid={`button-remove-interest-${interest}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </Badge>
           ))}
         </div>
+        {autoFilledFields.has('interests') && (
+          <p className="text-xs text-green-600 flex items-center gap-1">
+            <Lock className="w-3 h-3" />
+            Interesses do perfil Giviti
+          </p>
+        )}
       </div>
 
       <div className="space-y-4">
