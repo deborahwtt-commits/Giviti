@@ -507,20 +507,16 @@ export function registerCollabEventsRoutes(app: Express) {
       // Skip email invites for secret_santa events (simplified flow - logic preserved for future use)
       if (validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa') {
         try {
-          // Build invite link with token - normalize environment variables
-          let baseUrl = 'http://localhost:5000';
-          
+          // Build invite link with token - use custom domain in production
           console.log('[AddParticipant] Building invite link...');
+          console.log('[AddParticipant] REPLIT_DEPLOYMENT:', process.env.REPLIT_DEPLOYMENT);
           console.log('[AddParticipant] REPLIT_DEV_DOMAIN:', process.env.REPLIT_DEV_DOMAIN);
-          console.log('[AddParticipant] REPLIT_DOMAINS:', process.env.REPLIT_DOMAINS);
           
-          if (process.env.REPLIT_DEV_DOMAIN) {
-            const domain = process.env.REPLIT_DEV_DOMAIN.trim();
-            baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-          } else if (process.env.REPLIT_DOMAINS) {
-            const domain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
-            baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-          }
+          const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+            ? "https://giviti.com.br"
+            : process.env.REPLIT_DEV_DOMAIN 
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : "http://localhost:5000";
           
           const inviteLink = `${baseUrl}/convite/${validatedData.inviteToken}`;
           console.log('[AddParticipant] Invite link:', inviteLink);
@@ -760,18 +756,15 @@ export function registerCollabEventsRoutes(app: Express) {
         await storage.updateParticipantInviteToken(participantId, inviteToken);
       }
       
-      // Build invite link
-      let baseUrl = 'http://localhost:5000';
-      
+      // Build invite link - use custom domain in production
       console.log('[ResendInvite] Building invite link...');
+      console.log('[ResendInvite] REPLIT_DEPLOYMENT:', process.env.REPLIT_DEPLOYMENT);
       
-      if (process.env.REPLIT_DEV_DOMAIN) {
-        const domain = process.env.REPLIT_DEV_DOMAIN.trim();
-        baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-      } else if (process.env.REPLIT_DOMAINS) {
-        const domain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
-        baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-      }
+      const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+        ? "https://giviti.com.br"
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "http://localhost:5000";
       
       const inviteLink = `${baseUrl}/convite/${inviteToken}`;
       console.log('[ResendInvite] Invite link:', inviteLink);

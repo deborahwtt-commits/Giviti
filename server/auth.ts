@@ -207,11 +207,10 @@ export async function setupAuth(app: Express): Promise<void> {
       // Save the token
       await storage.createPasswordResetToken(user.id, token, expiresAt);
 
-      // Build reset URL - use REPLIT_DEPLOYMENT_URL if available for production
-      // Note: REPLIT_DEPLOYMENT_URL already includes protocol (https://...)
-      // REPLIT_DEV_DOMAIN is just the domain without protocol
-      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL 
-        ? process.env.REPLIT_DEPLOYMENT_URL
+      // Build reset URL - use custom domain in production, dev domain in development
+      // REPLIT_DEPLOYMENT is set to "1" when app is published
+      const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+        ? "https://giviti.com.br"
         : process.env.REPLIT_DEV_DOMAIN 
           ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : "http://localhost:5000";
