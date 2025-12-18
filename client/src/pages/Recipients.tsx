@@ -335,6 +335,7 @@ export default function Recipients() {
                 initialProfileData={editingProfile || undefined}
                 onSubmit={handleSubmit}
                 onCancel={handleCloseForm}
+                isSubmitting={createMutation.isPending || updateMutation.isPending}
               />
             </div>
           </div>

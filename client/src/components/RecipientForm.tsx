@@ -32,6 +32,7 @@ interface RecipientFormProps {
   initialProfileData?: any;
   onSubmit: (data: any, profile?: any) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
 const zodiacSigns = [
@@ -67,6 +68,7 @@ export default function RecipientForm({
   initialProfileData,
   onSubmit,
   onCancel,
+  isSubmitting = false,
 }: RecipientFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [age, setAge] = useState(initialData?.age?.toString() || "");
@@ -318,9 +320,17 @@ export default function RecipientForm({
         <Button
           type="submit"
           className="flex-1"
+          disabled={isSubmitting}
           data-testid="button-save-recipient"
         >
-          Salvar Presenteado
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            "Salvar Presenteado"
+          )}
         </Button>
         <Button
           type="button"
