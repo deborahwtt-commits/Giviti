@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, User, Sparkles, ChevronDown, X, KeyRound, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, User, Sparkles, ChevronDown, X, KeyRound, Trash2, AlertTriangle, Mail } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ type ProfileFormData = z.infer<typeof insertUserProfileSchema>;
 export default function Profile() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -210,6 +212,12 @@ export default function Profile() {
                 <p className="text-muted-foreground">
                   Conte mais sobre você para receber sugestões ainda mais personalizadas
                 </p>
+                {user?.email && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    {user.email}
+                  </p>
+                )}
               </div>
             </div>
             
