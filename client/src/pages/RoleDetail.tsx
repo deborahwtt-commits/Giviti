@@ -501,6 +501,7 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       setWishlistDialogOpen(false);
       setWishlistTitle("");
       setWishlistDescription("");
@@ -536,6 +537,7 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       toast({
         title: "Item removido",
         description: "O item foi removido da sua lista de desejos.",
