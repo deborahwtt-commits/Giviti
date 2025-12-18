@@ -365,6 +365,26 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
   });
 
   useEffect(() => {
+    if (!open) {
+      setFormData({
+        name: "",
+        description: "",
+        imageUrl: "",
+        productUrl: "",
+        category: "",
+        price: "",
+        tags: "",
+        priority: "null",
+        giftTypeId: "__none__",
+        selectedCategoryIds: [],
+        cupom: "",
+        validadeCupom: "",
+        showCoupon: false,
+        targetGender: "unissex",
+        targetAgeRange: "todos",
+      });
+      return;
+    }
     if (suggestion) {
       setFormData({
         name: suggestion.name || "",
