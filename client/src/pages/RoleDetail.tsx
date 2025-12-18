@@ -1577,7 +1577,7 @@ export default function RoleDetail() {
               <CardHeader>
                 <CardTitle>Status do Sorteio</CardTitle>
                 <CardDescription>
-                  Realize o sorteio quando todos os participantes confirmarem presença
+                  Realize o sorteio após adicionar pelo menos 3 participantes
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1672,7 +1672,7 @@ export default function RoleDetail() {
                                 Sorteio ainda não realizado
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) confirmado(s)
+                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) adicionado(s)
                                 {(drawStatus?.confirmedParticipantsCount || 0) < 3 && 
                                   " (mínimo: 3)"}
                               </p>
