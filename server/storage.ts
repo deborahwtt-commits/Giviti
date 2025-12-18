@@ -311,7 +311,7 @@ export interface IStorage {
   getUserEventsCount(userId: string): Promise<number>;
   getUserRecipientsCount(userId: string): Promise<number>;
   getUserPurchasedGiftsCount(userId: string): Promise<number>;
-  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>>;
+  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean }>>;
   
   // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
   
@@ -2013,12 +2013,14 @@ export class DatabaseStorage implements IStorage {
         u.*,
         (COALESCE(ue.events_count, 0) + COALESCE(uce.collaborative_count, 0)) AS events_count,
         COALESCE(ur.recipients_count, 0) AS recipients_count,
-        COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count
+        COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count,
+        COALESCE(up.is_completed, false) AS profile_completed
       FROM users u
       LEFT JOIN user_events ue ON u.id = ue.user_id
       LEFT JOIN user_collaborative_events uce ON u.id = uce.user_id
       LEFT JOIN user_recipients ur ON u.id = ur.user_id
       LEFT JOIN user_purchased_gifts upg ON u.id = upg.user_id
+      LEFT JOIN user_profiles up ON u.id = up.user_id
       ORDER BY u.created_at DESC
     `);
 
@@ -2035,6 +2037,7 @@ export class DatabaseStorage implements IStorage {
       eventsCount: row.events_count,
       recipientsCount: row.recipients_count,
       purchasedGiftsCount: row.purchased_gifts_count,
+      profileCompleted: row.profile_completed,
     }));
   }
 
