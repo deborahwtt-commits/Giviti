@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { formatCurrencyInput, formatCurrency } from "@/lib/utils";
 import { AddParticipantDialog } from "@/components/AddParticipantDialog";
 import { ParticipantPreferencesDialog } from "@/components/ParticipantPreferencesDialog";
 import {
@@ -1672,7 +1673,7 @@ export default function RoleDetail() {
                             {item.price && (
                               <span className="text-sm text-muted-foreground flex items-center gap-1">
                                 <DollarSign className="w-3 h-3" />
-                                R$ {item.price}
+                                {formatCurrency(item.price)}
                               </span>
                             )}
                             {item.purchaseUrl && (
@@ -1910,7 +1911,7 @@ export default function RoleDetail() {
                                 {item.price && (
                                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                                     <DollarSign className="w-3 h-3" />
-                                    R$ {item.price}
+                                    {formatCurrency(item.price)}
                                   </span>
                                 )}
                                 {item.purchaseUrl && (
@@ -2748,14 +2749,17 @@ export default function RoleDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="wishlist-price">Preço estimado</Label>
-                <Input
-                  id="wishlist-price"
-                  value={wishlistPrice}
-                  onChange={(e) => setWishlistPrice(e.target.value)}
-                  placeholder="Ex: 150,00"
-                  className="mt-1"
-                  data-testid="input-wishlist-price"
-                />
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    id="wishlist-price"
+                    value={wishlistPrice}
+                    onChange={(e) => setWishlistPrice(formatCurrencyInput(e.target.value))}
+                    placeholder="0,00"
+                    className="pl-9"
+                    data-testid="input-wishlist-price"
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="wishlist-priority">Prioridade</Label>
@@ -2873,7 +2877,7 @@ export default function RoleDetail() {
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           {item.price && (
                             <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700">
-                              R$ {item.price}
+                              {formatCurrency(item.price)}
                             </Badge>
                           )}
                           {item.priority && (

@@ -6,8 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number | string | null | undefined): string {
-  if (value === null || value === undefined) return "R$ 0,00";
-  const numValue = typeof value === "string" ? parseFloat(value) : value;
+  if (value === null || value === undefined || value === "") return "R$ 0,00";
+  
+  let numValue: number;
+  if (typeof value === "string") {
+    // Handle Brazilian format (1.234,56) or international format (1234.56)
+    if (value.includes(",")) {
+      // Brazilian format: remove dots (thousands) and replace comma with dot
+      const cleaned = value.replace(/\./g, "").replace(",", ".");
+      numValue = parseFloat(cleaned);
+    } else {
+      numValue = parseFloat(value);
+    }
+  } else {
+    numValue = value;
+  }
+  
   if (isNaN(numValue)) return "R$ 0,00";
   
   return new Intl.NumberFormat("pt-BR", {
