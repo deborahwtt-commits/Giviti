@@ -518,9 +518,9 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
           Temos uma notícia quentinha pra você! O sorteio do Amigo Secreto foi realizado e...
         </p>
 
-        <div style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: white; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
-          <p style="margin: 0 0 8px 0; font-size: 14px; opacity: 0.9;">Você tirou:</p>
-          <p style="margin: 0; font-size: 28px; font-weight: bold;">${receiverName}</p>
+        <div style="background-color: #fef2f2; border: 2px solid #e11d48; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Você tirou:</p>
+          <p style="margin: 0; font-size: 28px; font-weight: bold; color: #e11d48;">${receiverName}</p>
         </div>
 
         <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
