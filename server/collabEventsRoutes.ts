@@ -945,14 +945,13 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(400).json({ error: "Draw already performed. Delete existing pairs first to redraw." });
       }
       
-      // Get confirmed participants
+      // Get all participants (Secret Santa doesn't use acceptance logic)
       const allParticipants = await storage.getParticipants(id);
-      const confirmedParticipants = allParticipants.filter(p => p.status === "accepted");
       
       // Validate minimum participants
-      if (confirmedParticipants.length < 3) {
+      if (allParticipants.length < 3) {
         return res.status(400).json({ 
-          error: `Minimum 3 confirmed participants required. Currently: ${confirmedParticipants.length}` 
+          error: `Mínimo de 3 participantes necessário. Atualmente: ${allParticipants.length}` 
         });
       }
       
@@ -963,7 +962,7 @@ export function registerCollabEventsRoutes(app: Express) {
       const forbiddenPairs = new Set<string>();
       
       // Add self-matching restrictions (no one can draw themselves)
-      for (const participant of confirmedParticipants) {
+      for (const participant of allParticipants) {
         forbiddenPairs.add(`${participant.id}->${participant.id}`);
       }
       
@@ -973,7 +972,7 @@ export function registerCollabEventsRoutes(app: Express) {
       }
       
       // Backtracking algorithm to find valid matching
-      const participantIds = confirmedParticipants.map(p => p.id);
+      const participantIds = allParticipants.map(p => p.id);
       const n = participantIds.length;
       
       // Build adjacency list of allowed receivers for each giver
@@ -1082,7 +1081,7 @@ export function registerCollabEventsRoutes(app: Express) {
       const savedPairs = await storage.savePairs(id, pairs);
       
       // Create participant map for quick lookup
-      const participantMap = new Map(confirmedParticipants.map(p => [p.id, p]));
+      const participantMap = new Map(allParticipants.map(p => [p.id, p]));
       
       // Get base URL for signup link
       const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -1203,12 +1202,17 @@ export function registerCollabEventsRoutes(app: Express) {
       // Get draw status and participant counts (owner-only metadata)
       const pairs = await storage.getPairsByEvent(id);
       const allParticipants = await storage.getParticipants(id);
-      const confirmedParticipants = allParticipants.filter(p => p.status === "accepted");
+      
+      // For Secret Santa events, count all participants (no acceptance logic)
+      // For other event types, count only accepted participants
+      const participantsForDraw = event.eventType === "secret_santa" 
+        ? allParticipants 
+        : allParticipants.filter(p => p.status === "accepted");
       
       res.json({ 
         isDrawPerformed: pairs.length > 0,
         pairsCount: pairs.length,
-        confirmedParticipantsCount: confirmedParticipants.length,
+        confirmedParticipantsCount: participantsForDraw.length,
         totalParticipantsCount: allParticipants.length,
         isOwner: true,
       });
