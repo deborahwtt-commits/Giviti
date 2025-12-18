@@ -69,6 +69,28 @@ async function getUncachableResendClient() {
   };
 }
 
+// Centralized date formatting function with Brazil timezone
+function formatDateBrazil(dateStr: string | Date | null | undefined, includeTime: boolean = true): string | null {
+  if (!dateStr) return null;
+  try {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'America/Sao_Paulo',
+    };
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+    }
+    return date.toLocaleDateString('pt-BR', options);
+  } catch {
+    return typeof dateStr === 'string' ? dateStr : null;
+  }
+}
+
 export interface SendEmailOptions {
   to: string | string[];
   subject: string;
@@ -315,24 +337,7 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
     receiverProfile
   } = options;
 
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formattedDate = formatDate(eventDate);
+  const formattedDate = formatDateBrazil(eventDate);
 
   const hasRules = rules && (rules.minGiftValue || rules.maxGiftValue || rules.rulesDescription);
 
@@ -598,32 +603,8 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
     confirmationDeadline
   } = options;
 
-  const formatDeadline = (deadline: string | Date | null | undefined) => {
-    if (!deadline) return null;
-    const date = new Date(deadline);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const formattedDeadline = formatDeadline(confirmationDeadline);
-
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formattedDate = formatDate(eventDate);
+  const formattedDeadline = formatDateBrazil(confirmationDeadline, false);
+  const formattedDate = formatDateBrazil(eventDate);
 
   let suggestionsHtml = '';
   if (categorySuggestions && categorySuggestions.length > 0) {
@@ -776,30 +757,8 @@ export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInvit
     confirmationDeadline
   } = options;
 
-  const formatDeadline = (deadline: string | Date | null | undefined) => {
-    if (!deadline) return null;
-    const date = new Date(deadline);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const formattedDeadline = formatDeadline(confirmationDeadline);
-
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formattedDate = formatDate(eventDate);
+  const formattedDeadline = formatDateBrazil(confirmationDeadline, false);
+  const formattedDate = formatDateBrazil(eventDate, false);
   const formattedTarget = targetAmount ? (targetAmount / 100).toFixed(2) : null;
   const formattedPerPerson = amountPerPerson ? (amountPerPerson / 100).toFixed(2) : null;
 
@@ -993,22 +952,7 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
     wishlistLink
   } = options;
 
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formattedDate = formatDate(eventDate);
+  const formattedDate = formatDateBrazil(eventDate, false);
 
   // Get base URL for signup link - use custom domain in production
   const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
@@ -1163,22 +1107,7 @@ export async function sendEventCancellationEmail(options: EventCancellationEmail
   
   const typeLabel = eventTypeLabels[eventType] || 'Evento';
 
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formattedDate = formatDate(eventDate);
+  const formattedDate = formatDateBrazil(eventDate, false);
   const dateHtml = formattedDate ? `
     <p style="color: #6b7280; font-size: 14px; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
       <strong>Data prevista:</strong> ${formattedDate}
