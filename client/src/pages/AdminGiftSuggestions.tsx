@@ -153,7 +153,7 @@ export default function AdminGiftSuggestions() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {suggestions?.map((suggestion) => (
             <Card key={suggestion.id} className="overflow-hidden" data-testid={`card-suggestion-${suggestion.id}`}>
               <img
@@ -365,6 +365,26 @@ function SuggestionFormDialog({ open, onOpenChange, mode, suggestion }: Suggesti
   });
 
   useEffect(() => {
+    if (!open) {
+      setFormData({
+        name: "",
+        description: "",
+        imageUrl: "",
+        productUrl: "",
+        category: "",
+        price: "",
+        tags: "",
+        priority: "null",
+        giftTypeId: "__none__",
+        selectedCategoryIds: [],
+        cupom: "",
+        validadeCupom: "",
+        showCoupon: false,
+        targetGender: "unissex",
+        targetAgeRange: "todos",
+      });
+      return;
+    }
     if (suggestion) {
       setFormData({
         name: suggestion.name || "",

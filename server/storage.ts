@@ -101,6 +101,15 @@ import {
 import { db } from "./db";
 import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
 
+/**
+ * Normalize email to lowercase for consistent comparison and storage.
+ * This function should be used for all email comparisons and when storing emails.
+ */
+export function normalizeEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  return email.toLowerCase().trim();
+}
+
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
   id: string;
@@ -302,7 +311,7 @@ export interface IStorage {
   getUserEventsCount(userId: string): Promise<number>;
   getUserRecipientsCount(userId: string): Promise<number>;
   getUserPurchasedGiftsCount(userId: string): Promise<number>;
-  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>>;
+  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean }>>;
   
   // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
   
@@ -485,6 +494,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...recipient,
         userId,
+        email: recipient.email ? normalizeEmail(recipient.email) : recipient.email,
       })
       .returning();
     return newRecipient;
@@ -515,6 +525,7 @@ export class DatabaseStorage implements IStorage {
       .update(recipients)
       .set({
         ...recipientData,
+        email: recipientData.email ? normalizeEmail(recipientData.email) : recipientData.email,
         updatedAt: new Date(),
       })
       .where(and(eq(recipients.id, id), eq(recipients.userId, userId)))
@@ -1348,12 +1359,13 @@ export class DatabaseStorage implements IStorage {
 
   async syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number> {
     // Find all recipients that have this email but are not yet linked to this user
+    const normalizedEmail = normalizeEmail(userEmail);
     const recipientsToUpdate = await db
       .select()
       .from(recipients)
       .where(
         and(
-          eq(recipients.email, userEmail),
+          sql`LOWER(${recipients.email}) = ${normalizedEmail}`,
           or(
             isNull(recipients.linkedUserId),
             not(eq(recipients.linkedUserId, userId))
@@ -2001,12 +2013,14 @@ export class DatabaseStorage implements IStorage {
         u.*,
         (COALESCE(ue.events_count, 0) + COALESCE(uce.collaborative_count, 0)) AS events_count,
         COALESCE(ur.recipients_count, 0) AS recipients_count,
-        COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count
+        COALESCE(upg.purchased_gifts_count, 0) AS purchased_gifts_count,
+        COALESCE(up.is_completed, false) AS profile_completed
       FROM users u
       LEFT JOIN user_events ue ON u.id = ue.user_id
       LEFT JOIN user_collaborative_events uce ON u.id = uce.user_id
       LEFT JOIN user_recipients ur ON u.id = ur.user_id
       LEFT JOIN user_purchased_gifts upg ON u.id = upg.user_id
+      LEFT JOIN user_profiles up ON u.id = up.user_id
       ORDER BY u.created_at DESC
     `);
 
@@ -2023,6 +2037,7 @@ export class DatabaseStorage implements IStorage {
       eventsCount: row.events_count,
       recipientsCount: row.recipients_count,
       purchasedGiftsCount: row.purchased_gifts_count,
+      profileCompleted: row.profile_completed,
     }));
   }
 
@@ -2217,6 +2232,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...participant,
         eventId,
+        email: participant.email ? normalizeEmail(participant.email) : participant.email,
       })
       .returning();
     return newParticipant;
@@ -2691,7 +2707,10 @@ export class DatabaseStorage implements IStorage {
   async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
     const [newGuest] = await db
       .insert(birthdayGuests)
-      .values(guest)
+      .values({
+        ...guest,
+        email: guest.email ? normalizeEmail(guest.email) : guest.email,
+      })
       .returning();
     return newGuest;
   }
