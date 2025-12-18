@@ -181,36 +181,25 @@ export default function RecipientForm({
         // Auto-fill profile data if available
         if (data.profile) {
           if (data.profile.zodiacSign) {
-            // Map profile zodiac sign to form zodiac sign (lowercase → formatted)
-            const zodiacMap: Record<string, string> = {
-              'aries': 'Áries',
-              'touro': 'Touro',
-              'gemeos': 'Gêmeos',
-              'cancer': 'Câncer',
-              'leao': 'Leão',
-              'virgem': 'Virgem',
-              'libra': 'Libra',
-              'escorpiao': 'Escorpião',
-              'sagitario': 'Sagitário',
-              'capricornio': 'Capricórnio',
-              'aquario': 'Aquário',
-              'peixes': 'Peixes',
-            };
-            const mappedZodiac = zodiacMap[data.profile.zodiacSign];
-            if (mappedZodiac) {
-              setZodiacSign(mappedZodiac);
+            // Zodiac sign from profile is already in correct format (Áries, Touro, etc.)
+            // Verify it's a valid zodiac sign
+            const validZodiacSigns = [
+              'Áries', 'Touro', 'Gêmeos', 'Câncer', 'Leão', 'Virgem',
+              'Libra', 'Escorpião', 'Sagitário', 'Capricórnio', 'Aquário', 'Peixes'
+            ];
+            if (validZodiacSigns.includes(data.profile.zodiacSign)) {
+              setZodiacSign(data.profile.zodiacSign);
               filledFields.add('zodiacSign');
             }
           }
           if (data.profile.gender) {
-            // Map profile gender to form gender
+            // Map profile gender (Mulher, Homem, Não-binárie) to recipient format (Feminino, Masculino, Outro)
             const genderMap: Record<string, string> = {
-              'mulher': 'Feminino',
-              'homem': 'Masculino',
-              'nao-binarie': 'Outro',
+              'Mulher': 'Feminino',
+              'Homem': 'Masculino',
+              'Não-binárie': 'Outro',
             };
             const mappedGender = genderMap[data.profile.gender];
-            // Only mark as auto-filled if we successfully mapped the gender
             if (mappedGender) {
               setGender(mappedGender);
               filledFields.add('gender');
