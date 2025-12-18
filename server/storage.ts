@@ -393,6 +393,8 @@ export interface IStorage {
   createSecretSantaWishlistItem(item: InsertSecretSantaWishlistItem): Promise<SecretSantaWishlistItem>;
   deleteSecretSantaWishlistItem(id: string): Promise<boolean>;
   countSecretSantaWishlistItems(participantId: string): Promise<number>;
+  incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined>;
+  getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2807,6 +2809,26 @@ export class DatabaseStorage implements IStorage {
       .from(secretSantaWishlistItems)
       .where(eq(secretSantaWishlistItems.participantId, participantId));
     return result[0]?.count || 0;
+  }
+
+  async getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(secretSantaWishlistItems)
+      .where(eq(secretSantaWishlistItems.id, id));
+    return item;
+  }
+
+  async incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined> {
+    const [updated] = await db
+      .update(secretSantaWishlistItems)
+      .set({
+        clickCount: sql`${secretSantaWishlistItems.clickCount} + 1`,
+        lastClickedAt: new Date(),
+      })
+      .where(eq(secretSantaWishlistItems.id, id))
+      .returning();
+    return updated;
   }
 }
 
