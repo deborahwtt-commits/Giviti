@@ -1038,10 +1038,13 @@ export default function RoleDetail() {
               Reagendar
             </Button>
           )}
-          <Button variant="outline" size="sm" data-testid="button-share-role">
-            <Share2 className="w-4 h-4 mr-2" />
-            Compartilhar
-          </Button>
+          {/* Hide share button for Secret Santa - participants are added directly by organizer */}
+          {event.eventType !== "secret_santa" && (
+            <Button variant="outline" size="sm" data-testid="button-share-role">
+              <Share2 className="w-4 h-4 mr-2" />
+              Compartilhar
+            </Button>
+          )}
         </div>
       </div>
 
