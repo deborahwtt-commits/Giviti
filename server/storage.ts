@@ -101,6 +101,15 @@ import {
 import { db } from "./db";
 import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
 
+/**
+ * Normalize email to lowercase for consistent comparison and storage.
+ * This function should be used for all email comparisons and when storing emails.
+ */
+export function normalizeEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  return email.toLowerCase().trim();
+}
+
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
   id: string;
@@ -485,6 +494,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...recipient,
         userId,
+        email: recipient.email ? normalizeEmail(recipient.email) : recipient.email,
       })
       .returning();
     return newRecipient;
@@ -515,6 +525,7 @@ export class DatabaseStorage implements IStorage {
       .update(recipients)
       .set({
         ...recipientData,
+        email: recipientData.email ? normalizeEmail(recipientData.email) : recipientData.email,
         updatedAt: new Date(),
       })
       .where(and(eq(recipients.id, id), eq(recipients.userId, userId)))
@@ -2217,6 +2228,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...participant,
         eventId,
+        email: participant.email ? normalizeEmail(participant.email) : participant.email,
       })
       .returning();
     return newParticipant;
@@ -2691,7 +2703,10 @@ export class DatabaseStorage implements IStorage {
   async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
     const [newGuest] = await db
       .insert(birthdayGuests)
-      .values(guest)
+      .values({
+        ...guest,
+        email: guest.email ? normalizeEmail(guest.email) : guest.email,
+      })
       .returning();
     return newGuest;
   }
