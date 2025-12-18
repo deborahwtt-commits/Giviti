@@ -1886,7 +1886,7 @@ export function registerCollabEventsRoutes(app: Express) {
       }
       
       // Find the pair where current user is the giver
-      const pairs = await storage.getSecretSantaPairs(id);
+      const pairs = await storage.getPairsByEvent(id);
       const myPair = pairs.find(p => p.giverParticipantId === myParticipant.id);
       
       if (!myPair) {
