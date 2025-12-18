@@ -1564,32 +1564,34 @@ export default function RoleDetail() {
 
           </div>
 
-          {/* Participant/Owner view: My Wishlist */}
+          {/* Grid for My Wishlist + Seu Amigo Secreto side by side (for participants) */}
           {event.eventType === "secret_santa" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="w-5 h-5" />
-                      Minha Lista de Desejos
-                    </CardTitle>
-                    <CardDescription>
-                      Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
-                    </CardDescription>
+            <div className={`grid gap-6 ${!isOwner ? 'grid-cols-1 lg:grid-cols-2' : ''}`}>
+              {/* My Wishlist Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Heart className="w-5 h-5" />
+                        Minha Lista de Desejos
+                      </CardTitle>
+                      <CardDescription>
+                        Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWishlistDialogOpen(true)}
+                      disabled={(myWishlist?.length || 0) >= 10}
+                      data-testid="button-add-wishlist-item"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWishlistDialogOpen(true)}
-                    disabled={(myWishlist?.length || 0) >= 10}
-                    data-testid="button-add-wishlist-item"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent>
                 {wishlistLoading ? (
                   <div className="flex items-center justify-center py-4">
@@ -1665,11 +1667,10 @@ export default function RoleDetail() {
                 )}
               </CardContent>
             </Card>
-          )}
 
-          {/* Participant view: show their assigned pair - with icons for preferences and wishlist */}
-          {event.eventType === "secret_santa" && !isOwner && (
-            <Card>
+              {/* Participant view: Seu Amigo Secreto Card - side by side with My Wishlist */}
+              {!isOwner && (
+                <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Gift className="w-5 h-5" />
@@ -1817,7 +1818,9 @@ export default function RoleDetail() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+              </Card>
+              )}
+            </div>
           )}
 
           {/* Secret Santa Rules - positioned after "Seu Amigo Secreto" for participants */}
