@@ -2347,6 +2347,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async linkParticipantsByEmail(email: string, userId: string): Promise<number> {
+    const normalizedEmail = email.toLowerCase();
     const result = await db
       .update(collaborativeEventParticipants)
       .set({
@@ -2355,7 +2356,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(
         and(
-          eq(collaborativeEventParticipants.email, email.toLowerCase()),
+          sql`LOWER(${collaborativeEventParticipants.email}) = ${normalizedEmail}`,
           sql`${collaborativeEventParticipants.userId} IS NULL`
         )
       )

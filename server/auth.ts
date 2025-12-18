@@ -132,6 +132,12 @@ export async function setupAuth(app: Express): Promise<void> {
         return res.status(401).json({ message: "E-mail ou senha incorretos" });
       }
 
+      // Link any pending participant invitations to this user (case-insensitive email match)
+      const linkedCount = await storage.linkParticipantsByEmail(validatedData.email, user.id);
+      if (linkedCount > 0) {
+        console.log(`[Login] Linked ${linkedCount} participant invitation(s) to user ${user.id}`);
+      }
+
       // Regenerate session to prevent session fixation
       req.session.regenerate((err) => {
         if (err) {
