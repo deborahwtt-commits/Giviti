@@ -93,43 +93,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 2: Zodiac Sign */}
+      {/* Question 2: Gift Preference */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          2. Qual é o signo dela?
-          <span className="block text-sm font-normal text-muted-foreground mt-1">
-            (Se você não sabe, chute. O algoritmo gosta de astrologia.)
-          </span>
-        </Label>
-        <Select
-          value={formData.zodiacSign || ""}
-          onValueChange={(value) => onChange("zodiacSign", value)}
-        >
-          <SelectTrigger data-testid="select-profile-zodiac">
-            <SelectValue placeholder="Selecione o signo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="aries">Áries</SelectItem>
-            <SelectItem value="touro">Touro</SelectItem>
-            <SelectItem value="gemeos">Gêmeos</SelectItem>
-            <SelectItem value="cancer">Câncer</SelectItem>
-            <SelectItem value="leao">Leão</SelectItem>
-            <SelectItem value="virgem">Virgem</SelectItem>
-            <SelectItem value="libra">Libra</SelectItem>
-            <SelectItem value="escorpiao">Escorpião</SelectItem>
-            <SelectItem value="sagitario">Sagitário</SelectItem>
-            <SelectItem value="capricornio">Capricórnio</SelectItem>
-            <SelectItem value="aquario">Aquário</SelectItem>
-            <SelectItem value="peixes">Peixes</SelectItem>
-            <SelectItem value="nao-sei">Não sei</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Question 3: Gift Preference */}
-      <div className="space-y-3">
-        <Label className="text-base font-medium">
-          3. Que tipo de presente essa pessoa costuma gostar?
+          2. Que tipo de presente essa pessoa costuma gostar?
         </Label>
         <RadioGroup
           value={formData.giftPreference || ""}
@@ -174,10 +141,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 4: Lifestyle */}
+      {/* Question 3: Lifestyle */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          4. Como você descreveria o estilo de vida dessa pessoa?
+          3. Como você descreveria o estilo de vida dessa pessoa?
         </Label>
         <RadioGroup
           value={formData.lifestyle || ""}
@@ -216,9 +183,9 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 5: Interest Category */}
+      {/* Question 4: Interest Category */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">5. Ela curte mais:</Label>
+        <Label className="text-base font-medium">4. Ela curte mais:</Label>
         <RadioGroup
           value={formData.interestCategory || ""}
           onValueChange={(value) => onChange("interestCategory", value)}
@@ -268,10 +235,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 6: Gift Reception Style */}
+      {/* Question 5: Gift Reception Style */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          6. Essa pessoa gosta de receber presentes…
+          5. Essa pessoa gosta de receber presentes…
         </Label>
         <RadioGroup
           value={formData.giftReceptionStyle || ""}
@@ -316,10 +283,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 7: Budget Range */}
+      {/* Question 6: Budget Range */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          7. Quanto você pretende investir nesse presente?
+          6. Quanto você pretende investir nesse presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Seja honesto — até o Giviti entende os boletos)
           </span>
@@ -379,10 +346,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 8: Occasion */}
+      {/* Question 7: Occasion */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          8. Quando é a ocasião do presente?
+          7. Quando é a ocasião do presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Porque cada data pede um tipo de surpresa especial)
           </span>
@@ -419,10 +386,10 @@ export default function RecipientProfileQuestionnaire({
         </Select>
       </div>
 
-      {/* Question 9: Gifts to Avoid - OPTIONAL */}
+      {/* Question 8: Gifts to Avoid - OPTIONAL */}
       <div className="space-y-3">
         <Label htmlFor="gifts-to-avoid" className="text-base font-medium">
-          9. Qual presente nunca sugerir para esta pessoa?
+          8. Qual presente nunca sugerir para esta pessoa?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Não queremos cometer uma gafe, não é?) — Opcional
           </span>
@@ -442,12 +409,12 @@ export default function RecipientProfileQuestionnaire({
         </p>
       </div>
 
-      {/* Question 10: Location - OPTIONAL */}
+      {/* Question 9: Location - OPTIONAL */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <MapPin className="w-5 h-5 text-primary" />
           <Label className="text-base font-medium">
-            10. Onde essa pessoa mora?
+            9. Onde essa pessoa mora?
             <span className="block text-sm font-normal text-muted-foreground mt-1">
               (Opcional — ajuda a sugerir presentes regionais ou experiências locais)
             </span>

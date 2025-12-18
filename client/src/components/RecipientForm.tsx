@@ -168,8 +168,26 @@ export default function RecipientForm({
         // Auto-fill profile data if available
         if (data.profile) {
           if (data.profile.zodiacSign) {
-            setZodiacSign(data.profile.zodiacSign);
-            filledFields.add('zodiacSign');
+            // Map profile zodiac sign to form zodiac sign (lowercase → formatted)
+            const zodiacMap: Record<string, string> = {
+              'aries': 'Áries',
+              'touro': 'Touro',
+              'gemeos': 'Gêmeos',
+              'cancer': 'Câncer',
+              'leao': 'Leão',
+              'virgem': 'Virgem',
+              'libra': 'Libra',
+              'escorpiao': 'Escorpião',
+              'sagitario': 'Sagitário',
+              'capricornio': 'Capricórnio',
+              'aquario': 'Aquário',
+              'peixes': 'Peixes',
+            };
+            const mappedZodiac = zodiacMap[data.profile.zodiacSign];
+            if (mappedZodiac) {
+              setZodiacSign(mappedZodiac);
+              filledFields.add('zodiacSign');
+            }
           }
           if (data.profile.gender) {
             // Map profile gender to form gender
