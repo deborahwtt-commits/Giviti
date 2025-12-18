@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { startOfDay, parseISO } from "date-fns";
 import { Loader2, Cake, Gift, Users, MapPin } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DynamicIcon } from "@/components/DynamicIcon";
 import type { Occasion } from "@shared/schema";
 
 interface EventFormProps {
@@ -143,8 +144,10 @@ export default function EventForm({
                 ) : occasions && occasions.length > 0 ? (
                   occasions.map((occasion) => (
                     <SelectItem key={occasion.id} value={occasion.name}>
-                      {occasion.icon && <span className="mr-2">{occasion.icon}</span>}
-                      {occasion.name}
+                      <span className="flex items-center gap-2">
+                        {occasion.icon && <DynamicIcon name={occasion.icon} className="w-4 h-4" />}
+                        {occasion.name}
+                      </span>
                     </SelectItem>
                   ))
                 ) : (
