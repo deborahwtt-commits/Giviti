@@ -1374,25 +1374,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Map profile values to recipient format
-    const zodiacMap: Record<string, string> = {
-      'aries': 'Áries',
-      'touro': 'Touro',
-      'gemeos': 'Gêmeos',
-      'cancer': 'Câncer',
-      'leao': 'Leão',
-      'virgem': 'Virgem',
-      'libra': 'Libra',
-      'escorpiao': 'Escorpião',
-      'sagitario': 'Sagitário',
-      'capricornio': 'Capricórnio',
-      'aquario': 'Aquário',
-      'peixes': 'Peixes',
-    };
-
+    // User profile stores gender as "Mulher", "Homem", "Não-binárie" etc.
+    // Recipients use "Feminino", "Masculino", "Outro"
     const genderMap: Record<string, string> = {
-      'mulher': 'Feminino',
-      'homem': 'Masculino',
-      'nao-binarie': 'Outro',
+      'Mulher': 'Feminino',
+      'Homem': 'Masculino',
+      'Não-binárie': 'Outro',
+      'Prefiro não informar': '',
     };
 
     // Build update data from user profile
@@ -1408,11 +1396,16 @@ export class DatabaseStorage implements IStorage {
 
     // Update from profile if available
     if (userProfile) {
+      // Zodiac sign is already in the correct format (Áries, Touro, etc.)
       if (userProfile.zodiacSign) {
-        updateData.zodiacSign = zodiacMap[userProfile.zodiacSign] || userProfile.zodiacSign;
+        updateData.zodiacSign = userProfile.zodiacSign;
       }
+      // Gender needs mapping from profile format to recipient format
       if (userProfile.gender) {
-        updateData.gender = genderMap[userProfile.gender] || userProfile.gender;
+        const mappedGender = genderMap[userProfile.gender];
+        if (mappedGender) {
+          updateData.gender = mappedGender;
+        }
       }
       if (userProfile.interests && userProfile.interests.length > 0) {
         updateData.interests = userProfile.interests;
