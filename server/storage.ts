@@ -2381,6 +2381,20 @@ export class DatabaseStorage implements IStorage {
     return result.length;
   }
 
+  async repairParticipantLinksForEvent(eventId: string): Promise<number> {
+    const result = await db.execute(sql`
+      UPDATE collaborative_event_participants p
+      SET user_id = u.id, updated_at = now()
+      FROM users u
+      WHERE p.event_id = ${eventId}
+        AND p.user_id IS NULL
+        AND p.email IS NOT NULL
+        AND LOWER(p.email) = LOWER(u.email)
+      RETURNING p.id
+    `);
+    return result.rowCount ?? 0;
+  }
+
   // ========== Share Link Operations ==========
 
   async createShareLink(link: InsertCollaborativeEventLink): Promise<CollaborativeEventLink> {
