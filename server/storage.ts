@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -230,6 +230,7 @@ export interface IStorage {
   // User Profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   upsertUserProfile(userId: string, profile: InsertUserProfile): Promise<UserProfile>;
+  syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number>;
   
   // Recipient Profile operations
   getRecipientProfile(recipientId: string, userId: string): Promise<RecipientProfile | undefined>;
@@ -1343,6 +1344,92 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return profile;
+  }
+
+  async syncRecipientsFromUserProfile(userId: string, userEmail: string): Promise<number> {
+    // Find all recipients that have this email but are not yet linked to this user
+    const recipientsToUpdate = await db
+      .select()
+      .from(recipients)
+      .where(
+        and(
+          eq(recipients.email, userEmail),
+          or(
+            isNull(recipients.linkedUserId),
+            not(eq(recipients.linkedUserId, userId))
+          )
+        )
+      );
+
+    if (recipientsToUpdate.length === 0) {
+      return 0;
+    }
+
+    // Get user info and profile
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    const userProfile = await this.getUserProfile(userId);
+
+    if (!user) {
+      return 0;
+    }
+
+    // Map profile values to recipient format
+    const zodiacMap: Record<string, string> = {
+      'aries': 'Áries',
+      'touro': 'Touro',
+      'gemeos': 'Gêmeos',
+      'cancer': 'Câncer',
+      'leao': 'Leão',
+      'virgem': 'Virgem',
+      'libra': 'Libra',
+      'escorpiao': 'Escorpião',
+      'sagitario': 'Sagitário',
+      'capricornio': 'Capricórnio',
+      'aquario': 'Aquário',
+      'peixes': 'Peixes',
+    };
+
+    const genderMap: Record<string, string> = {
+      'mulher': 'Feminino',
+      'homem': 'Masculino',
+      'nao-binarie': 'Outro',
+    };
+
+    // Build update data from user profile
+    const updateData: Partial<typeof recipients.$inferSelect> = {
+      linkedUserId: userId,
+      updatedAt: new Date(),
+    };
+
+    // Update name from user
+    if (user.firstName || user.lastName) {
+      updateData.name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    }
+
+    // Update from profile if available
+    if (userProfile) {
+      if (userProfile.zodiacSign) {
+        updateData.zodiacSign = zodiacMap[userProfile.zodiacSign] || userProfile.zodiacSign;
+      }
+      if (userProfile.gender) {
+        updateData.gender = genderMap[userProfile.gender] || userProfile.gender;
+      }
+      if (userProfile.interests && userProfile.interests.length > 0) {
+        updateData.interests = userProfile.interests;
+      }
+    }
+
+    // Update all matching recipients
+    let updatedCount = 0;
+    for (const recipient of recipientsToUpdate) {
+      await db
+        .update(recipients)
+        .set(updateData)
+        .where(eq(recipients.id, recipient.id));
+      updatedCount++;
+    }
+
+    return updatedCount;
   }
 
   // ========== Recipient Profile ==========

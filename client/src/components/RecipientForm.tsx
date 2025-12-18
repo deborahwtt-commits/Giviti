@@ -140,6 +140,19 @@ export default function RecipientForm({
     }
   }, [initialProfileData]);
 
+  // If recipient is already linked to a Giviti user, mark fields as auto-filled (from profile)
+  useEffect(() => {
+    if (initialData?.linkedUserId) {
+      const filledFields = new Set<string>();
+      if (initialData.name) filledFields.add('name');
+      if (initialData.gender) filledFields.add('gender');
+      if (initialData.zodiacSign) filledFields.add('zodiacSign');
+      if (initialData.interests && initialData.interests.length > 0) filledFields.add('interests');
+      setAutoFilledFields(filledFields);
+      setLookupResult('found');
+    }
+  }, [initialData?.linkedUserId, initialData?.name, initialData?.gender, initialData?.zodiacSign, initialData?.interests]);
+
   // Email lookup function
   const lookupUserByEmail = useCallback(async (emailToLookup: string) => {
     if (!emailToLookup || !emailToLookup.includes('@')) {

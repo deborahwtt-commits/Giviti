@@ -69,6 +69,12 @@ export async function setupAuth(app: Express): Promise<void> {
         console.log(`[Register] Linked ${linkedCount} participant invitation(s) to new user ${newUser.id}`);
       }
 
+      // Sync any recipients that have this user's email with the new user data
+      const syncedRecipientsCount = await storage.syncRecipientsFromUserProfile(newUser.id, validatedData.email);
+      if (syncedRecipientsCount > 0) {
+        console.log(`[Register] Synced ${syncedRecipientsCount} recipient(s) to new user ${newUser.id}`);
+      }
+
       // Regenerate session to prevent session fixation
       req.session.regenerate((err) => {
         if (err) {

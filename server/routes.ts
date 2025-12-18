@@ -1356,8 +1356,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user!.id;
+      const userEmail = req.user!.email;
       const validatedData = insertUserProfileSchema.parse(req.body);
       const profile = await storage.upsertUserProfile(userId, validatedData);
+      
+      // Sync recipients that have this user's email with the updated profile data
+      const syncedCount = await storage.syncRecipientsFromUserProfile(userId, userEmail);
+      if (syncedCount > 0) {
+        console.log(`Synced ${syncedCount} recipients with user profile for ${userEmail}`);
+      }
+      
       res.json(profile);
     } catch (error) {
       if (error instanceof ZodError) {
