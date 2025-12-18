@@ -118,6 +118,9 @@ export default function RecipientForm({
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [lookupResult, setLookupResult] = useState<'found' | 'not_found' | null>(null);
   const [lookupDebounceTimer, setLookupDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Track which fields were auto-filled from profile (read-only)
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   // Fetch Google product categories from API to use as interest options
   const { data: googleCategories, isLoading: categoriesLoading } = useQuery<GoogleProductCategory[]>({
@@ -154,15 +157,19 @@ export default function RecipientForm({
         setLookupResult('found');
         setLinkedUserId(data.user.id);
         
+        const filledFields = new Set<string>();
+        
         // Auto-fill name if empty and user has name
-        if (!name && (data.user.firstName || data.user.lastName)) {
+        if (data.user.firstName || data.user.lastName) {
           setName(`${data.user.firstName || ''} ${data.user.lastName || ''}`.trim());
+          filledFields.add('name');
         }
         
         // Auto-fill profile data if available
         if (data.profile) {
           if (data.profile.zodiacSign) {
             setZodiacSign(data.profile.zodiacSign);
+            filledFields.add('zodiacSign');
           }
           if (data.profile.gender) {
             // Map profile gender to form gender
@@ -172,9 +179,11 @@ export default function RecipientForm({
               'nao-binarie': 'Outro',
             };
             setGender(genderMap[data.profile.gender] || data.profile.gender);
+            filledFields.add('gender');
           }
           if (data.profile.interests && data.profile.interests.length > 0) {
             setInterests(data.profile.interests);
+            filledFields.add('interests');
           }
           
           // Fill questionnaire data
@@ -192,11 +201,15 @@ export default function RecipientForm({
           if (Object.keys(newProfileData).length > 0) {
             setProfileData(newProfileData);
             setShowQuestionnaire(true);
+            filledFields.add('questionnaire');
           }
         }
+        
+        setAutoFilledFields(filledFields);
       } else {
         setLookupResult('not_found');
         setLinkedUserId("");
+        setAutoFilledFields(new Set());
       }
     } catch (error) {
       console.error("Error looking up user:", error);
@@ -211,6 +224,7 @@ export default function RecipientForm({
   const handleEmailChange = (newEmail: string) => {
     setEmail(newEmail);
     setLookupResult(null);
+    setAutoFilledFields(new Set());
     
     // Clear previous timer
     if (lookupDebounceTimer) {
