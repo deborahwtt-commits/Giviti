@@ -83,6 +83,7 @@ export default function RecipientForm({
   const [newInterest, setNewInterest] = useState("");
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [profileData, setProfileData] = useState<any>({});
+  const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
 
   // Fetch Google product categories from API to use as interest options
   const { data: googleCategories, isLoading: categoriesLoading } = useQuery<GoogleProductCategory[]>({
@@ -117,6 +118,14 @@ export default function RecipientForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isLocalSubmitting || isSubmitting) {
+      return;
+    }
+    
+    setIsLocalSubmitting(true);
+    
     const data = {
       name,
       age: parseInt(age),
@@ -320,10 +329,10 @@ export default function RecipientForm({
         <Button
           type="submit"
           className="flex-1"
-          disabled={isSubmitting}
+          disabled={isLocalSubmitting || isSubmitting}
           data-testid="button-save-recipient"
         >
-          {isSubmitting ? (
+          {(isLocalSubmitting || isSubmitting) ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Salvando...
