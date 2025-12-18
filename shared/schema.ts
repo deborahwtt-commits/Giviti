@@ -96,6 +96,8 @@ export const recipients = pgTable("recipients", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
+  email: varchar("email"),
+  linkedUserId: varchar("linked_user_id").references(() => users.id, { onDelete: "set null" }),
   age: integer("age").notNull(),
   gender: varchar("gender"),
   zodiacSign: varchar("zodiac_sign"),
