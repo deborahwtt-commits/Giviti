@@ -1805,8 +1805,8 @@ export default function RoleDetail() {
             </Card>
           )}
 
-          {/* Participant view: My Wishlist */}
-          {event.eventType === "secret_santa" && !isOwner && (
+          {/* Participant/Owner view: My Wishlist */}
+          {event.eventType === "secret_santa" && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
