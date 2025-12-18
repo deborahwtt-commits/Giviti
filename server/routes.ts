@@ -1482,7 +1482,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Generate or get existing share token
         const token = await storage.generateBirthdayShareToken(eventId);
-        const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+        // Use custom domain in production, dev domain in development
+        const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+          ? "https://giviti.com.br"
+          : process.env.REPLIT_DEV_DOMAIN 
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : "http://localhost:5000";
         const wishlistLink = `${baseUrl}/aniversario/${token}`;
         
         const { sendBirthdayInviteEmail } = await import("./emailService");

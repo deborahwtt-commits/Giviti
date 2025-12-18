@@ -1010,10 +1010,12 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
 
   const formattedDate = formatDate(eventDate);
 
-  // Get base URL for signup link
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPLIT_DEPLOYMENT_URL || 'https://giviti.com.br';
+  // Get base URL for signup link - use custom domain in production
+  const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+    ? "https://giviti.com.br"
+    : process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : "http://localhost:5000";
   const signupLink = baseUrl;
 
   return sendEmail({
