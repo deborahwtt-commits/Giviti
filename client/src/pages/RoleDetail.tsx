@@ -2540,10 +2540,6 @@ export default function RoleDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Outras configurações em desenvolvimento
-              </p>
-              
               {isOwner && event?.status !== "cancelled" && (
                 <div className="pt-4 border-t">
                   <h4 className="text-sm font-medium text-destructive mb-2">Zona de Perigo</h4>
