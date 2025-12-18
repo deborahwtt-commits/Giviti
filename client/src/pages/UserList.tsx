@@ -153,7 +153,7 @@ export default function UserList() {
                       {user.firstName} {user.lastName}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground max-w-[180px] truncate" title={user.email}>
                     {user.email}
                   </TableCell>
                   <TableCell>
