@@ -137,7 +137,7 @@ export default function Landing() {
 
       toast({
         title: "Login realizado com sucesso!",
-        description: `Bem-vindo de volta${data.firstName ? `, ${data.firstName}` : ''}!`,
+        description: `Bem-vindo${data.firstName ? `, ${data.firstName}` : ''}!`,
       });
       setLocation("/dashboard");
     },

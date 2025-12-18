@@ -51,7 +51,7 @@ export default function DashboardHero({
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-6 h-6 text-primary" />
             <span className="text-sm font-medium text-muted-foreground">
-              Bem-vindo de volta
+              Bem-vindo
             </span>
           </div>
 

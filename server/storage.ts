@@ -99,7 +99,7 @@ import {
   type InsertSecretSantaWishlistItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
 
 // Received invitation type for user's invitation list
 export type ReceivedInvitation = {
@@ -107,6 +107,7 @@ export type ReceivedInvitation = {
   type: 'birthday' | 'collaborative';
   eventName: string;
   eventType: string;
+  rawEventType?: string;
   eventDate: Date | null;
   confirmationDeadline: Date | null;
   ownerName: string;
@@ -114,6 +115,7 @@ export type ReceivedInvitation = {
   invitedAt: Date | null;
   eventId: string;
   shareToken?: string | null;
+  isDrawPerformed?: boolean;
 };
 
 // Enriched participant type with profile data
@@ -965,17 +967,30 @@ export class DatabaseStorage implements IStorage {
         'creative_challenge': 'Desafio Criativo',
       }[invite.eventType] || 'Rolê';
       
+      // Check if draw has been performed for secret_santa events
+      let isDrawPerformed = false;
+      if (invite.eventType === 'secret_santa') {
+        const pairs = await db
+          .select({ id: secretSantaPairs.id })
+          .from(secretSantaPairs)
+          .where(eq(secretSantaPairs.eventId, invite.eventId))
+          .limit(1);
+        isDrawPerformed = pairs.length > 0;
+      }
+      
       invitations.push({
         id: invite.id,
         type: 'collaborative',
         eventName: invite.eventName,
         eventType: eventTypeLabel,
+        rawEventType: invite.eventType,
         eventDate: invite.eventDate ? new Date(invite.eventDate) : null,
         confirmationDeadline: invite.confirmationDeadline ? new Date(invite.confirmationDeadline) : null,
         ownerName: [invite.ownerFirstName, invite.ownerLastName].filter(Boolean).join(' ') || 'Usuário',
         status: invite.status || 'invited',
         invitedAt: invite.createdAt,
         eventId: invite.eventId,
+        isDrawPerformed: invite.eventType === 'secret_santa' ? isDrawPerformed : undefined,
       });
     }
     
@@ -1994,9 +2009,11 @@ export class DatabaseStorage implements IStorage {
           OR ${collaborativeEventParticipants.userId} = ${userId}
           ${userEmail ? sql`OR ${collaborativeEventParticipants.email} = ${userEmail}` : sql``}
         )`
-      );
+      )
+      .orderBy(desc(collaborativeEvents.createdAt));
 
     // Deduplicate (since LEFT JOIN can return multiple rows per event)
+    // Use Map to preserve order (first occurrence wins, which is most recent due to ORDER BY)
     const uniqueEvents = Array.from(
       new Map(events.map(event => [event.id, event])).values()
     );

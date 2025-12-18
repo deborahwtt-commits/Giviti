@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { formatCurrencyInput, formatCurrency } from "@/lib/utils";
 import { AddParticipantDialog } from "@/components/AddParticipantDialog";
 import { ParticipantPreferencesDialog } from "@/components/ParticipantPreferencesDialog";
 import {
@@ -367,6 +368,9 @@ export default function RoleDetail() {
   
   // State for cancel event dialog
   const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
+  
+  // State for viewing another participant's wishlist
+  const [viewWishlistParticipant, setViewWishlistParticipant] = useState<{ id: string; name: string } | null>(null);
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -412,7 +416,7 @@ export default function RoleDetail() {
     enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
   });
 
-  // Secret Santa Wishlist Query (participant view)
+  // Secret Santa Wishlist Query (for all participants including owner)
   const { data: myWishlist, isLoading: wishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
     queryKey: ["/api/collab-events", id, "my-wishlist"],
     queryFn: async () => {
@@ -424,7 +428,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
+    enabled: !!id && !!event && event.eventType === "secret_santa",
   });
 
   // Receiver's wishlist query (for participant to see what their receiver wants)
@@ -445,6 +449,41 @@ export default function RoleDetail() {
     enabled: Boolean(id && event && event.eventType === "secret_santa" && !isOwner && myPair?.receiver),
   });
 
+  // Query for viewing another participant's wishlist
+  const { data: participantWishlist, isLoading: participantWishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
+    queryKey: ["/api/collab-events", id, "participant", viewWishlistParticipant?.id, "wishlist"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/participant/${viewWishlistParticipant?.id}/wishlist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar lista de desejos do participante");
+      }
+      return response.json();
+    },
+    enabled: Boolean(id && event && event.eventType === "secret_santa" && viewWishlistParticipant?.id),
+  });
+
+  // Mutation for tracking wishlist link clicks
+  const trackWishlistClickMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const response = await fetch(`/api/wishlist-click/${itemId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao registrar clique");
+      }
+      return response.json();
+    },
+  });
+
+  // Handler for clicking wishlist links
+  const handleWishlistLinkClick = (itemId: string, url: string) => {
+    trackWishlistClickMutation.mutate(itemId);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   // Add wishlist item mutation
   const addWishlistItemMutation = useMutation({
     mutationFn: async (item: { title: string; description?: string; purchaseUrl?: string; price?: string; priority?: number }) => {
@@ -462,6 +501,7 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       setWishlistDialogOpen(false);
       setWishlistTitle("");
       setWishlistDescription("");
@@ -497,6 +537,7 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       toast({
         title: "Item removido",
         description: "O item foi removido da sua lista de desejos.",
@@ -1038,10 +1079,13 @@ export default function RoleDetail() {
               Reagendar
             </Button>
           )}
-          <Button variant="outline" size="sm" data-testid="button-share-role">
-            <Share2 className="w-4 h-4 mr-2" />
-            Compartilhar
-          </Button>
+          {/* Hide share button for Secret Santa - participants are added directly by organizer */}
+          {event.eventType !== "secret_santa" && (
+            <Button variant="outline" size="sm" data-testid="button-share-role">
+              <Share2 className="w-4 h-4 mr-2" />
+              Compartilhar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1572,12 +1616,115 @@ export default function RoleDetail() {
             })()}
           </div>
 
+          {/* Participant/Owner view: My Wishlist */}
+          {event.eventType === "secret_santa" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Heart className="w-5 h-5" />
+                      Minha Lista de Desejos
+                    </CardTitle>
+                    <CardDescription>
+                      Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWishlistDialogOpen(true)}
+                    disabled={(myWishlist?.length || 0) >= 10}
+                    data-testid="button-add-wishlist-item"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {wishlistLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : myWishlist && myWishlist.length > 0 ? (
+                  <div className="space-y-3">
+                    {myWishlist.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border"
+                        data-testid={`wishlist-item-${item.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium" data-testid={`text-wishlist-title-${item.id}`}>
+                              {item.title}
+                            </p>
+                            {item.priority && (
+                              <Badge variant="outline" className="text-xs">
+                                {item.priority === 1 ? "Muito desejado" : item.priority === 2 ? "Desejado" : "Opcional"}
+                              </Badge>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground mt-1" data-testid={`text-wishlist-desc-${item.id}`}>
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            {item.price && (
+                              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" />
+                                {formatCurrency(item.price)}
+                              </span>
+                            )}
+                            {item.purchaseUrl && (
+                              <a
+                                href={item.purchaseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-primary hover:underline flex items-center gap-1"
+                                data-testid={`link-wishlist-url-${item.id}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Ver produto
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeWishlistItemMutation.mutate(item.id)}
+                          disabled={removeWishlistItemMutation.isPending}
+                          data-testid={`button-remove-wishlist-${item.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Sua lista de desejos está vazia.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Adicione itens que você gostaria de ganhar!
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {event.eventType === "secret_santa" && isOwner && (
             <Card>
               <CardHeader>
                 <CardTitle>Status do Sorteio</CardTitle>
                 <CardDescription>
-                  Realize o sorteio quando todos os participantes confirmarem presença
+                  Realize o sorteio após adicionar pelo menos 3 participantes
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1672,7 +1819,7 @@ export default function RoleDetail() {
                                 Sorteio ainda não realizado
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) confirmado(s)
+                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) adicionado(s)
                                 {(drawStatus?.confirmedParticipantsCount || 0) < 3 && 
                                   " (mínimo: 3)"}
                               </p>
@@ -1766,7 +1913,7 @@ export default function RoleDetail() {
                                 {item.price && (
                                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                                     <DollarSign className="w-3 h-3" />
-                                    R$ {item.price}
+                                    {formatCurrency(item.price)}
                                   </span>
                                 )}
                                 {item.purchaseUrl && (
@@ -1805,108 +1952,6 @@ export default function RoleDetail() {
             </Card>
           )}
 
-          {/* Participant view: My Wishlist */}
-          {event.eventType === "secret_santa" && !isOwner && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="w-5 h-5" />
-                      Minha Lista de Desejos
-                    </CardTitle>
-                    <CardDescription>
-                      Compartilhe seus desejos com quem te tirou ({myWishlist?.length || 0}/10 itens)
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWishlistDialogOpen(true)}
-                    disabled={(myWishlist?.length || 0) >= 10}
-                    data-testid="button-add-wishlist-item"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {wishlistLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : myWishlist && myWishlist.length > 0 ? (
-                  <div className="space-y-3">
-                    {myWishlist.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-start gap-3 p-3 rounded-lg border"
-                        data-testid={`wishlist-item-${item.id}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium" data-testid={`text-wishlist-title-${item.id}`}>
-                              {item.title}
-                            </p>
-                            {item.priority && (
-                              <Badge variant="outline" className="text-xs">
-                                {item.priority === 1 ? "Muito desejado" : item.priority === 2 ? "Desejado" : "Opcional"}
-                              </Badge>
-                            )}
-                          </div>
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground mt-1" data-testid={`text-wishlist-desc-${item.id}`}>
-                              {item.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3 mt-2 flex-wrap">
-                            {item.price && (
-                              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                <DollarSign className="w-3 h-3" />
-                                R$ {item.price}
-                              </span>
-                            )}
-                            {item.purchaseUrl && (
-                              <a
-                                href={item.purchaseUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline flex items-center gap-1"
-                                data-testid={`link-wishlist-url-${item.id}`}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                Ver produto
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeWishlistItemMutation.mutate(item.id)}
-                          disabled={removeWishlistItemMutation.isPending}
-                          data-testid={`button-remove-wishlist-${item.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      Sua lista de desejos está vazia.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Adicione itens que você gostaria de ganhar!
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="participants" className="space-y-6">
@@ -2020,19 +2065,26 @@ export default function RoleDetail() {
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {/* Wishlist status icon (only for secret_santa) */}
+                          {/* Wishlist status icon (only for secret_santa) - clickable to view wishlist */}
                           {event.eventType === "secret_santa" && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className={participant.wishlistItemsCount > 0 ? "text-rose-500" : "text-muted-foreground"}>
+                                <button
+                                  onClick={() => setViewWishlistParticipant({ 
+                                    id: participant.id, 
+                                    name: participant.name || participant.email || "Participante" 
+                                  })}
+                                  className={`${participant.wishlistItemsCount > 0 ? "text-rose-500 hover:text-rose-600" : "text-muted-foreground hover:text-foreground"} transition-colors`}
+                                  data-testid={`button-view-wishlist-${participant.id}`}
+                                >
                                   <Heart className={`w-4 h-4 ${participant.wishlistItemsCount > 0 ? "fill-current" : ""}`} />
-                                </span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
                                   {participant.wishlistItemsCount > 0
-                                    ? `${participant.wishlistItemsCount} ${participant.wishlistItemsCount === 1 ? "item" : "itens"} na lista de desejos`
-                                    : "Lista de desejos vazia"}
+                                    ? `Ver ${participant.wishlistItemsCount} ${participant.wishlistItemsCount === 1 ? "item" : "itens"} na lista de desejos`
+                                    : "Lista de desejos vazia - clique para ver"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -2182,7 +2234,8 @@ export default function RoleDetail() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       ) : (
-                        user?.email && participant.email === user.email && participant.status === "pending" && (
+                        /* Hide accept/reject buttons for Secret Santa - simplified flow without confirmation */
+                        event.eventType !== "secret_santa" && user?.email && participant.email === user.email && participant.status === "pending" && (
                           <div className="flex gap-1">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -2380,7 +2433,7 @@ export default function RoleDetail() {
                           <SelectValue placeholder="Selecione quem..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                          {participants?.map((participant) => (
                             <SelectItem 
                               key={participant.id} 
                               value={participant.id}
@@ -2405,7 +2458,7 @@ export default function RoleDetail() {
                           <SelectValue placeholder="Selecione quem não pode tirar..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {participants?.filter(p => p.status === "accepted").map((participant) => (
+                          {participants?.map((participant) => (
                             <SelectItem 
                               key={participant.id} 
                               value={participant.id}
@@ -2489,10 +2542,6 @@ export default function RoleDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Outras configurações em desenvolvimento
-              </p>
-              
               {isOwner && event?.status !== "cancelled" && (
                 <div className="pt-4 border-t">
                   <h4 className="text-sm font-medium text-destructive mb-2">Zona de Perigo</h4>
@@ -2698,14 +2747,17 @@ export default function RoleDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="wishlist-price">Preço estimado</Label>
-                <Input
-                  id="wishlist-price"
-                  value={wishlistPrice}
-                  onChange={(e) => setWishlistPrice(e.target.value)}
-                  placeholder="Ex: 150,00"
-                  className="mt-1"
-                  data-testid="input-wishlist-price"
-                />
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    id="wishlist-price"
+                    value={wishlistPrice}
+                    onChange={(e) => setWishlistPrice(formatCurrencyInput(e.target.value))}
+                    placeholder="0,00"
+                    className="pl-9"
+                    data-testid="input-wishlist-price"
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="wishlist-priority">Prioridade</Label>
@@ -2773,6 +2825,95 @@ export default function RoleDetail() {
               )}
               Confirmar Cancelamento
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog for viewing another participant's wishlist */}
+      <AlertDialog open={!!viewWishlistParticipant} onOpenChange={(open) => !open && setViewWishlistParticipant(null)}>
+        <AlertDialogContent className="max-w-lg" data-testid="dialog-view-participant-wishlist">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-rose-500" />
+              Lista de Desejos de {viewWishlistParticipant?.name}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Veja o que este participante gostaria de ganhar
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="max-h-[400px] overflow-y-auto">
+            {participantWishlistLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !participantWishlist || participantWishlist.length === 0 ? (
+              <div className="text-center py-8">
+                <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">
+                  Este participante ainda não adicionou itens à lista de desejos.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {participantWishlist.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="p-3 rounded-lg border bg-card hover-elevate"
+                    data-testid={`wishlist-item-${item.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground" data-testid={`text-wishlist-item-title-${item.id}`}>
+                          {item.title}
+                        </p>
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          {item.price && (
+                            <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700">
+                              {formatCurrency(item.price)}
+                            </Badge>
+                          )}
+                          {item.priority && (
+                            <Badge 
+                              variant="outline" 
+                              className={
+                                item.priority === 1 
+                                  ? "text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700"
+                                  : item.priority === 2
+                                  ? "text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700"
+                                  : "text-muted-foreground border-muted"
+                              }
+                            >
+                              {item.priority === 1 ? "Muito desejado" : item.priority === 2 ? "Desejado" : "Opcional"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {item.purchaseUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleWishlistLinkClick(item.id, item.purchaseUrl!)}
+                          data-testid={`button-wishlist-link-${item.id}`}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          Ver
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-close-wishlist-dialog">Fechar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

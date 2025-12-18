@@ -114,12 +114,13 @@ export default function CollaborativeEvents() {
     );
   }
 
+  // Sort by createdAt descending (most recent first)
   const sortedEvents = events ? [...events].sort((a, b) => {
-    if (!a.eventDate) return 1;
-    if (!b.eventDate) return -1;
-    const dateA = typeof a.eventDate === 'string' ? parseISO(a.eventDate) : a.eventDate;
-    const dateB = typeof b.eventDate === 'string' ? parseISO(b.eventDate) : b.eventDate;
-    return dateA.getTime() - dateB.getTime();
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    const dateA = typeof a.createdAt === 'string' ? parseISO(a.createdAt) : a.createdAt;
+    const dateB = typeof b.createdAt === 'string' ? parseISO(b.createdAt) : b.createdAt;
+    return dateB.getTime() - dateA.getTime(); // Descending order (most recent first)
   }) : [];
 
   return (

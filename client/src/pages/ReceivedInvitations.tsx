@@ -12,6 +12,7 @@ type ReceivedInvitation = {
   type: 'birthday' | 'collaborative';
   eventName: string;
   eventType: string;
+  rawEventType?: string;
   eventDate: string | null;
   confirmationDeadline: string | null;
   ownerName: string;
@@ -19,9 +20,31 @@ type ReceivedInvitation = {
   invitedAt: string | null;
   eventId: string;
   shareToken?: string | null;
+  isDrawPerformed?: boolean;
 };
 
-function getStatusLabel(status: string): { label: string; variant: "default" | "secondary" | "outline" | "destructive"; className?: string } {
+function getStatusLabel(
+  status: string, 
+  rawEventType?: string, 
+  isDrawPerformed?: boolean
+): { label: string; variant: "default" | "secondary" | "outline" | "destructive"; className?: string } {
+  // Special handling for Secret Santa events - show draw status instead of invitation status
+  if (rawEventType === 'secret_santa') {
+    if (isDrawPerformed) {
+      return { 
+        label: 'Sorteado', 
+        variant: 'default', 
+        className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800' 
+      };
+    } else {
+      return { 
+        label: 'Não sorteado', 
+        variant: 'secondary',
+        className: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 border-orange-200 dark:border-orange-800'
+      };
+    }
+  }
+  
   switch (status) {
     case 'confirmed':
     case 'accepted':
@@ -105,7 +128,11 @@ export default function ReceivedInvitations() {
       ) : (
         <div className="grid gap-4">
           {invitations.map((invitation) => {
-            const { label: statusLabel, variant: statusVariant, className: statusClassName } = getStatusLabel(invitation.status);
+            const { label: statusLabel, variant: statusVariant, className: statusClassName } = getStatusLabel(
+              invitation.status,
+              invitation.rawEventType,
+              invitation.isDrawPerformed
+            );
             const typeIcon = getTypeIcon(invitation.type, invitation.eventType);
             
             return (
