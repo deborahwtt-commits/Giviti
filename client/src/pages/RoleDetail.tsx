@@ -412,7 +412,7 @@ export default function RoleDetail() {
     enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
   });
 
-  // Secret Santa Wishlist Query (participant view)
+  // Secret Santa Wishlist Query (for all participants including owner)
   const { data: myWishlist, isLoading: wishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
     queryKey: ["/api/collab-events", id, "my-wishlist"],
     queryFn: async () => {
@@ -424,7 +424,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
+    enabled: !!id && !!event && event.eventType === "secret_santa",
   });
 
   // Receiver's wishlist query (for participant to see what their receiver wants)
