@@ -367,6 +367,9 @@ export default function RoleDetail() {
   
   // State for cancel event dialog
   const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
+  
+  // State for viewing another participant's wishlist
+  const [viewWishlistParticipant, setViewWishlistParticipant] = useState<{ id: string; name: string } | null>(null);
 
   // Collective Gift Queries
   const { data: contributions, isLoading: contributionsLoading } = useQuery<ContributionWithParticipant[]>({
@@ -444,6 +447,41 @@ export default function RoleDetail() {
     },
     enabled: Boolean(id && event && event.eventType === "secret_santa" && !isOwner && myPair?.receiver),
   });
+
+  // Query for viewing another participant's wishlist
+  const { data: participantWishlist, isLoading: participantWishlistLoading } = useQuery<SecretSantaWishlistItem[]>({
+    queryKey: ["/api/collab-events", id, "participant", viewWishlistParticipant?.id, "wishlist"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/participant/${viewWishlistParticipant?.id}/wishlist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao buscar lista de desejos do participante");
+      }
+      return response.json();
+    },
+    enabled: Boolean(id && event && event.eventType === "secret_santa" && viewWishlistParticipant?.id),
+  });
+
+  // Mutation for tracking wishlist link clicks
+  const trackWishlistClickMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const response = await fetch(`/api/wishlist-click/${itemId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao registrar clique");
+      }
+      return response.json();
+    },
+  });
+
+  // Handler for clicking wishlist links
+  const handleWishlistLinkClick = (itemId: string, url: string) => {
+    trackWishlistClickMutation.mutate(itemId);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   // Add wishlist item mutation
   const addWishlistItemMutation = useMutation({
@@ -2024,19 +2062,26 @@ export default function RoleDetail() {
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {/* Wishlist status icon (only for secret_santa) */}
+                          {/* Wishlist status icon (only for secret_santa) - clickable to view wishlist */}
                           {event.eventType === "secret_santa" && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className={participant.wishlistItemsCount > 0 ? "text-rose-500" : "text-muted-foreground"}>
+                                <button
+                                  onClick={() => setViewWishlistParticipant({ 
+                                    id: participant.id, 
+                                    name: participant.name || participant.email || "Participante" 
+                                  })}
+                                  className={`${participant.wishlistItemsCount > 0 ? "text-rose-500 hover:text-rose-600" : "text-muted-foreground hover:text-foreground"} transition-colors`}
+                                  data-testid={`button-view-wishlist-${participant.id}`}
+                                >
                                   <Heart className={`w-4 h-4 ${participant.wishlistItemsCount > 0 ? "fill-current" : ""}`} />
-                                </span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
                                   {participant.wishlistItemsCount > 0
-                                    ? `${participant.wishlistItemsCount} ${participant.wishlistItemsCount === 1 ? "item" : "itens"} na lista de desejos`
-                                    : "Lista de desejos vazia"}
+                                    ? `Ver ${participant.wishlistItemsCount} ${participant.wishlistItemsCount === 1 ? "item" : "itens"} na lista de desejos`
+                                    : "Lista de desejos vazia - clique para ver"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -2778,6 +2823,95 @@ export default function RoleDetail() {
               )}
               Confirmar Cancelamento
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog for viewing another participant's wishlist */}
+      <AlertDialog open={!!viewWishlistParticipant} onOpenChange={(open) => !open && setViewWishlistParticipant(null)}>
+        <AlertDialogContent className="max-w-lg" data-testid="dialog-view-participant-wishlist">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-rose-500" />
+              Lista de Desejos de {viewWishlistParticipant?.name}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Veja o que este participante gostaria de ganhar
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="max-h-[400px] overflow-y-auto">
+            {participantWishlistLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !participantWishlist || participantWishlist.length === 0 ? (
+              <div className="text-center py-8">
+                <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">
+                  Este participante ainda não adicionou itens à lista de desejos.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {participantWishlist.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="p-3 rounded-lg border bg-card hover-elevate"
+                    data-testid={`wishlist-item-${item.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground" data-testid={`text-wishlist-item-title-${item.id}`}>
+                          {item.title}
+                        </p>
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          {item.price && (
+                            <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700">
+                              R$ {item.price}
+                            </Badge>
+                          )}
+                          {item.priority && (
+                            <Badge 
+                              variant="outline" 
+                              className={
+                                item.priority === 1 
+                                  ? "text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700"
+                                  : item.priority === 2
+                                  ? "text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700"
+                                  : "text-muted-foreground border-muted"
+                              }
+                            >
+                              {item.priority === 1 ? "Muito desejado" : item.priority === 2 ? "Desejado" : "Opcional"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {item.purchaseUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleWishlistLinkClick(item.id, item.purchaseUrl!)}
+                          data-testid={`button-wishlist-link-${item.id}`}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          Ver
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-close-wishlist-dialog">Fechar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
