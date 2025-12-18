@@ -178,8 +178,12 @@ export default function RecipientForm({
               'homem': 'Masculino',
               'nao-binarie': 'Outro',
             };
-            setGender(genderMap[data.profile.gender] || data.profile.gender);
-            filledFields.add('gender');
+            const mappedGender = genderMap[data.profile.gender];
+            // Only mark as auto-filled if we successfully mapped the gender
+            if (mappedGender) {
+              setGender(mappedGender);
+              filledFields.add('gender');
+            }
           }
           if (data.profile.interests && data.profile.interests.length > 0) {
             setInterests(data.profile.interests);
