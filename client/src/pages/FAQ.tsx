@@ -65,7 +65,7 @@ export default function FAQ() {
                     </p>
                     <p className="text-muted-foreground mb-3">
                       E tem mais! Com os <strong>Rolês</strong>, você organiza eventos colaborativos com a galera: 
-                      monte um <strong>Amigo Secreto</strong> com sorteio automático, planeje uma <strong>Noite Temática</strong> épica, ou junte o pessoal pra dar um <strong>Presente Coletivo</strong> daqueles. 
+                      monte um <strong>Amigo Secreto</strong> com sorteio automático, planeje um <strong>Evento Temático</strong> épico, ou junte o pessoal pra dar um <strong>Presente Coletivo</strong> daqueles. 
                       Tudo integrado, com convites por email e acompanhamento das confirmações!
                     </p>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
@@ -88,7 +88,7 @@ export default function FAQ() {
                       <li><strong>Complete seu perfil</strong> - Assim a gente te conhece melhor</li>
                       <li><strong>Cadastre seus presenteados</strong> - Quem são as pessoas especiais da sua vida</li>
                       <li><strong>Adicione as datas importantes</strong> - Aniversários, Natal, Dia das Mães...</li>
-                      <li><strong>Organize um rolê</strong> - Amigo Secreto, Noite Temática ou Presente Coletivo</li>
+                      <li><strong>Organize um rolê</strong> - Amigo Secreto, Evento Temático ou Presente Coletivo</li>
                       <li><strong>Explore as sugestões</strong> - E deixe a mágica acontecer!</li>
                     </ol>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
@@ -402,7 +402,7 @@ export default function FAQ() {
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                         <Palette className="w-5 h-5 text-purple-500 mt-0.5" />
                         <div>
-                          <strong>Noite Temática</strong>
+                          <strong>Evento Temático</strong>
                           <p className="text-sm text-muted-foreground">
                             Organize eventos com temas divertidos! Festa a fantasia, noite de filmes, 
                             jantar italiano... O sistema tem várias sugestões pra te inspirar.
@@ -536,13 +536,13 @@ export default function FAQ() {
                 </AccordionItem>
 
                 <AccordionItem value="noite-tematica">
-                  <AccordionTrigger>Como organizo uma Noite Temática?</AccordionTrigger>
+                  <AccordionTrigger>Como organizo um Evento Temático?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Noites temáticas são perfeitas para reunir a galera com estilo:
+                      Eventos temáticos são perfeitos para reunir a galera com estilo:
                     </p>
                     <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Crie um novo rolê do tipo <strong>Noite Temática</strong></li>
+                      <li>Crie um novo rolê do tipo <strong>Evento Temático</strong></li>
                       <li>Escolha uma categoria (Festa, Jantar, Cinema em Casa...)</li>
                       <li>Defina a data, local e descrição</li>
                       <li>Convide os participantes</li>

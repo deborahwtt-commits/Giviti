@@ -72,7 +72,7 @@ function getTypeIcon(type: 'birthday' | 'collaborative', eventType: string) {
   if (eventType.includes('Amigo Secreto')) {
     return <Gift className="w-5 h-5 text-red-500" />;
   }
-  if (eventType.includes('Noite Temática')) {
+  if (eventType.includes('Evento Temático')) {
     return <Sparkles className="w-5 h-5 text-purple-500" />;
   }
   if (eventType.includes('Presente Coletivo')) {

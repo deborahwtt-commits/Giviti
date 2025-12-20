@@ -222,7 +222,7 @@ export async function sendCollaborativeEventInviteEmail(
 ) {
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
-    themed_night: 'Noite Temática',
+    themed_night: 'Evento Temático',
     collective_gift: 'Presente Coletivo'
   };
   
@@ -630,14 +630,14 @@ export async function sendThemedNightInviteEmail(options: ThemedNightInviteEmail
 
   return sendEmail({
     to,
-    subject: `${inviterName} te convidou para uma Noite Temática!`,
+    subject: `${inviterName} te convidou para um Evento Temático!`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
         
         <div style="text-align: center; margin-bottom: 30px;">
           <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%); padding: 30px 20px; border-radius: 16px; margin-bottom: 20px;">
             <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0;">Você foi convidado(a) para</p>
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Noite Temática</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Evento Temático</h1>
           </div>
         </div>
 
@@ -1101,7 +1101,7 @@ export async function sendEventCancellationEmail(options: EventCancellationEmail
 
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
-    themed_night: 'Noite Temática',
+    themed_night: 'Evento Temático',
     collective_gift: 'Presente Coletivo'
   };
   

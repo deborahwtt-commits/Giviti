@@ -977,7 +977,7 @@ export class DatabaseStorage implements IStorage {
     for (const invite of collabInvites) {
       const eventTypeLabel = {
         'secret_santa': 'Amigo Secreto',
-        'themed_night': 'Noite Temática',
+        'themed_night': 'Evento Temático',
         'collective_gift': 'Presente Coletivo',
         'creative_challenge': 'Desafio Criativo',
       }[invite.eventType] || 'Rolê';

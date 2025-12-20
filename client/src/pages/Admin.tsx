@@ -268,7 +268,7 @@ export default function Admin() {
               title="Cadastro de Rolês"
               value="Gerenciar"
               icon={Sparkles}
-              description="Configurar categorias de Noite Temática"
+              description="Configurar categorias de Evento Temático"
               onClick={() => setLocation("/admin/cadastro-roles")}
             />
             <AdminStatsCard

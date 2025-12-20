@@ -13,7 +13,7 @@ import type { LucideIcon } from "lucide-react";
 
 const eventTypeInfo: Record<string, { label: string; Icon: LucideIcon }> = {
   secret_santa: { label: "Amigo Secreto", Icon: Gift },
-  themed_night: { label: "Noite Temática", Icon: PartyPopper },
+  themed_night: { label: "Evento Temático", Icon: PartyPopper },
   collective_gift: { label: "Presente Coletivo", Icon: Heart },
   creative_challenge: { label: "Desafio Criativo", Icon: Sparkles },
 };

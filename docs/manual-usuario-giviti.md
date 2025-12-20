@@ -33,7 +33,7 @@ Versão 1.1 | Dezembro 2024
    - [Criando um Amigo Secreto](#criando-um-amigo-secreto)
    - [Gerenciando Participantes](#gerenciando-participantes)
    - [Realizando o Sorteio](#realizando-o-sorteio)
-   - [Noite Temática](#noite-temática)
+   - [Evento Temático](#evento-temático)
    - [Presente Coletivo](#presente-coletivo)
 8. [Perguntas Frequentes](#perguntas-frequentes)
 
@@ -316,7 +316,7 @@ Rolês são eventos colaborativos que você organiza com amigos, família ou col
 - Configuração de valor mínimo e máximo do presente
 - Regras personalizadas
 
-**Noite Temática:**
+**Evento Temático:**
 - Organize encontros temáticos
 - Categorias pré-definidas disponíveis
 - Sugestões de atividades
@@ -400,11 +400,11 @@ Na lista de participantes, você verá um ícone especial ao lado do nome de que
 
 Clique no ícone para ver as preferências do participante.
 
-### Noite Temática
+### Evento Temático
 
-Para criar uma Noite Temática:
+Para criar um Evento Temático:
 
-1. Selecione **"Noite Temática"** ao criar o rolê
+1. Selecione **"Evento Temático"** ao criar o rolê
 2. Escolha a categoria (Ex: "Jantar Mexicano", "Noite de Jogos")
 3. Adicione participantes da mesma forma
 4. Use a descrição para combinar detalhes
