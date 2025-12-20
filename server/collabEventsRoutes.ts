@@ -178,7 +178,10 @@ export function registerCollabEventsRoutes(app: Express) {
   app.get("/api/collab-events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
+      const userRole = (req as AuthenticatedRequest).user.role;
       const { id } = req.params;
+      
+      const isSystemAdmin = userRole === "admin";
       
       // Auto-repair: link orphan participants to existing users by email
       const linkedCount = await storage.repairParticipantLinksForEvent(id);
@@ -186,7 +189,11 @@ export function registerCollabEventsRoutes(app: Express) {
         console.log(`[Event ${id}] Auto-linked ${linkedCount} participant(s) to existing users`);
       }
       
-      const event = await storage.getCollaborativeEvent(id, userId);
+      // For system admins, get event without access check
+      // For others, get event with user scope (enforces access control)
+      const event = isSystemAdmin 
+        ? await storage.getCollaborativeEvent(id) // No userId = no access check
+        : await storage.getCollaborativeEvent(id, userId);
       
       if (!event) {
         return res.status(404).json({ error: "Event not found or access denied" });
@@ -1195,21 +1202,34 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
-  // GET /api/collab-events/:id/draw-status - Check if draw was performed (OWNER ONLY)
+  // GET /api/collab-events/:id/draw-status - Check if draw was performed (OWNER or ADMIN)
   app.get("/api/collab-events/:id/draw-status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
+      const userRole = (req as AuthenticatedRequest).user.role;
       const { id } = req.params;
       
-      // Get event with user scope (enforces access control)
-      const event = await storage.getCollaborativeEvent(id, userId);
+      const isSystemAdmin = userRole === "admin";
       
-      // Owner-only endpoint: return uniform 403 to prevent enumeration
-      if (!event || event.ownerId !== userId) {
+      // For system admins, get event without access check
+      // For others, get event with user scope (enforces access control)
+      const event = isSystemAdmin 
+        ? await storage.getCollaborativeEvent(id) // No userId = no access check
+        : await storage.getCollaborativeEvent(id, userId);
+      
+      // Allow access for event owners and system admins
+      // For non-admin, non-owner: return 403
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      const isOwner = event.ownerId === userId;
+      
+      if (!isOwner && !isSystemAdmin) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Get draw status and participant counts (owner-only metadata)
+      // Get draw status and participant counts
       const pairs = await storage.getPairsByEvent(id);
       const allParticipants = await storage.getParticipants(id);
       
@@ -1224,7 +1244,8 @@ export function registerCollabEventsRoutes(app: Express) {
         pairsCount: pairs.length,
         confirmedParticipantsCount: participantsForDraw.length,
         totalParticipantsCount: allParticipants.length,
-        isOwner: true,
+        isOwner,
+        isSystemAdmin,
       });
     } catch (error) {
       console.error("Error fetching draw status:", error);
@@ -1272,39 +1293,80 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
-  // GET /api/collab-events/:id/pairs - Get all pairs (owner only)
+  // GET /api/collab-events/:id/pairs - Get pairs (admin sees all, others see only their own)
   app.get("/api/collab-events/:id/pairs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
+      const userRole = (req as AuthenticatedRequest).user.role;
       const { id } = req.params;
       
-      // Get event
-      const event = await storage.getCollaborativeEvent(id, userId);
+      const isSystemAdmin = userRole === "admin";
+      
+      // For system admins, get event without access check
+      // For others, get event with user scope (enforces access control)
+      const event = isSystemAdmin 
+        ? await storage.getCollaborativeEvent(id) // No userId = no access check
+        : await storage.getCollaborativeEvent(id, userId);
+        
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
       
-      // Check if user is owner
-      if (event.ownerId !== userId) {
-        return res.status(403).json({ error: "Only the event owner can view all pairs" });
+      const isOwner = event.ownerId === userId;
+      
+      // If user is system admin, return all pairs
+      if (isSystemAdmin) {
+        const pairs = await storage.getPairsByEvent(id);
+        
+        // Enrich with participant details
+        const enrichedPairs = await Promise.all(
+          pairs.map(async (pair) => {
+            const giver = await storage.getParticipant(pair.giverParticipantId);
+            const receiver = await storage.getParticipant(pair.receiverParticipantId);
+            return {
+              ...pair,
+              giver,
+              receiver,
+            };
+          })
+        );
+        
+        return res.json({ 
+          viewMode: "all", 
+          pairs: enrichedPairs,
+          isSystemAdmin: true
+        });
       }
       
-      const pairs = await storage.getPairsByEvent(id);
+      // For non-admin users (including owners), return only their own pair
+      // Find the participant record for this user
+      const participants = await storage.getParticipants(id);
+      const userParticipant = participants.find(p => p.userId === userId);
       
-      // Enrich with participant details
-      const enrichedPairs = await Promise.all(
-        pairs.map(async (pair) => {
-          const giver = await storage.getParticipant(pair.giverParticipantId);
-          const receiver = await storage.getParticipant(pair.receiverParticipantId);
-          return {
-            ...pair,
-            giver,
-            receiver,
-          };
-        })
-      );
+      if (!userParticipant) {
+        return res.status(404).json({ error: "You are not a participant in this event" });
+      }
       
-      res.json(enrichedPairs);
+      // Get the pair where this user is the giver
+      const pair = await storage.getPairForParticipant(id, userParticipant.id);
+      
+      if (!pair) {
+        return res.status(404).json({ error: "Draw not yet performed or no pair found" });
+      }
+      
+      // Get receiver details
+      const receiver = await storage.getParticipant(pair.receiverParticipantId);
+      
+      res.json({ 
+        viewMode: "own", 
+        pair: {
+          ...pair,
+          giver: userParticipant,
+          receiver
+        },
+        isOwner,
+        isSystemAdmin: false
+      });
     } catch (error) {
       console.error("Error fetching pairs:", error);
       res.status(500).json({ error: "Failed to fetch pairs" });
