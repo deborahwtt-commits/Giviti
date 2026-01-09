@@ -266,10 +266,10 @@ export default function Admin() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AdminStatsCard
-              title="Cupons de Ingresso"
+              title="Passes VIP"
               value="Gerenciar"
               icon={Ticket}
-              description="Criar e gerenciar cupons para registro"
+              description="Criar e gerenciar passes VIP para registro"
               onClick={() => setLocation("/admin/controle-acesso")}
             />
           </div>

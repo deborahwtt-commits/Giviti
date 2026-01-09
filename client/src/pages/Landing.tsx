@@ -439,7 +439,7 @@ export default function Landing() {
                               <FormControl>
                                 <Input
                                   {...field}
-                                  placeholder="Digite seu cupom de acesso"
+                                  placeholder="Digite seu passe VIP"
                                   className="uppercase"
                                   data-testid="input-register-ticket"
                                 />

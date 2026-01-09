@@ -87,7 +87,7 @@ export default function AdminAccessControl() {
       return await apiRequest("/api/admin/access-tickets", "POST", data);
     },
     onSuccess: () => {
-      toast({ title: "Cupom criado com sucesso!" });
+      toast({ title: "Passe VIP criado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/access-tickets"] });
       setShowCreateDialog(false);
       ticketForm.reset();
@@ -96,7 +96,7 @@ export default function AdminAccessControl() {
       const message = error?.message?.match(/\{.*\}/)?.[0];
       const parsed = message ? JSON.parse(message) : null;
       toast({ 
-        title: "Erro ao criar cupom", 
+        title: "Erro ao criar passe VIP", 
         description: parsed?.message || "Tente novamente",
         variant: "destructive" 
       });
@@ -108,13 +108,13 @@ export default function AdminAccessControl() {
       return await apiRequest(`/api/admin/access-tickets/${id}`, "PATCH", data);
     },
     onSuccess: () => {
-      toast({ title: "Cupom atualizado!" });
+      toast({ title: "Passe VIP atualizado!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/access-tickets"] });
       setEditingTicket(null);
       ticketForm.reset();
     },
     onError: () => {
-      toast({ title: "Erro ao atualizar cupom", variant: "destructive" });
+      toast({ title: "Erro ao atualizar passe VIP", variant: "destructive" });
     },
   });
 
@@ -123,11 +123,11 @@ export default function AdminAccessControl() {
       return await apiRequest(`/api/admin/access-tickets/${id}`, "DELETE");
     },
     onSuccess: () => {
-      toast({ title: "Cupom excluído!" });
+      toast({ title: "Passe VIP excluído!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/access-tickets"] });
     },
     onError: () => {
-      toast({ title: "Erro ao excluir cupom", variant: "destructive" });
+      toast({ title: "Erro ao excluir passe VIP", variant: "destructive" });
     },
   });
 
@@ -170,7 +170,7 @@ export default function AdminAccessControl() {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
-    toast({ title: "Cupom copiado!" });
+    toast({ title: "Código copiado!" });
   };
 
   const toggleTicketExpand = (ticketId: string) => {
@@ -215,7 +215,7 @@ export default function AdminAccessControl() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Controle de Acesso</h1>
-          <p className="text-muted-foreground">Gerenciar cupons de ingresso e lista de espera</p>
+          <p className="text-muted-foreground">Gerenciar passes VIP e lista de espera</p>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export default function AdminAccessControl() {
         <TabsList className="mb-6">
           <TabsTrigger value="tickets" className="flex items-center gap-2" data-testid="tab-tickets">
             <Ticket className="h-4 w-4" />
-            Cupons de Ingresso
+            Passes VIP
           </TabsTrigger>
           <TabsTrigger value="waitlist" className="flex items-center gap-2" data-testid="tab-waitlist">
             <Clock className="h-4 w-4" />
@@ -236,7 +236,7 @@ export default function AdminAccessControl() {
 
         <TabsContent value="tickets">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Cupons Ativos</h2>
+            <h2 className="text-lg font-semibold">Passes VIP Ativos</h2>
             <Button 
               onClick={() => {
                 ticketForm.reset();
@@ -245,7 +245,7 @@ export default function AdminAccessControl() {
               data-testid="button-create-ticket"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Novo Cupom
+              Novo Passe
             </Button>
           </div>
 
@@ -339,7 +339,7 @@ export default function AdminAccessControl() {
                     <div className="mt-4 pt-4 border-t" data-testid={`ticket-usage-${ticket.id}`}>
                       <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                         <Users className="h-4 w-4" />
-                        Usuários que usaram este cupom
+                        Usuários que usaram este passe
                       </h4>
                       {ticketUsageLoading ? (
                         <div className="flex items-center justify-center py-4">
@@ -371,7 +371,7 @@ export default function AdminAccessControl() {
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground py-2">
-                          Nenhum usuário usou este cupom ainda.
+                          Nenhum usuário usou este passe ainda.
                         </p>
                       )}
                     </div>
@@ -382,9 +382,9 @@ export default function AdminAccessControl() {
           ) : (
             <Card className="p-12 text-center">
               <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">Nenhum cupom criado ainda</p>
+              <p className="text-muted-foreground">Nenhum passe VIP criado ainda</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Crie cupons para permitir que pessoas se registrem
+                Crie passes VIP para permitir que pessoas se registrem
               </p>
             </Card>
           )}
@@ -456,7 +456,7 @@ export default function AdminAccessControl() {
               <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">Lista de espera vazia</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Pessoas sem cupom podem se inscrever na lista de espera
+                Pessoas sem passe VIP podem se inscrever na lista de espera
               </p>
             </Card>
           )}
@@ -477,7 +477,7 @@ export default function AdminAccessControl() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingTicket ? "Editar Cupom" : "Criar Novo Cupom"}
+              {editingTicket ? "Editar Passe VIP" : "Criar Novo Passe VIP"}
             </DialogTitle>
             <DialogDescription>
               {editingTicket 
@@ -492,7 +492,7 @@ export default function AdminAccessControl() {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código do Cupom</FormLabel>
+                    <FormLabel>Código do Passe</FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
                         <Input
@@ -525,7 +525,7 @@ export default function AdminAccessControl() {
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="Para quem é este cupom"
+                        placeholder="Para quem é este passe"
                         data-testid="input-ticket-recipient"
                       />
                     </FormControl>
@@ -580,7 +580,7 @@ export default function AdminAccessControl() {
                 name="isActive"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
-                    <FormLabel>Cupom Ativo</FormLabel>
+                    <FormLabel>Passe Ativo</FormLabel>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -602,7 +602,7 @@ export default function AdminAccessControl() {
                       <Textarea
                         {...field}
                         value={field.value || ""}
-                        placeholder="Observações internas sobre este cupom"
+                        placeholder="Observações internas sobre este passe"
                         className="resize-none"
                         data-testid="input-ticket-notes"
                       />
@@ -632,7 +632,7 @@ export default function AdminAccessControl() {
                   {(createTicketMutation.isPending || updateTicketMutation.isPending) && (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}
-                  {editingTicket ? "Salvar" : "Criar Cupom"}
+                  {editingTicket ? "Salvar" : "Criar Passe"}
                 </Button>
               </DialogFooter>
             </form>

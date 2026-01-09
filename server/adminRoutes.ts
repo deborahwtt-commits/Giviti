@@ -664,7 +664,7 @@ export function registerAdminRoutes(app: Express) {
       // Check if code already exists
       const existing = await storage.getAccessTicketByCode(validatedData.code);
       if (existing) {
-        return res.status(400).json({ message: "Já existe um cupom com este código" });
+        return res.status(400).json({ message: "Já existe um passe VIP com este código" });
       }
       
       const ticket = await storage.createAccessTicket(validatedData, req.user!.id);
@@ -690,7 +690,7 @@ export function registerAdminRoutes(app: Express) {
       if (updates.code) {
         const existing = await storage.getAccessTicketByCode(updates.code);
         if (existing && existing.id !== id) {
-          return res.status(400).json({ message: "Já existe um cupom com este código" });
+          return res.status(400).json({ message: "Já existe um passe VIP com este código" });
         }
       }
       
