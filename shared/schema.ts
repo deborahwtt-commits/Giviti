@@ -58,7 +58,7 @@ export const registerUserSchema = insertUserSchema
   .extend({
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
-    ticketCode: z.string().min(1, "Cupom de ingresso é obrigatório"),
+    ticketCode: z.string().min(1, "Passe VIP é obrigatório"),
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {

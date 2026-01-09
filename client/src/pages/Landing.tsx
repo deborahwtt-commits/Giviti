@@ -434,7 +434,7 @@ export default function Landing() {
                             <FormItem>
                               <FormLabel className="flex items-center gap-1">
                                 <Ticket className="h-4 w-4" />
-                                Cupom de Ingresso
+                                Passe VIP
                               </FormLabel>
                               <FormControl>
                                 <Input
@@ -590,7 +590,7 @@ export default function Landing() {
 
                         <div className="text-center pt-2">
                           <p className="text-sm text-muted-foreground mb-2">
-                            Não tem um cupom de ingresso?
+                            Não tem um passe VIP?
                           </p>
                           <Button
                             type="button"
@@ -693,7 +693,7 @@ export default function Landing() {
                               onClick={() => setShowWaitlistMode(false)}
                               data-testid="button-back-to-register-form"
                             >
-                              Já tenho um cupom de ingresso
+                              Já tenho um passe VIP
                             </Button>
                           </form>
                         </Form>

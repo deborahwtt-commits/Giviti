@@ -481,8 +481,8 @@ export default function AdminAccessControl() {
             </DialogTitle>
             <DialogDescription>
               {editingTicket 
-                ? "Atualize as informações do cupom de ingresso"
-                : "Crie um novo cupom de ingresso para permitir registros"}
+                ? "Atualize as informações do passe VIP"
+                : "Crie um novo passe VIP para permitir registros"}
             </DialogDescription>
           </DialogHeader>
           <Form {...ticketForm}>

@@ -49,13 +49,13 @@ export async function setupAuth(app: Express): Promise<void> {
       // Validate access ticket (soft launch requirement)
       const ticket = await storage.getAccessTicketByCode(validatedData.ticketCode);
       if (!ticket) {
-        return res.status(400).json({ message: "Cupom de ingresso inválido" });
+        return res.status(400).json({ message: "Passe VIP inválido" });
       }
       if (!ticket.isActive) {
-        return res.status(400).json({ message: "Este cupom de ingresso não está mais ativo" });
+        return res.status(400).json({ message: "Este passe VIP não está mais ativo" });
       }
       if (ticket.usedAccounts >= ticket.maxAccounts) {
-        return res.status(400).json({ message: "Este cupom de ingresso já atingiu o limite de contas permitidas" });
+        return res.status(400).json({ message: "Este passe VIP já atingiu o limite de contas permitidas" });
       }
       
       // Check if user already exists
