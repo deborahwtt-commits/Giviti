@@ -9,6 +9,8 @@ import {
   insertRelationshipTypeSchema,
   insertThemedNightCategorySchema,
   insertSystemSettingSchema,
+  insertAccessTicketSchema,
+  insertWaitlistSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import bcrypt from "bcrypt";
@@ -620,6 +622,196 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching top clicks:", error);
       res.status(500).json({ message: "Failed to fetch click analytics" });
+    }
+  });
+
+  // ========== Access Tickets Routes (Soft Launch) ==========
+
+  // GET /api/admin/access-tickets - Get all access tickets
+  app.get("/api/admin/access-tickets", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const tickets = await storage.getAccessTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching access tickets:", error);
+      res.status(500).json({ message: "Failed to fetch access tickets" });
+    }
+  });
+
+  // GET /api/admin/access-tickets/:id - Get single access ticket with usage
+  app.get("/api/admin/access-tickets/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const ticket = await storage.getAccessTicket(id);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      const usage = await storage.getAccessTicketUsage(id);
+      res.json({ ...ticket, usage });
+    } catch (error) {
+      console.error("Error fetching access ticket:", error);
+      res.status(500).json({ message: "Failed to fetch access ticket" });
+    }
+  });
+
+  // POST /api/admin/access-tickets - Create new access ticket
+  app.post("/api/admin/access-tickets", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const validatedData = insertAccessTicketSchema.parse(req.body);
+      
+      // Check if code already exists
+      const existing = await storage.getAccessTicketByCode(validatedData.code);
+      if (existing) {
+        return res.status(400).json({ message: "Já existe um cupom com este código" });
+      }
+      
+      const ticket = await storage.createAccessTicket(validatedData, req.user!.id);
+      await createAudit(req, "CREATE", "access_ticket", ticket.id, { code: ticket.code });
+      
+      res.status(201).json(ticket);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Error creating access ticket:", error);
+      res.status(500).json({ message: "Failed to create access ticket" });
+    }
+  });
+
+  // PATCH /api/admin/access-tickets/:id - Update access ticket
+  app.patch("/api/admin/access-tickets/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // If updating code, check for duplicates
+      if (updates.code) {
+        const existing = await storage.getAccessTicketByCode(updates.code);
+        if (existing && existing.id !== id) {
+          return res.status(400).json({ message: "Já existe um cupom com este código" });
+        }
+      }
+      
+      const ticket = await storage.updateAccessTicket(id, updates);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      await createAudit(req, "UPDATE", "access_ticket", id, updates);
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error updating access ticket:", error);
+      res.status(500).json({ message: "Failed to update access ticket" });
+    }
+  });
+
+  // DELETE /api/admin/access-tickets/:id - Delete access ticket
+  app.delete("/api/admin/access-tickets/:id", isAuthenticated, hasRole("admin"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteAccessTicket(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      await createAudit(req, "DELETE", "access_ticket", id);
+      
+      res.json({ message: "Ticket deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting access ticket:", error);
+      res.status(500).json({ message: "Failed to delete access ticket" });
+    }
+  });
+
+  // ========== Waitlist Routes ==========
+
+  // GET /api/admin/waitlist - Get all waitlist entries
+  app.get("/api/admin/waitlist", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const entries = await storage.getWaitlist();
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching waitlist:", error);
+      res.status(500).json({ message: "Failed to fetch waitlist" });
+    }
+  });
+
+  // PATCH /api/admin/waitlist/:id - Update waitlist entry (e.g., invite)
+  app.patch("/api/admin/waitlist/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const entry = await storage.updateWaitlistEntry(id, updates);
+      
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      
+      await createAudit(req, "UPDATE", "waitlist", id, updates);
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating waitlist entry:", error);
+      res.status(500).json({ message: "Failed to update waitlist entry" });
+    }
+  });
+
+  // DELETE /api/admin/waitlist/:id - Delete waitlist entry
+  app.delete("/api/admin/waitlist/:id", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWaitlistEntry(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      
+      await createAudit(req, "DELETE", "waitlist", id);
+      
+      res.json({ message: "Entry deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting waitlist entry:", error);
+      res.status(500).json({ message: "Failed to delete waitlist entry" });
+    }
+  });
+
+  // ========== Public Waitlist Route (no auth required) ==========
+  
+  // POST /api/waitlist - Join waitlist (public endpoint)
+  app.post("/api/waitlist", async (req: any, res) => {
+    try {
+      const validatedData = insertWaitlistSchema.parse(req.body);
+      
+      // Check if email already in waitlist
+      const existing = await storage.getWaitlistEntryByEmail(validatedData.email);
+      if (existing) {
+        return res.status(400).json({ message: "Este e-mail já está na lista de espera" });
+      }
+      
+      // Check if email already has an account
+      const existingUser = await storage.getUserByEmail(validatedData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Este e-mail já possui uma conta" });
+      }
+      
+      const entry = await storage.createWaitlistEntry(validatedData);
+      
+      res.status(201).json({ 
+        message: "Você foi adicionado à lista de espera! Entraremos em contato em breve.",
+        id: entry.id 
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Error creating waitlist entry:", error);
+      res.status(500).json({ message: "Failed to join waitlist" });
     }
   });
 }

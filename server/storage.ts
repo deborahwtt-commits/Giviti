@@ -97,6 +97,14 @@ import {
   secretSantaWishlistItems,
   type SecretSantaWishlistItem,
   type InsertSecretSantaWishlistItem,
+  accessTickets,
+  accessTicketUsage,
+  waitlist,
+  type AccessTicket,
+  type InsertAccessTicket,
+  type AccessTicketUsage,
+  type Waitlist,
+  type InsertWaitlist,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
@@ -406,6 +414,26 @@ export interface IStorage {
   incrementSecretSantaWishlistItemClick(id: string): Promise<SecretSantaWishlistItem | undefined>;
   getSecretSantaWishlistItem(id: string): Promise<SecretSantaWishlistItem | undefined>;
   getMostClickedSecretSantaWishlistItems(limit?: number): Promise<Array<SecretSantaWishlistItem & { eventTitle: string; participantName: string }>>;
+  
+  // ========== SOFT LAUNCH ACCESS CONTROL ==========
+  
+  // Access Ticket Operations
+  getAccessTickets(): Promise<AccessTicket[]>;
+  getAccessTicket(id: string): Promise<AccessTicket | undefined>;
+  getAccessTicketByCode(code: string): Promise<AccessTicket | undefined>;
+  createAccessTicket(ticket: InsertAccessTicket, createdBy: string): Promise<AccessTicket>;
+  updateAccessTicket(id: string, updates: Partial<InsertAccessTicket>): Promise<AccessTicket | undefined>;
+  deleteAccessTicket(id: string): Promise<boolean>;
+  useAccessTicket(ticketId: string, userId: string): Promise<boolean>;
+  getAccessTicketUsage(ticketId: string): Promise<Array<AccessTicketUsage & { user: User }>>;
+  
+  // Waitlist Operations
+  getWaitlist(): Promise<Waitlist[]>;
+  getWaitlistEntry(id: string): Promise<Waitlist | undefined>;
+  getWaitlistEntryByEmail(email: string): Promise<Waitlist | undefined>;
+  createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist>;
+  updateWaitlistEntry(id: string, updates: Partial<{ status: string; invitedAt: Date; ticketId: string }>): Promise<Waitlist | undefined>;
+  deleteWaitlistEntry(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2972,6 +3000,151 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`${secretSantaWishlistItems.clickCount} DESC`, sql`${secretSantaWishlistItems.lastClickedAt} DESC NULLS LAST`)
       .limit(limit);
     return result;
+  }
+
+  // ========== SOFT LAUNCH ACCESS CONTROL ==========
+
+  async getAccessTickets(): Promise<AccessTicket[]> {
+    return await db
+      .select()
+      .from(accessTickets)
+      .orderBy(desc(accessTickets.createdAt));
+  }
+
+  async getAccessTicket(id: string): Promise<AccessTicket | undefined> {
+    const [ticket] = await db
+      .select()
+      .from(accessTickets)
+      .where(eq(accessTickets.id, id));
+    return ticket;
+  }
+
+  async getAccessTicketByCode(code: string): Promise<AccessTicket | undefined> {
+    const [ticket] = await db
+      .select()
+      .from(accessTickets)
+      .where(eq(accessTickets.code, code.toUpperCase().trim()));
+    return ticket;
+  }
+
+  async createAccessTicket(ticket: InsertAccessTicket, createdBy: string): Promise<AccessTicket> {
+    const [newTicket] = await db
+      .insert(accessTickets)
+      .values({
+        ...ticket,
+        code: ticket.code.toUpperCase().trim(),
+        createdBy,
+      })
+      .returning();
+    return newTicket;
+  }
+
+  async updateAccessTicket(id: string, updates: Partial<InsertAccessTicket>): Promise<AccessTicket | undefined> {
+    const updateData: any = { ...updates, updatedAt: new Date() };
+    if (updates.code) {
+      updateData.code = updates.code.toUpperCase().trim();
+    }
+    const [updated] = await db
+      .update(accessTickets)
+      .set(updateData)
+      .where(eq(accessTickets.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAccessTicket(id: string): Promise<boolean> {
+    const result = await db
+      .delete(accessTickets)
+      .where(eq(accessTickets.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async useAccessTicket(ticketId: string, userId: string): Promise<boolean> {
+    // Record the usage
+    await db.insert(accessTicketUsage).values({
+      ticketId,
+      userId,
+    });
+    
+    // Increment the used count
+    await db
+      .update(accessTickets)
+      .set({ 
+        usedAccounts: sql`${accessTickets.usedAccounts} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(accessTickets.id, ticketId));
+    
+    return true;
+  }
+
+  async getAccessTicketUsage(ticketId: string): Promise<Array<AccessTicketUsage & { user: User }>> {
+    const result = await db
+      .select({
+        id: accessTicketUsage.id,
+        ticketId: accessTicketUsage.ticketId,
+        userId: accessTicketUsage.userId,
+        createdAt: accessTicketUsage.createdAt,
+        user: users,
+      })
+      .from(accessTicketUsage)
+      .innerJoin(users, eq(accessTicketUsage.userId, users.id))
+      .where(eq(accessTicketUsage.ticketId, ticketId))
+      .orderBy(desc(accessTicketUsage.createdAt));
+    return result;
+  }
+
+  // Waitlist Operations
+  async getWaitlist(): Promise<Waitlist[]> {
+    return await db
+      .select()
+      .from(waitlist)
+      .orderBy(desc(waitlist.createdAt));
+  }
+
+  async getWaitlistEntry(id: string): Promise<Waitlist | undefined> {
+    const [entry] = await db
+      .select()
+      .from(waitlist)
+      .where(eq(waitlist.id, id));
+    return entry;
+  }
+
+  async getWaitlistEntryByEmail(email: string): Promise<Waitlist | undefined> {
+    const [entry] = await db
+      .select()
+      .from(waitlist)
+      .where(eq(waitlist.email, email.toLowerCase().trim()));
+    return entry;
+  }
+
+  async createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist> {
+    const [newEntry] = await db
+      .insert(waitlist)
+      .values({
+        ...entry,
+        email: entry.email.toLowerCase().trim(),
+      })
+      .returning();
+    return newEntry;
+  }
+
+  async updateWaitlistEntry(id: string, updates: Partial<{ status: string; invitedAt: Date; ticketId: string }>): Promise<Waitlist | undefined> {
+    const [updated] = await db
+      .update(waitlist)
+      .set(updates)
+      .where(eq(waitlist.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteWaitlistEntry(id: string): Promise<boolean> {
+    const result = await db
+      .delete(waitlist)
+      .where(eq(waitlist.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
