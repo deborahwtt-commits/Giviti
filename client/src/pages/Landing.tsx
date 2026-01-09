@@ -35,6 +35,7 @@ export default function Landing() {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showWaitlistMode, setShowWaitlistMode] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   // Login form
   const loginForm = useForm<LoginUser>({
@@ -182,6 +183,7 @@ export default function Landing() {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterUser) => {
+      setRegisterError(null); // Clear previous error
       const params = new URLSearchParams();
       if (keepLoggedIn) {
         params.set("remember", "true");
@@ -189,6 +191,7 @@ export default function Landing() {
       return await apiRequest(`/api/register?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
+      setRegisterError(null);
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
@@ -222,6 +225,9 @@ export default function Landing() {
           errorMessage = error.message;
         }
       }
+      
+      // Set inline error for immediate visibility
+      setRegisterError(errorMessage);
       
       toast({
         title: "Erro ao criar conta",
@@ -563,6 +569,15 @@ export default function Landing() {
                             Manter-me logado neste navegador
                           </Label>
                         </div>
+
+                        {registerError && (
+                          <div 
+                            className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+                            data-testid="register-error-message"
+                          >
+                            {registerError}
+                          </div>
+                        )}
 
                         <Button
                           type="submit"
