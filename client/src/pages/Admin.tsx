@@ -16,7 +16,8 @@ import {
   MousePointerClick,
   ExternalLink,
   Clock,
-  UserX
+  UserX,
+  Ticket
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -254,6 +255,23 @@ export default function Admin() {
                 ))}
               </div>
             </Card>
+          </div>
+        </div>
+
+        {/* Controle de Acesso (Soft Launch) */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Ticket className="w-5 h-5" />
+            Controle de Acesso
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AdminStatsCard
+              title="Cupons de Ingresso"
+              value="Gerenciar"
+              icon={Ticket}
+              description="Criar e gerenciar cupons para registro"
+              onClick={() => setLocation("/admin/controle-acesso")}
+            />
           </div>
         </div>
 
