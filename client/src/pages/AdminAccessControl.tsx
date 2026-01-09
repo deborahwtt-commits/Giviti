@@ -20,7 +20,11 @@ import {
   Mail,
   Copy,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  Calendar
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -29,7 +33,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertAccessTicketSchema, type InsertAccessTicket, type AccessTicket, type Waitlist, type User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface AccessTicketWithUsage extends AccessTicket {
@@ -43,6 +47,7 @@ export default function AdminAccessControl() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTicket, setEditingTicket] = useState<AccessTicket | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
 
   const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
@@ -58,6 +63,11 @@ export default function AdminAccessControl() {
   const { data: waitlist, isLoading: waitlistLoading } = useQuery<Waitlist[]>({
     queryKey: ["/api/admin/waitlist"],
     enabled: hasAdminAccess,
+  });
+
+  const { data: expandedTicketData, isLoading: ticketUsageLoading } = useQuery<AccessTicketWithUsage>({
+    queryKey: ["/api/admin/access-tickets", expandedTicketId],
+    enabled: !!expandedTicketId,
   });
 
   const ticketForm = useForm<InsertAccessTicket>({
@@ -161,6 +171,10 @@ export default function AdminAccessControl() {
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
     toast({ title: "Cupom copiado!" });
+  };
+
+  const toggleTicketExpand = (ticketId: string) => {
+    setExpandedTicketId(expandedTicketId === ticketId ? null : ticketId);
   };
 
   const generateRandomCode = () => {
@@ -285,6 +299,21 @@ export default function AdminAccessControl() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      {ticket.usedAccounts > 0 && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => toggleTicketExpand(ticket.id)}
+                          data-testid={`button-view-${ticket.id}`}
+                          title="Visualizar usuários"
+                        >
+                          {expandedTicketId === ticket.id ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="icon"
@@ -304,6 +333,49 @@ export default function AdminAccessControl() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Expanded Usage Section */}
+                  {expandedTicketId === ticket.id && (
+                    <div className="mt-4 pt-4 border-t" data-testid={`ticket-usage-${ticket.id}`}>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Usuários que usaram este cupom
+                      </h4>
+                      {ticketUsageLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                      ) : expandedTicketData?.usage && expandedTicketData.usage.length > 0 ? (
+                        <div className="space-y-2">
+                          {expandedTicketData.usage.map((usageEntry) => (
+                            <div 
+                              key={usageEntry.id}
+                              className="bg-muted/50 rounded-lg p-3 flex flex-wrap items-center gap-4"
+                              data-testid={`usage-entry-${usageEntry.id}`}
+                            >
+                              <div className="flex-1 min-w-[200px]">
+                                <p className="font-medium">
+                                  {usageEntry.user.firstName} {usageEntry.user.lastName}
+                                </p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {usageEntry.user.email}
+                                </p>
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {usageEntry.createdAt && format(new Date(usageEntry.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground py-2">
+                          Nenhum usuário usou este cupom ainda.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
