@@ -313,7 +313,7 @@ export default function Landing() {
                 Giviti
               </h1>
               <p className="text-xl md:text-2xl text-white/90 mb-6">
-                Presentes Perfeitos, Sempre
+                Você presente.
               </p>
               <p className="text-lg text-white/80 max-w-lg">
                 Nunca mais esqueça uma data importante ou fique sem ideias.
@@ -764,7 +764,7 @@ export default function Landing() {
 
       <footer className="py-8 px-4 md:px-6 border-t border-border">
         <div className="max-w-7xl mx-auto text-center text-sm text-muted-foreground">
-          <p>© 2024 Giviti. Presentes Perfeitos, Sempre.</p>
+          <p>© 2024 Giviti. Você presente..</p>
         </div>
       </footer>
 

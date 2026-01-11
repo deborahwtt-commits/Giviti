@@ -1,6 +1,6 @@
 # Manual do Usuário - Giviti
 
-## Presentes Perfeitos, Sempre
+## Você presente.
 
 Versão 1.2 | Janeiro 2026
 
@@ -622,6 +622,6 @@ Entre em contato através do e-mail de suporte da plataforma.
 
 ---
 
-**Giviti** - Presentes Perfeitos, Sempre
+**Giviti** - Você presente.
 
 © 2024-2026 - Todos os direitos reservados
