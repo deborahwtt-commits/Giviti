@@ -1,8 +1,8 @@
 # Manual do Usuário - Giviti
 
-## Presentes Perfeitos, Sempre
+## Você presente.
 
-Versão 1.1 | Dezembro 2024
+Versão 1.2 | Janeiro 2026
 
 ---
 
@@ -10,32 +10,41 @@ Versão 1.1 | Dezembro 2024
 
 1. [Introdução](#introdução)
 2. [Primeiros Passos](#primeiros-passos)
+   - [Sistema de Acesso (Passe VIP)](#sistema-de-acesso-passe-vip)
    - [Criando sua Conta](#criando-sua-conta)
+   - [Lista de Espera](#lista-de-espera)
    - [Fazendo Login](#fazendo-login)
    - [Esqueci Minha Senha](#esqueci-minha-senha)
    - [Conhecendo o Dashboard](#conhecendo-o-dashboard)
 3. [Gerenciando Presenteados](#gerenciando-presenteados)
    - [Adicionando um Novo Presenteado](#adicionando-um-novo-presenteado)
    - [Preenchendo o Perfil do Presenteado](#preenchendo-o-perfil-do-presenteado)
+   - [Vinculação Bidirecional](#vinculação-bidirecional)
    - [Editando e Excluindo Presenteados](#editando-e-excluindo-presenteados)
 4. [Gerenciando Eventos](#gerenciando-eventos)
    - [Criando um Novo Evento](#criando-um-novo-evento)
    - [Tipos de Eventos](#tipos-de-eventos)
    - [Arquivando e Avançando Eventos](#arquivando-e-avançando-eventos)
-5. [Sugestões de Presentes](#sugestões-de-presentes)
+5. [Meu Aniversário](#meu-aniversário)
+   - [Criando seu Evento de Aniversário](#criando-seu-evento-de-aniversário)
+   - [Gerenciando sua Wishlist](#gerenciando-sua-wishlist)
+   - [Convidando Pessoas](#convidando-pessoas)
+   - [Link Público da Wishlist](#link-público-da-wishlist)
+6. [Sugestões de Presentes](#sugestões-de-presentes)
    - [Como Funciona o Algoritmo](#como-funciona-o-algoritmo)
    - [Usando os Filtros](#usando-os-filtros)
    - [Favoritos e Presentes Comprados](#favoritos-e-presentes-comprados)
-6. [Seu Perfil](#seu-perfil)
+7. [Seu Perfil](#seu-perfil)
    - [Preenchendo o Questionário de Preferências](#preenchendo-o-questionário-de-preferências)
-7. [Eventos Colaborativos (Rolês)](#eventos-colaborativos-rolês)
+   - [Horóscopo Semanal](#horóscopo-semanal)
+8. [Eventos Colaborativos (Rolês)](#eventos-colaborativos-rolês)
    - [Tipos de Rolês](#tipos-de-rolês)
    - [Criando um Amigo Secreto](#criando-um-amigo-secreto)
    - [Gerenciando Participantes](#gerenciando-participantes)
    - [Realizando o Sorteio](#realizando-o-sorteio)
-   - [Noite Temática](#noite-temática)
+   - [Evento Temático](#evento-temático)
    - [Presente Coletivo](#presente-coletivo)
-8. [Perguntas Frequentes](#perguntas-frequentes)
+9. [Perguntas Frequentes](#perguntas-frequentes)
 
 ---
 
@@ -55,19 +64,48 @@ O Giviti aprende sobre as preferências de cada pessoa e usa essas informações
 
 ## Primeiros Passos
 
+### Sistema de Acesso (Passe VIP)
+
+O Giviti opera atualmente em modo de **soft launch** (lançamento restrito). Para criar uma conta, você precisa de um **Passe VIP** - um código especial de acesso.
+
+**Como obter um Passe VIP:**
+- Receba de alguém que já usa o Giviti
+- Aguarde um convite após se inscrever na lista de espera
+- Participe de eventos e promoções especiais
+
+**Características do Passe VIP:**
+- Cada código pode permitir uma ou mais contas
+- Os códigos são únicos e personalizados
+- Alguns códigos têm limite de uso
+
+> **Dica**: Se você não tem um Passe VIP, inscreva-se na lista de espera para ser notificado quando novas vagas estiverem disponíveis.
+
 ### Criando sua Conta
 
 1. Acesse a página inicial do Giviti
 2. Clique em **"Criar Conta"**
-3. Preencha os campos:
+3. Digite seu **Passe VIP** no campo indicado
+4. Preencha os campos:
    - **Nome**: Seu primeiro nome
    - **Sobrenome**: Seu sobrenome
    - **E-mail**: Um e-mail válido (será usado para login)
    - **Senha**: Crie uma senha segura (mínimo 6 caracteres)
-4. Marque a opção "Manter-me logado neste navegador" se desejar
-5. Clique em **"Criar Conta"**
+5. Marque a opção "Manter-me logado neste navegador" se desejar
+6. Clique em **"Criar Conta"**
 
 Após criar sua conta, você será redirecionado automaticamente para o Dashboard.
+
+### Lista de Espera
+
+Se você não possui um Passe VIP, pode se inscrever na lista de espera:
+
+1. Na página inicial, clique em **"Entrar na Lista de Espera"**
+2. Preencha seu **nome** e **e-mail**
+3. Clique em **"Inscrever-se"**
+
+Você receberá um e-mail quando novas vagas estiverem disponíveis.
+
+> **Nota**: A posição na fila não garante ordem de convite. Convites são enviados conforme disponibilidade de vagas.
 
 ### Fazendo Login
 
@@ -146,6 +184,26 @@ Para sugestões mais precisas, você pode preencher um perfil detalhado:
 4. Opcionalmente, adicione localização (cidade, estado, país)
 5. Clique em **"Salvar"**
 
+### Vinculação Bidirecional
+
+O Giviti possui um sistema inteligente de **vinculação bidirecional** entre usuários e presenteados:
+
+**Como funciona:**
+- Quando você cadastra um presenteado com um e-mail
+- E essa pessoa cria uma conta no Giviti usando o mesmo e-mail
+- O sistema automaticamente vincula os perfis
+
+**Benefícios:**
+- As preferências preenchidas pela pessoa aparecem automaticamente no perfil do presenteado
+- Sugestões de presentes ficam mais precisas
+- Atualizações de preferências são sincronizadas em tempo real
+
+**Indicadores visuais:**
+- Um ícone especial aparece ao lado de presenteados vinculados
+- Você pode ver se a pessoa tem perfil completo no Giviti
+
+> **Dica**: Convide seus presenteados a criar uma conta no Giviti! Assim você receberá sugestões ainda mais personalizadas.
+
 ### Editando e Excluindo Presenteados
 
 **Para editar:**
@@ -205,6 +263,73 @@ O Giviti suporta diversos tipos de eventos:
 - Este mês
 - Próximos 3 meses
 - Todos os próximos
+
+---
+
+## Meu Aniversário
+
+O Giviti oferece uma funcionalidade especial para você organizar seu próprio aniversário, criar uma wishlist de presentes e compartilhar com amigos e família.
+
+### Criando seu Evento de Aniversário
+
+1. Acesse **"Meu Aniversário"** no menu lateral
+2. Clique em **"Criar Evento de Aniversário"**
+3. Preencha as informações:
+   - **Data do aniversário**: Quando você faz aniversário
+   - **Título** (opcional): Um nome personalizado para o evento
+   - **Descrição** (opcional): Mensagem para seus convidados
+4. Clique em **"Criar"**
+
+### Gerenciando sua Wishlist
+
+Na aba **"Wishlist"** você pode adicionar os presentes que deseja receber:
+
+1. Clique em **"Adicionar Item"**
+2. Preencha os detalhes:
+   - **Nome do presente**: O que você quer ganhar
+   - **Descrição** (opcional): Detalhes como cor, tamanho, modelo
+   - **Link** (opcional): URL da loja onde está disponível
+   - **Faixa de preço** (opcional): Valor estimado
+   - **Prioridade**: Alta, Média ou Baixa
+3. Clique em **"Adicionar"**
+
+**Organizando sua wishlist:**
+- Arraste os itens para reordenar por prioridade
+- Use o ícone de lápis para editar
+- Use o ícone de lixeira para remover
+
+### Convidando Pessoas
+
+Na aba **"Convidados"** você pode gerenciar quem será convidado:
+
+1. Clique em **"Convidar"**
+2. Preencha nome e e-mail do convidado
+3. Clique em **"Enviar Convite"**
+
+O convidado receberá um e-mail com:
+- Informações sobre seu aniversário
+- Link para ver sua wishlist
+- Opção de marcar presentes que pretende dar
+
+**Acompanhando os convites:**
+- **Pendente**: Convite enviado, aguardando visualização
+- **Visualizado**: A pessoa abriu o link
+- **Confirmado**: Indicou interesse em algum presente
+
+### Link Público da Wishlist
+
+Você pode compartilhar sua wishlist de forma pública:
+
+1. Na página do seu aniversário, clique em **"Compartilhar Wishlist"**
+2. Copie o link gerado
+3. Compartilhe via WhatsApp, redes sociais ou e-mail
+
+**Características do link público:**
+- Qualquer pessoa com o link pode ver sua wishlist
+- Visitantes podem marcar presentes que pretendem dar
+- Você vê em tempo real quais presentes foram "reservados"
+
+> **Dica**: O link público é perfeito para compartilhar em grupos de WhatsApp ou posts em redes sociais!
 
 ---
 
@@ -302,6 +427,21 @@ Seu perfil ajuda outras pessoas a te darem presentes melhores (especialmente em 
 
 > **Dica**: Quanto mais completo seu perfil, melhores serão as sugestões que outras pessoas receberão para você!
 
+### Horóscopo Semanal
+
+O Giviti oferece mensagens personalizadas de horóscopo baseadas no seu signo:
+
+**Configurando seu signo:**
+1. No seu perfil, selecione seu **signo do zodíaco**
+2. Salve as alterações
+
+**Visualizando o horóscopo:**
+- No Dashboard, você verá uma seção com seu horóscopo semanal
+- A mensagem é atualizada toda semana
+- Inclui previsões relacionadas a relacionamentos e presentes
+
+> **Nota**: O horóscopo é um recurso de entretenimento e não substitui o algoritmo de sugestões personalizadas.
+
 ---
 
 ## Eventos Colaborativos (Rolês)
@@ -316,7 +456,7 @@ Rolês são eventos colaborativos que você organiza com amigos, família ou col
 - Configuração de valor mínimo e máximo do presente
 - Regras personalizadas
 
-**Noite Temática:**
+**Evento Temático:**
 - Organize encontros temáticos
 - Categorias pré-definidas disponíveis
 - Sugestões de atividades
@@ -400,11 +540,11 @@ Na lista de participantes, você verá um ícone especial ao lado do nome de que
 
 Clique no ícone para ver as preferências do participante.
 
-### Noite Temática
+### Evento Temático
 
-Para criar uma Noite Temática:
+Para criar um Evento Temático:
 
-1. Selecione **"Noite Temática"** ao criar o rolê
+1. Selecione **"Evento Temático"** ao criar o rolê
 2. Escolha a categoria (Ex: "Jantar Mexicano", "Noite de Jogos")
 3. Adicione participantes da mesma forma
 4. Use a descrição para combinar detalhes
@@ -482,6 +622,6 @@ Entre em contato através do e-mail de suporte da plataforma.
 
 ---
 
-**Giviti** - Presentes Perfeitos, Sempre
+**Giviti** - Você presente.
 
-© 2024 - Todos os direitos reservados
+© 2024-2026 - Todos os direitos reservados

@@ -79,7 +79,7 @@ const eventTypeInfo: Record<string, { label: string; className: string; Icon: Lu
     Icon: Gift 
   },
   themed_night: { 
-    label: "Noite Temática", 
+    label: "Evento Temático", 
     className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
     Icon: PartyPopper 
   },
@@ -127,6 +127,15 @@ interface MyPairResponse {
     isRevealed: boolean;
   };
   receiver: CollaborativeEventParticipant;
+}
+
+// New response type for /pairs endpoint - admin sees all, others see only their own
+interface PairsResponse {
+  viewMode: "all" | "own";
+  pairs?: EnrichedPair[];  // Present when viewMode === "all" (admin only)
+  pair?: EnrichedPair;     // Present when viewMode === "own" (non-admin)
+  isOwner?: boolean;
+  isSystemAdmin: boolean;
 }
 
 interface ParticipantUserProfile {
@@ -286,14 +295,18 @@ export default function RoleDetail() {
 
   // Calculate if current user is owner
   const isOwner = event && user && event.ownerId === user.id;
+  
+  // Check if current user is a system admin
+  const isSystemAdmin = user?.role === "admin";
 
-  // Owner-only query: draw status is restricted to event owners
+  // Draw status query - for owners and system admins
   const { data: drawStatus, isLoading: drawStatusLoading } = useQuery<{
     isDrawPerformed: boolean;
     pairsCount?: number;
     confirmedParticipantsCount?: number;
     totalParticipantsCount?: number;
     isOwner: boolean;
+    isSystemAdmin?: boolean;
   }>({
     queryKey: ["/api/collab-events", id, "draw-status"],
     queryFn: async () => {
@@ -305,25 +318,37 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner,
+    enabled: !!id && !!event && event.eventType === "secret_santa" && (isOwner || isSystemAdmin),
   });
 
-  // Query: All pairs (owner only) - for displaying in Overview after draw
-  const { data: allPairs, isLoading: allPairsLoading } = useQuery<EnrichedPair[]>({
+  // Query: Pairs - admin sees all pairs, others see only their own pair
+  // For system admins: always fetch (they see all pairs regardless of draw status)
+  // For owners: fetch after draw status is loaded and performed
+  // For participants: fetch when draw is performed (via myPair query)
+  const { data: pairsData, isLoading: pairsLoading } = useQuery<PairsResponse>({
     queryKey: ["/api/collab-events", id, "pairs"],
     queryFn: async () => {
       const response = await fetch(`/api/collab-events/${id}/pairs`, {
         credentials: "include",
       });
       if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
         throw new Error("Erro ao buscar pares");
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "secret_santa" && isOwner && drawStatus?.isDrawPerformed === true,
+    // System admins always enabled (they need to see all pairs)
+    // Owners enabled after draw status loaded
+    // Regular participants will use myPair query instead
+    enabled: !!id && !!event && event.eventType === "secret_santa" && (
+      isSystemAdmin || // Admins always fetch
+      (isOwner && drawStatus?.isDrawPerformed === true) // Owners after draw
+    ),
   });
 
-  // Query: My pair (participant view) - for non-owners to see who they got
+  // Query for non-owner participants to see their pair (my-pair endpoint)
   const { data: myPair, isLoading: myPairLoading } = useQuery<MyPairResponse>({
     queryKey: ["/api/collab-events", id, "my-pair"],
     queryFn: async () => {
@@ -338,7 +363,8 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner,
+    // Only for non-admin, non-owner participants
+    enabled: !!id && !!event && event.eventType === "secret_santa" && !isOwner && !isSystemAdmin,
   });
 
   // Query: User profile (participant view) - to check if profile is filled
@@ -1875,12 +1901,12 @@ export default function RoleDetail() {
             );
           })()}
 
-          {event.eventType === "secret_santa" && isOwner && (
+          {event.eventType === "secret_santa" && (isOwner || isSystemAdmin) && (
             <Card>
               <CardHeader>
                 <CardTitle>Status do Sorteio</CardTitle>
                 <CardDescription>
-                  Realize o sorteio após adicionar pelo menos 3 participantes
+                  {isOwner ? "Realize o sorteio após adicionar pelo menos 3 participantes" : "Visualização do status do sorteio"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1911,64 +1937,105 @@ export default function RoleDetail() {
                           </div>
                         </div>
                         
-                        {/* Display pairs for owner */}
-                        {allPairsLoading ? (
+                        {/* Display pairs - admin sees all, non-admin sees only their own */}
+                        {pairsLoading ? (
                           <div className="flex items-center justify-center py-4">
                             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                           </div>
-                        ) : allPairs && allPairs.length > 0 && (
+                        ) : pairsData && (
                           <div className="mt-4 space-y-3">
-                            <p className="text-sm font-medium">Pares do Sorteio:</p>
-                            <div className="space-y-2">
-                              {allPairs.map((pair) => (
+                            {/* Admin view: all pairs */}
+                            {pairsData.viewMode === "all" && pairsData.pairs && pairsData.pairs.length > 0 && (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium">Pares do Sorteio:</p>
+                                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                                    Visão Admin
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2">
+                                  {pairsData.pairs.map((pair) => (
+                                    <div 
+                                      key={pair.id} 
+                                      className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
+                                      data-testid={`pair-${pair.id}`}
+                                    >
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarFallback className="text-xs">
+                                          {getInitials(pair.giver?.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">
+                                          {pair.giver?.name || "Participante"}
+                                        </p>
+                                      </div>
+                                      <Gift className="w-4 h-4 text-primary" />
+                                      <div className="flex-1 text-right">
+                                        <p className="text-sm font-medium">
+                                          {pair.receiver?.name || "Participante"}
+                                        </p>
+                                      </div>
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarFallback className="text-xs">
+                                          {getInitials(pair.receiver?.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                            
+                            {/* Non-admin owner view: only their own pair */}
+                            {pairsData.viewMode === "own" && pairsData.pair && (
+                              <>
+                                <p className="text-sm font-medium">Seu Par no Sorteio:</p>
                                 <div 
-                                  key={pair.id} 
-                                  className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
-                                  data-testid={`pair-${pair.id}`}
+                                  className="flex items-center gap-3 p-4 rounded-lg border bg-primary/5 border-primary/20"
+                                  data-testid={`my-pair-${pairsData.pair.id}`}
                                 >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="text-xs">
-                                      {getInitials(pair.giver?.name)}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Você tira:</span>
+                                  </div>
+                                  <Gift className="w-5 h-5 text-primary" />
+                                  <Avatar className="h-10 w-10">
+                                    <AvatarFallback className="text-sm">
+                                      {getInitials(pairsData.pair.receiver?.name)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1">
-                                    <p className="text-sm font-medium">
-                                      {pair.giver?.name || "Participante"}
+                                    <p className="text-base font-semibold">
+                                      {pairsData.pair.receiver?.name || "Participante"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Prepare um presente especial!
                                     </p>
                                   </div>
-                                  <Gift className="w-4 h-4 text-primary" />
-                                  <div className="flex-1 text-right">
-                                    <p className="text-sm font-medium">
-                                      {pair.receiver?.name || "Participante"}
-                                    </p>
-                                  </div>
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="text-xs">
-                                      {getInitials(pair.receiver?.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
                                 </div>
-                              ))}
-                            </div>
+                              </>
+                            )}
                           </div>
                         )}
                         
-                        {/* Redraw button */}
-                        <div className="mt-4 pt-4 border-t">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setConfirmRedrawOpen(true)}
-                            className="w-full"
-                            data-testid="button-redraw-secret-santa"
-                          >
-                            <Gift className="w-4 h-4 mr-2" />
-                            Realizar Novo Sorteio
-                          </Button>
-                        </div>
+                        {/* Redraw button - only for owners */}
+                        {isOwner && (
+                          <div className="mt-4 pt-4 border-t">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setConfirmRedrawOpen(true)}
+                              className="w-full"
+                              data-testid="button-redraw-secret-santa"
+                            >
+                              <Gift className="w-4 h-4 mr-2" />
+                              Realizar Novo Sorteio
+                            </Button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <>
-                        {drawStatus?.isOwner ? (
+                        {isOwner ? (
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm text-muted-foreground">
@@ -1989,6 +2056,17 @@ export default function RoleDetail() {
                               <Gift className="w-4 h-4 mr-2" />
                               Realizar Sorteio
                             </Button>
+                          </div>
+                        ) : isSystemAdmin ? (
+                          <div className="flex items-center justify-center py-4">
+                            <div className="text-center">
+                              <p className="text-sm text-muted-foreground">
+                                Sorteio ainda não realizado
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {drawStatus?.confirmedParticipantsCount || 0} participante(s) adicionado(s)
+                              </p>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center py-4">

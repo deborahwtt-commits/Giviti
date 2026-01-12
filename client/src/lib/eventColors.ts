@@ -49,7 +49,7 @@ export function getRoleTypeLabel(eventType?: string | null): string {
     case 'secret_santa':
       return 'Amigo Secreto';
     case 'themed_night':
-      return 'Noite Temática';
+      return 'Evento Temático';
     case 'collective_gift':
       return 'Presente Coletivo';
     default:

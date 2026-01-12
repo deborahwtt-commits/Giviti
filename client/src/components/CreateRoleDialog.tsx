@@ -121,7 +121,7 @@ const eventTypeOptions = [
   },
   {
     value: "themed_night",
-    label: "Noite Temática",
+    label: "Evento Temático",
     icon: PartyPopper,
     description: "Festa com tema e lista de tarefas",
   },

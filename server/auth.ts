@@ -46,6 +46,18 @@ export async function setupAuth(app: Express): Promise<void> {
     try {
       const validatedData = registerUserSchema.parse(req.body);
       
+      // Validate access ticket (soft launch requirement)
+      const ticket = await storage.getAccessTicketByCode(validatedData.ticketCode);
+      if (!ticket) {
+        return res.status(400).json({ message: "Passe VIP inválido" });
+      }
+      if (!ticket.isActive) {
+        return res.status(400).json({ message: "Este passe VIP não está mais ativo" });
+      }
+      if (ticket.usedAccounts >= ticket.maxAccounts) {
+        return res.status(400).json({ message: "Este passe VIP já atingiu o limite de contas permitidas" });
+      }
+      
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
@@ -62,6 +74,9 @@ export async function setupAuth(app: Express): Promise<void> {
         validatedData.firstName ?? undefined,
         validatedData.lastName ?? undefined
       );
+      
+      // Record ticket usage
+      await storage.useAccessTicket(ticket.id, newUser.id);
 
       // Link any pending participant invitations to this new user
       const linkedCount = await storage.linkParticipantsByEmail(validatedData.email, newUser.id);

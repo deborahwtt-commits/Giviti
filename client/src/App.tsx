@@ -19,6 +19,7 @@ import ThemedNightCategories from "@/pages/ThemedNightCategories";
 import AdminGiftSuggestions from "@/pages/AdminGiftSuggestions";
 import AdminGiftCategoriesTypes from "@/pages/AdminGiftCategoriesTypes";
 import AdminOccasions from "@/pages/AdminOccasions";
+import AdminAccessControl from "@/pages/AdminAccessControl";
 import CollaborativeEvents from "@/pages/CollaborativeEvents";
 import NotFound from "@/pages/not-found";
 import RoleDetail from "@/pages/RoleDetail";
@@ -107,6 +108,7 @@ function AuthenticatedApp() {
         <Route path="/admin/sugestoes" component={AdminGiftSuggestions} />
         <Route path="/admin/categorias-tipos" component={AdminGiftCategoriesTypes} />
         <Route path="/admin/datas-comemorativas" component={AdminOccasions} />
+        <Route path="/admin/controle-acesso" component={AdminAccessControl} />
         <Route path="/admin/serpapi-test" component={SerpApiTest} />
         <Route component={NotFound} />
       </Switch>

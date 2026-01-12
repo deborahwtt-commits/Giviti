@@ -95,7 +95,7 @@ function CreateCategoryDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-create-category">
         <DialogHeader>
-          <DialogTitle>Nova Categoria de Noite Temática</DialogTitle>
+          <DialogTitle>Nova Categoria de Evento Temático</DialogTitle>
           <DialogDescription>
             Crie uma nova categoria para sugestões de rolês temáticos
           </DialogDescription>
@@ -792,7 +792,7 @@ export default function ThemedNightCategories() {
               Cadastro de Rolês
             </h1>
             <p className="text-muted-foreground">
-              Gerencie as categorias e sugestões de Noite Temática
+              Gerencie as categorias e sugestões de Evento Temático
             </p>
           </div>
           <CreateCategoryDialog />
@@ -807,7 +807,7 @@ export default function ThemedNightCategories() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Categorias de Noite Temática
+                Categorias de Evento Temático
               </CardTitle>
               <CardDescription>
                 {categories?.length || 0} categoria(s) cadastrada(s)

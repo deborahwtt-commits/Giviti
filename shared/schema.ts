@@ -58,6 +58,7 @@ export const registerUserSchema = insertUserSchema
   .extend({
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
+    ticketCode: z.string().min(1, "Passe VIP é obrigatório"),
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {
@@ -955,3 +956,67 @@ export const insertSecretSantaWishlistItemSchema = createInsertSchema(secretSant
 
 export type InsertSecretSantaWishlistItem = z.infer<typeof insertSecretSantaWishlistItemSchema>;
 export type SecretSantaWishlistItem = typeof secretSantaWishlistItems.$inferSelect;
+
+// ========== Soft Launch Access Control ==========
+
+// Access tickets (cupons de ingresso) - controls who can create accounts
+export const accessTickets = pgTable("access_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(), // Unique ticket code
+  recipientName: varchar("recipient_name").notNull(), // Who the ticket is for
+  recipientEmail: varchar("recipient_email"), // Optional email
+  maxAccounts: integer("max_accounts").notNull().default(1), // Max accounts allowed
+  usedAccounts: integer("used_accounts").notNull().default(0), // Accounts created with this ticket
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"), // Admin notes
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAccessTicketSchema = createInsertSchema(accessTickets).omit({
+  id: true,
+  usedAccounts: true,
+  createdBy: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAccessTicket = z.infer<typeof insertAccessTicketSchema>;
+export type AccessTicket = typeof accessTickets.$inferSelect;
+
+// Ticket usage log - tracks which users created accounts with which ticket
+export const accessTicketUsage = pgTable("access_ticket_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id")
+    .notNull()
+    .references(() => accessTickets.id, { onDelete: "cascade" }),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AccessTicketUsage = typeof accessTicketUsage.$inferSelect;
+
+// Waitlist - for people without tickets who want access
+export const waitlist = pgTable("waitlist", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, invited, registered
+  invitedAt: timestamp("invited_at"),
+  ticketId: varchar("ticket_id").references(() => accessTickets.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWaitlistSchema = createInsertSchema(waitlist).omit({
+  id: true,
+  status: true,
+  invitedAt: true,
+  ticketId: true,
+  createdAt: true,
+});
+
+export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
+export type Waitlist = typeof waitlist.$inferSelect;

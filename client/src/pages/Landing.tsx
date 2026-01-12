@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Gift, Heart, Calendar, Sparkles, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Gift, Heart, Calendar, Sparkles, Eye, EyeOff, Loader2, Ticket, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerUserSchema, loginUserSchema, type RegisterUser, type LoginUser } from "@shared/schema";
+import { registerUserSchema, loginUserSchema, insertWaitlistSchema, type RegisterUser, type LoginUser, type InsertWaitlist } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,9 @@ export default function Landing() {
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showWaitlistMode, setShowWaitlistMode] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   // Login form
   const loginForm = useForm<LoginUser>({
@@ -52,6 +55,16 @@ export default function Landing() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      ticketCode: "",
+    },
+  });
+
+  // Waitlist form
+  const waitlistForm = useForm<InsertWaitlist>({
+    resolver: zodResolver(insertWaitlistSchema),
+    defaultValues: {
+      name: "",
+      email: "",
     },
   });
 
@@ -170,6 +183,7 @@ export default function Landing() {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterUser) => {
+      setRegisterError(null); // Clear previous error
       const params = new URLSearchParams();
       if (keepLoggedIn) {
         params.set("remember", "true");
@@ -177,6 +191,7 @@ export default function Landing() {
       return await apiRequest(`/api/register?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
+      setRegisterError(null);
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
@@ -211,6 +226,9 @@ export default function Landing() {
         }
       }
       
+      // Set inline error for immediate visibility
+      setRegisterError(errorMessage);
+      
       toast({
         title: "Erro ao criar conta",
         description: errorMessage,
@@ -225,6 +243,48 @@ export default function Landing() {
 
   const onRegisterSubmit = (data: RegisterUser) => {
     registerMutation.mutate(data);
+  };
+
+  // Waitlist mutation
+  const waitlistMutation = useMutation({
+    mutationFn: async (data: InsertWaitlist) => {
+      return await apiRequest("/api/waitlist", "POST", data) as any;
+    },
+    onSuccess: (data: any) => {
+      setWaitlistSuccess(true);
+      toast({
+        title: "Adicionado à lista de espera!",
+        description: data.message || "Entraremos em contato quando houver vagas.",
+      });
+      waitlistForm.reset();
+    },
+    onError: (error: any) => {
+      let errorMessage = "Não foi possível entrar na lista de espera";
+      
+      if (error.message) {
+        const jsonMatch = error.message.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed.message || errorMessage;
+          } catch {
+            errorMessage = error.message;
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onWaitlistSubmit = (data: InsertWaitlist) => {
+    waitlistMutation.mutate(data);
   };
 
   return (
@@ -253,7 +313,7 @@ export default function Landing() {
                 Giviti
               </h1>
               <p className="text-xl md:text-2xl text-white/90 mb-6">
-                Presentes Perfeitos, Sempre
+                Você presente.
               </p>
               <p className="text-lg text-white/80 max-w-lg">
                 Nunca mais esqueça uma data importante ou fique sem ideias.
@@ -363,21 +423,84 @@ export default function Landing() {
 
                 {/* Register Form */}
                 <TabsContent value="register">
-                  <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                  {!showWaitlistMode ? (
+                    <Form {...registerForm}>
+                      <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                        {/* Ticket Code Field - Required for registration */}
                         <FormField
                           control={registerForm.control}
-                          name="firstName"
+                          name="ticketCode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nome</FormLabel>
+                              <FormLabel className="flex items-center gap-1">
+                                <Ticket className="h-4 w-4" />
+                                Passe VIP
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
-                                  value={field.value ?? ""}
-                                  placeholder="João"
-                                  data-testid="input-register-firstname"
+                                  placeholder="Digite seu passe VIP"
+                                  className="uppercase"
+                                  data-testid="input-register-ticket"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={registerForm.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    placeholder="João"
+                                    data-testid="input-register-firstname"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={registerForm.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Sobrenome</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    placeholder="Silva"
+                                    data-testid="input-register-lastname"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={registerForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>E-mail</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="email"
+                                  placeholder="seu@email.com"
+                                  data-testid="input-register-email"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -387,115 +510,196 @@ export default function Landing() {
 
                         <FormField
                           control={registerForm.control}
-                          name="lastName"
+                          name="password"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Sobrenome</FormLabel>
+                              <FormLabel>Senha</FormLabel>
                               <FormControl>
-                                <Input
-                                  {...field}
-                                  value={field.value ?? ""}
-                                  placeholder="Silva"
-                                  data-testid="input-register-lastname"
-                                />
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    data-testid="input-register-password"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full px-3"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    data-testid="button-toggle-password-register"
+                                  >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  </Button>
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </div>
 
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>E-mail</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="email"
-                                placeholder="seu@email.com"
-                                data-testid="input-register-email"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Senha</FormLabel>
-                            <FormControl>
-                              <div className="relative">
+                        <FormField
+                          control={registerForm.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirmar Senha</FormLabel>
+                              <FormControl>
                                 <Input
                                   {...field}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  data-testid="input-register-password"
+                                  data-testid="input-register-confirm-password"
                                 />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-0 top-0 h-full px-3"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  data-testid="button-toggle-password-register"
-                                >
-                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirmar Senha</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                data-testid="input-register-confirm-password"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="keep-logged-in-register"
-                          checked={keepLoggedIn}
-                          onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
-                          data-testid="checkbox-keep-logged-in-register"
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                        <Label htmlFor="keep-logged-in-register" className="text-sm font-medium cursor-pointer">
-                          Manter-me logado neste navegador
-                        </Label>
-                      </div>
 
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={registerMutation.isPending}
-                        data-testid="button-submit-register"
-                      >
-                        {registerMutation.isPending ? "Criando conta..." : "Criar Conta"}
-                      </Button>
-                    </form>
-                  </Form>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="keep-logged-in-register"
+                            checked={keepLoggedIn}
+                            onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
+                            data-testid="checkbox-keep-logged-in-register"
+                          />
+                          <Label htmlFor="keep-logged-in-register" className="text-sm font-medium cursor-pointer">
+                            Manter-me logado neste navegador
+                          </Label>
+                        </div>
+
+                        {registerError && (
+                          <div 
+                            className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+                            data-testid="register-error-message"
+                          >
+                            {registerError}
+                          </div>
+                        )}
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={registerMutation.isPending}
+                          data-testid="button-submit-register"
+                        >
+                          {registerMutation.isPending ? "Criando conta..." : "Criar Conta"}
+                        </Button>
+
+                        <div className="text-center pt-2">
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Não tem um passe VIP?
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setShowWaitlistMode(true)}
+                            data-testid="button-show-waitlist"
+                          >
+                            <Clock className="h-4 w-4 mr-2" />
+                            Entrar na Lista de Espera
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  ) : (
+                    <div className="space-y-4">
+                      {waitlistSuccess ? (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Clock className="w-8 h-8 text-primary" />
+                          </div>
+                          <h3 className="text-lg font-semibold mb-2">Você está na lista!</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Entraremos em contato quando houver vagas disponíveis.
+                          </p>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowWaitlistMode(false);
+                              setWaitlistSuccess(false);
+                            }}
+                            data-testid="button-back-to-register"
+                          >
+                            Voltar ao Cadastro
+                          </Button>
+                        </div>
+                      ) : (
+                        <Form {...waitlistForm}>
+                          <form onSubmit={waitlistForm.handleSubmit(onWaitlistSubmit)} className="space-y-4">
+                            <div className="text-center mb-4">
+                              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Clock className="w-6 h-6 text-primary" />
+                              </div>
+                              <h3 className="text-lg font-semibold">Lista de Espera</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Estamos em lançamento limitado. Deixe seus dados e avisaremos quando houver vagas.
+                              </p>
+                            </div>
+
+                            <FormField
+                              control={waitlistForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Nome Completo</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="Seu nome"
+                                      data-testid="input-waitlist-name"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={waitlistForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>E-mail</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="email"
+                                      placeholder="seu@email.com"
+                                      data-testid="input-waitlist-email"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <Button
+                              type="submit"
+                              className="w-full"
+                              disabled={waitlistMutation.isPending}
+                              data-testid="button-submit-waitlist"
+                            >
+                              {waitlistMutation.isPending ? "Enviando..." : "Entrar na Lista de Espera"}
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="w-full"
+                              onClick={() => setShowWaitlistMode(false)}
+                              data-testid="button-back-to-register-form"
+                            >
+                              Já tenho um passe VIP
+                            </Button>
+                          </form>
+                        </Form>
+                      )}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </Card>
@@ -560,7 +764,7 @@ export default function Landing() {
 
       <footer className="py-8 px-4 md:px-6 border-t border-border">
         <div className="max-w-7xl mx-auto text-center text-sm text-muted-foreground">
-          <p>© 2024 Giviti. Presentes Perfeitos, Sempre.</p>
+          <p>© 2024 Giviti. Você presente..</p>
         </div>
       </footer>
 

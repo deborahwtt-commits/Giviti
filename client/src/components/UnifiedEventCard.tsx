@@ -39,7 +39,7 @@ export default function UnifiedEventCard({
       Icon: Gift 
     },
     themed_night: { 
-      label: "Noite Temática", 
+      label: "Evento Temático", 
       Icon: PartyPopper 
     },
     collective_gift: { 
