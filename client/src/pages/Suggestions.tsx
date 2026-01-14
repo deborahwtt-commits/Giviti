@@ -260,8 +260,9 @@ interface UnifiedProductCardProps {
 function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts }: UnifiedProductCardProps) {
   const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
   
-  const existingGift = recipientId && internalId
-    ? userGifts?.find(ug => ug.suggestionId === internalId && ug.recipientId === recipientId)
+  // Find existing gift by suggestionId (can be with or without recipientId)
+  const existingGift = internalId
+    ? userGifts?.find(ug => ug.suggestionId === internalId && (recipientId ? ug.recipientId === recipientId : !ug.recipientId))
     : undefined;
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
@@ -275,11 +276,8 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
 
   const createGiftMutation = useMutation({
     mutationFn: async (data: { isFavorite: boolean; isPurchased: boolean }) => {
-      if (!recipientId) {
-        throw new Error("Recipient required to save gift");
-      }
       return await apiRequest("/api/gifts", "POST", {
-        recipientId,
+        recipientId: recipientId || null,
         suggestionId: internalId,
         name: product.name,
         description: product.description,
@@ -348,15 +346,6 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
   };
 
   const handlePurchasedToggle = async (checked: boolean) => {
-    if (!recipientId) {
-      toast({
-        title: "Selecione um presenteado",
-        description: "Para marcar como comprado, escolha um presenteado específico no filtro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (product.source === "google") {
       toast({
         title: "Funcionalidade não disponível",
