@@ -402,6 +402,8 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
   userId: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  interests: z.array(z.string()).max(3, "Máximo de 3 interesses permitidos").default([]),
 });
 
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;

@@ -73,7 +73,10 @@ export default function Profile() {
 
   useEffect(() => {
     if (profile) {
-      reset(profile);
+      reset({
+        ...profile,
+        interests: profile.interests || [],
+      });
     }
   }, [profile, reset]);
 
@@ -622,7 +625,7 @@ export default function Profile() {
               13. Quais são seus interesses?
             </Label>
             <p className="text-sm text-muted-foreground mb-4">
-              Selecione as categorias que mais combinam com você
+              Selecione até 3 categorias que mais combinam com você
             </p>
             
             <Popover>
@@ -634,7 +637,7 @@ export default function Profile() {
                 >
                   <span className="text-muted-foreground">
                     {(watch("interests") || []).length > 0
-                      ? `${(watch("interests") || []).length} interesse(s) selecionado(s)`
+                      ? `${(watch("interests") || []).length}/3 interesse(s) selecionado(s)`
                       : "Selecionar interesses..."}
                   </span>
                   <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
@@ -645,12 +648,18 @@ export default function Profile() {
                   {googleCategories.filter(cat => cat.isActive).map((category) => {
                     const currentInterests = watch("interests") || [];
                     const isSelected = currentInterests.includes(category.namePtBr);
+                    const isAtLimit = currentInterests.length >= 3 && !isSelected;
                     
                     return (
                       <div
                         key={category.id}
-                        className="flex items-center space-x-2 p-2 hover-elevate rounded-md cursor-pointer"
+                        className={`flex items-center space-x-2 p-2 rounded-md ${
+                          isAtLimit 
+                            ? "opacity-50 cursor-not-allowed" 
+                            : "hover-elevate cursor-pointer"
+                        }`}
                         onClick={() => {
+                          if (isAtLimit) return;
                           const newInterests = isSelected
                             ? currentInterests.filter((i) => i !== category.namePtBr)
                             : [...currentInterests, category.namePtBr];
@@ -660,7 +669,9 @@ export default function Profile() {
                       >
                         <Checkbox
                           checked={isSelected}
+                          disabled={isAtLimit}
                           onCheckedChange={(checked) => {
+                            if (isAtLimit && checked) return;
                             const newInterests = checked
                               ? [...currentInterests, category.namePtBr]
                               : currentInterests.filter((i) => i !== category.namePtBr);
@@ -672,6 +683,11 @@ export default function Profile() {
                     );
                   })}
                 </div>
+                {(watch("interests") || []).length >= 3 && (
+                  <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground text-center">
+                    Limite de 3 interesses atingido
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
 
