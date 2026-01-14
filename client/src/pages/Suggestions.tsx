@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles, ShoppingBag, Calendar } from "lucide-react";
 import { parseISO, isBefore, startOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -260,19 +259,32 @@ interface UnifiedProductCardProps {
 function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts }: UnifiedProductCardProps) {
   const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
   
-  // Find existing gift by suggestionId (can be with or without recipientId)
+  // Find existing gift by suggestionId - for purchase status, check ANY gift with this suggestionId
   const existingGift = internalId
     ? userGifts?.find(ug => ug.suggestionId === internalId && (recipientId ? ug.recipientId === recipientId : !ug.recipientId))
     : undefined;
+  
+  // Check if this product was purchased (with ANY recipientId) - used to disable the purchase button
+  // For internal products: match by suggestionId
+  // For Google products: match by purchaseUrl (product URL)
+  const isPurchasedAnywhere = internalId
+    ? userGifts?.some(ug => ug.suggestionId === internalId && ug.isPurchased)
+    : product.productUrl
+      ? userGifts?.some(ug => ug.purchaseUrl === product.productUrl && ug.isPurchased)
+      : false;
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
-  const [purchased, setPurchased] = useState(existingGift?.isPurchased ?? false);
+  const [purchased, setPurchased] = useState(isPurchasedAnywhere ?? false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     setFavorite(existingGift?.isFavorite ?? false);
-    setPurchased(existingGift?.isPurchased ?? false);
-  }, [existingGift]);
+    // Only update purchased state if server confirms purchase - never reset to false
+    // This prevents the optimistic update from being overridden before refetch completes
+    if (isPurchasedAnywhere) {
+      setPurchased(true);
+    }
+  }, [existingGift, isPurchasedAnywhere]);
 
   const createGiftMutation = useMutation({
     mutationFn: async (data: { isFavorite: boolean; isPurchased: boolean }) => {
@@ -345,51 +357,6 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
     }
   };
 
-  const handlePurchasedToggle = async (checked: boolean) => {
-    if (product.source === "google") {
-      toast({
-        title: "Funcionalidade não disponível",
-        description: "Status de compra só pode ser salvo para produtos internos.",
-      });
-      return;
-    }
-
-    setPurchased(checked);
-
-    try {
-      if (existingGift) {
-        await updateGiftMutation.mutateAsync({
-          isFavorite: favorite,
-          isPurchased: checked,
-        });
-        if (checked) {
-          toast({
-            title: "Presente Comprado!",
-            description: `${product.name} foi marcado como comprado.`,
-          });
-        }
-      } else {
-        await createGiftMutation.mutateAsync({
-          isFavorite: false,
-          isPurchased: checked,
-        });
-        if (checked) {
-          toast({
-            title: "Presente Comprado!",
-            description: `${product.name} foi marcado como comprado.`,
-          });
-        }
-      }
-    } catch (error) {
-      setPurchased(!checked);
-      toast({
-        title: "Erro",
-        description: "Não foi possível marcar como comprado",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <Card className="overflow-hidden group hover-elevate" data-testid={`card-product-${product.id}`}>
       <div className="relative aspect-square bg-muted">
@@ -402,42 +369,22 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
           }}
         />
         
+        {/* Funcionalidade de favoritar temporariamente oculta
         {product.source === "internal" && (
-          <>
-            {/* Funcionalidade de favoritar temporariamente oculta
-            <button
-              onClick={handleFavoriteToggle}
-              className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
-                favorite
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background/80 text-foreground hover-elevate"
-              }`}
-              data-testid={`button-favorite-${product.id}`}
-              aria-label="Favoritar"
-            >
-              <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
-            </button>
-            */}
-
-            <div className="absolute bottom-2 left-2">
-              <div className="flex items-center gap-1.5">
-                <Checkbox
-                  checked={purchased}
-                  onCheckedChange={handlePurchasedToggle}
-                  id={`purchased-${product.id}`}
-                  data-testid={`checkbox-purchased-${product.id}`}
-                  className="bg-background h-4 w-4"
-                />
-                <label
-                  htmlFor={`purchased-${product.id}`}
-                  className="text-xs font-medium text-background bg-foreground/90 px-1.5 py-0.5 rounded cursor-pointer"
-                >
-                  Comprado
-                </label>
-              </div>
-            </div>
-          </>
+          <button
+            onClick={handleFavoriteToggle}
+            className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
+              favorite
+                ? "bg-primary text-primary-foreground"
+                : "bg-background/80 text-foreground hover-elevate"
+            }`}
+            data-testid={`button-favorite-${product.id}`}
+            aria-label="Favoritar"
+          >
+            <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
+          </button>
         )}
+        */}
       </div>
       
       <div className="p-3">
