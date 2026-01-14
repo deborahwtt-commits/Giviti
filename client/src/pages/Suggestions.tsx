@@ -415,6 +415,7 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
         
         {product.source === "internal" && (
           <>
+            {/* Funcionalidade de favoritar temporariamente oculta
             <button
               onClick={handleFavoriteToggle}
               className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
@@ -427,6 +428,7 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
             >
               <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
             </button>
+            */}
 
             <div className="absolute bottom-2 left-2">
               <div className="flex items-center gap-1.5">
