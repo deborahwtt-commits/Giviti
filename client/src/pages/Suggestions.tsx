@@ -72,8 +72,13 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
     try {
       const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
       
+      // "none" and "myself" both mean no specific recipient
+      const finalRecipientId = recipientId && recipientId !== "none" && recipientId !== "myself" 
+        ? recipientId 
+        : null;
+      
       await apiRequest("/api/gifts", "POST", {
-        recipientId: recipientId || null,
+        recipientId: finalRecipientId,
         suggestionId: internalId,
         name: product.name,
         description: product.description || product.store || "",
@@ -180,6 +185,7 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Não especificar</SelectItem>
+                  <SelectItem value="myself">Eu!</SelectItem>
                   {recipients.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
