@@ -379,9 +379,8 @@ export const userProfiles = pgTable("user_profiles", {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  ageRange: varchar("age_range"),
+  birthDate: timestamp("birth_date"),
   gender: varchar("gender"),
-  zodiacSign: varchar("zodiac_sign"),
   giftPreference: varchar("gift_preference"),
   freeTimeActivity: varchar("free_time_activity"),
   musicalStyle: varchar("musical_style"),
