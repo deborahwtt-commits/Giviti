@@ -130,7 +130,8 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
         currencyCode: "BRL",
         isFavorite: false,
         isPurchased: true,
-        purchasedAt: new Date(purchaseDate).toISOString(),
+        // Parse date as local time by adding noon time to avoid UTC midnight timezone issues
+        purchasedAt: new Date(purchaseDate + "T12:00:00").toISOString(),
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
