@@ -1083,12 +1083,14 @@ export default function RoleDetail() {
                 <Badge variant="outline" data-testid="badge-role-status">
                   {statusLabels[event.status]}
                 </Badge>
+                {/* HIDDEN: Public badge - All events are private
                 {event.isPublic && (
                   <Badge variant="outline" data-testid="badge-role-public">
                     <Eye className="w-3 h-3 mr-1" />
                     Público
                   </Badge>
                 )}
+                */}
               </div>
             </div>
           </div>

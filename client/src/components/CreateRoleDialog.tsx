@@ -696,7 +696,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            {/* Hide public link option for secret_santa - logic preserved for future use */}
+            {/* HIDDEN: Public event option - All events are private by default
             {selectedType !== "secret_santa" && (
               <FormField
                 control={form.control}
@@ -720,6 +720,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                 )}
               />
             )}
+            */}
 
             <div className="flex justify-end gap-3">
               <Button
