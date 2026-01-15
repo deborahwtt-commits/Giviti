@@ -26,6 +26,7 @@ import {
   collectiveGiftContributions,
   collaborativeEventTasks,
   clicks,
+  getZodiacSignFromDate,
   type User,
   type UpsertUser,
   type Recipient,
@@ -141,7 +142,7 @@ export type ParticipantWithProfile = CollaborativeEventParticipant & {
   wishlistItemsCount: number;
   userIsActive: boolean;
   userProfile: {
-    ageRange: string | null;
+    birthDate: Date | null;
     gender: string | null;
     zodiacSign: string | null;
     giftPreference: string | null;
@@ -1436,9 +1437,10 @@ export class DatabaseStorage implements IStorage {
 
     // Update from profile if available
     if (userProfile) {
-      // Zodiac sign is already in the correct format (Áries, Touro, etc.)
-      if (userProfile.zodiacSign) {
-        updateData.zodiacSign = userProfile.zodiacSign;
+      // Calculate zodiac sign from birth date
+      const zodiacSign = getZodiacSignFromDate(userProfile.birthDate);
+      if (zodiacSign) {
+        updateData.zodiacSign = zodiacSign;
       }
       // Gender needs mapping from profile format to recipient format
       if (userProfile.gender) {
@@ -2303,9 +2305,9 @@ export class DatabaseStorage implements IStorage {
       wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
       userIsActive: userIsActive ?? true, // Default to true if no user linked (email-only participant)
       userProfile: profile ? {
-        ageRange: profile.ageRange,
+        birthDate: profile.birthDate,
         gender: profile.gender,
-        zodiacSign: profile.zodiacSign,
+        zodiacSign: getZodiacSignFromDate(profile.birthDate),
         giftPreference: profile.giftPreference,
         freeTimeActivity: profile.freeTimeActivity,
         musicalStyle: profile.musicalStyle,
@@ -2663,7 +2665,9 @@ export class DatabaseStorage implements IStorage {
   async getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null> {
     const profile = await this.getUserProfile(userId);
     
-    if (!profile || !profile.zodiacSign) {
+    // Calculate zodiac sign from birth date
+    const zodiacSign = getZodiacSignFromDate(profile?.birthDate);
+    if (!profile || !zodiacSign) {
       return null;
     }
     
@@ -2690,7 +2694,7 @@ export class DatabaseStorage implements IStorage {
       "peixes": "Peixes",
     };
     
-    const signoNome = signoNameMap[profile.zodiacSign.toLowerCase()] || profile.zodiacSign;
+    const signoNome = signoNameMap[zodiacSign.toLowerCase()] || zodiacSign;
     
     const [signo] = await db
       .select()

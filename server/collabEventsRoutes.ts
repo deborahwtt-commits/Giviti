@@ -6,6 +6,7 @@ import {
   insertCollaborativeEventSchema,
   insertCollaborativeEventParticipantSchema,
   insertCollaborativeEventLinkSchema,
+  getZodiacSignFromDate,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
@@ -1161,7 +1162,7 @@ export function registerCollabEventsRoutes(app: Express) {
               const profile = await storage.getUserProfile(receiver.userId);
               if (profile && profile.isCompleted) {
                 receiverProfile = {
-                  zodiacSign: profile.zodiacSign,
+                  zodiacSign: getZodiacSignFromDate(profile.birthDate),
                   giftPreference: profile.giftPreference,
                   freeTimeActivity: profile.freeTimeActivity,
                   musicalStyle: profile.musicalStyle,

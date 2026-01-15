@@ -140,7 +140,7 @@ interface PairsResponse {
 }
 
 interface ParticipantUserProfile {
-  ageRange: string | null;
+  birthDate: Date | string | null;
   gender: string | null;
   zodiacSign: string | null;
   giftPreference: string | null;

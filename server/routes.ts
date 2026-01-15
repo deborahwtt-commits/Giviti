@@ -18,6 +18,7 @@ import {
   insertGiftSuggestionSchema,
   updateGiftSuggestionSchema,
   insertThemedNightSuggestionSchema,
+  getZodiacSignFromDate,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -216,7 +217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: user.lastName,
         },
         profile: profile ? {
-          zodiacSign: profile.zodiacSign,
+          birthDate: profile.birthDate,
+          zodiacSign: getZodiacSignFromDate(profile.birthDate),
           gender: profile.gender,
           giftPreference: profile.giftPreference,
           freeTimeActivity: profile.freeTimeActivity,
@@ -1908,7 +1910,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: user?.lastName,
         },
         profile: userProfile ? {
-          zodiacSign: userProfile.zodiacSign,
+          birthDate: userProfile.birthDate,
+          zodiacSign: getZodiacSignFromDate(userProfile.birthDate),
           giftPreference: userProfile.giftPreference,
           freeTimeActivity: userProfile.freeTimeActivity,
           musicalStyle: userProfile.musicalStyle,
