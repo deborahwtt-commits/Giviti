@@ -125,8 +125,8 @@ export function registerCollabEventsRoutes(app: Express) {
       // Update participant status to accepted and link to user
       const updatedParticipant = await storage.updateParticipantStatus(participant.id, "accepted");
       
-      // Clear the invite token so it can't be used again
-      await storage.updateParticipantInviteToken(participant.id, "");
+      // Clear the invite token so it can't be used again (use null to avoid unique constraint violation)
+      await storage.updateParticipantInviteToken(participant.id, null);
       
       // Link participant to user if they have an email
       if (userEmail) {
