@@ -360,7 +360,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate event date is not in the past
       if (validatedData.eventDate) {
-        const eventDate = new Date(validatedData.eventDate);
+        // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+        let dateString = validatedData.eventDate;
+        if (typeof dateString === 'string' && !dateString.includes('T')) {
+          dateString = dateString + 'T12:00:00';
+        }
+        const eventDate = new Date(dateString);
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
@@ -435,7 +440,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate event date is not in the past if being updated
       if (validatedData.eventDate !== undefined) {
-        const eventDate = new Date(validatedData.eventDate);
+        // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+        let dateString = validatedData.eventDate;
+        if (typeof dateString === 'string' && !dateString.includes('T')) {
+          dateString = dateString + 'T12:00:00';
+        }
+        const eventDate = new Date(dateString);
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
