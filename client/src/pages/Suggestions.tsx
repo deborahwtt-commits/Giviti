@@ -43,23 +43,64 @@ interface PurchaseModalProps {
   onSuccess: () => void;
 }
 
+// Currency formatting helpers
+function formatCurrencyInput(value: string): string {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/\D/g, "");
+  
+  if (!numericValue) return "";
+  
+  // Convert to number (in cents) and format
+  const cents = parseInt(numericValue, 10);
+  const reais = cents / 100;
+  
+  return reais.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function parseCurrencyToNumber(formattedValue: string): number {
+  // Remove currency symbol, dots (thousands) and replace comma with dot
+  const numericString = formattedValue
+    .replace(/[R$\s]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  
+  return parseFloat(numericString) || 0;
+}
+
 function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId, onSuccess }: PurchaseModalProps) {
   const { toast } = useToast();
   const [recipientId, setRecipientId] = useState(selectedRecipientId || "");
-  const [price, setPrice] = useState(product.price.toString());
+  const [priceDisplay, setPriceDisplay] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
       setRecipientId(selectedRecipientId || "");
-      setPrice(product.price.toString());
+      // Format initial price as currency
+      const initialPrice = product.price || 0;
+      setPriceDisplay(
+        initialPrice.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      );
       setPurchaseDate(format(new Date(), "yyyy-MM-dd"));
     }
   }, [open, selectedRecipientId, product.price]);
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCurrencyInput(e.target.value);
+    setPriceDisplay(formatted);
+  };
+
   const handleSubmit = async () => {
-    if (!price || parseFloat(price) <= 0) {
+    const numericPrice = parseCurrencyToNumber(priceDisplay);
+    
+    if (!priceDisplay || numericPrice <= 0) {
       toast({
         title: "Valor inválido",
         description: "Informe o valor pago pelo presente.",
@@ -83,7 +124,7 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
         name: product.name,
         description: product.description || product.store || "",
         imageUrl: product.imageUrl,
-        price: parseFloat(price).toFixed(2),
+        price: numericPrice.toFixed(2),
         purchaseUrl: product.productUrl || "",
         externalSource: product.source === "google" ? "google_shopping" : null,
         currencyCode: "BRL",
@@ -97,7 +138,7 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
       
       toast({
         title: "Presente registrado!",
-        description: `${product.name} foi marcado como comprado por R$ ${parseFloat(price).toFixed(2)}.`,
+        description: `${product.name} foi marcado como comprado por ${priceDisplay}.`,
       });
       
       onSuccess();
@@ -149,12 +190,11 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
               </Label>
               <Input
                 id="purchase-price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
+                type="text"
+                inputMode="numeric"
+                value={priceDisplay}
+                onChange={handlePriceChange}
+                placeholder="R$ 0,00"
                 className="mt-1"
                 data-testid="input-purchase-price"
               />
