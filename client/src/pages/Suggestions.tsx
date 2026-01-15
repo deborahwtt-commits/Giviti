@@ -342,6 +342,7 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
         description: product.description,
         imageUrl: product.imageUrl,
         price: product.price,
+        purchaseUrl: product.productUrl || "",
         isFavorite: data.isFavorite,
         isPurchased: data.isPurchased,
       });
