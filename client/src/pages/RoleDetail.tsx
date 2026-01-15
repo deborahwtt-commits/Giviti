@@ -66,6 +66,7 @@ import {
   CalendarPlus,
   Ban,
   Plus,
+  Pencil,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -231,6 +232,10 @@ export default function RoleDetail() {
   // Description editing states
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState<string>("");
+  
+  // Name editing states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState<string>("");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -824,6 +829,58 @@ export default function RoleDetail() {
     saveDescriptionMutation.mutate(editedDescription.trim());
   };
 
+  // Mutation to save event name
+  const saveNameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
+        name: name
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      setIsEditingName(false);
+      toast({
+        title: "Nome salvo",
+        description: "O nome do rolê foi atualizado.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar nome",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartEditName = () => {
+    setEditedName(event?.name || "");
+    setIsEditingName(true);
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
+
+  const handleSaveEditName = () => {
+    // Only save if there's an actual change and name is not empty
+    const currentName = event?.name || "";
+    if (!editedName.trim()) {
+      toast({
+        title: "Nome inválido",
+        description: "O nome do rolê não pode estar vazio.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (editedName.trim() === currentName.trim()) {
+      setIsEditingName(false);
+      return;
+    }
+    saveNameMutation.mutate(editedName.trim());
+  };
+
   const removeParticipantMutation = useMutation({
     mutationFn: async (participantId: string) => {
       return await apiRequest(`/api/collab-events/${id}/participants/${participantId}`, "DELETE");
@@ -1074,8 +1131,58 @@ export default function RoleDetail() {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <TypeIcon className="w-6 h-6 text-primary" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-role-name">{event.name}</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                {isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      className="text-2xl font-bold h-10 max-w-md"
+                      placeholder="Nome do rolê"
+                      data-testid="input-edit-role-name"
+                      autoFocus
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleSaveEditName}
+                      disabled={saveNameMutation.isPending}
+                      data-testid="button-save-role-name"
+                    >
+                      {saveNameMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4 text-green-600" />
+                      )}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleCancelEditName}
+                      disabled={saveNameMutation.isPending}
+                      data-testid="button-cancel-edit-role-name"
+                    >
+                      <X className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-3xl font-bold" data-testid="text-role-name">{event.name}</h1>
+                    {isOwner && event.status !== "completed" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleStartEditName}
+                        className="ml-1"
+                        data-testid="button-edit-role-name"
+                      >
+                        <Pencil className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className={typeInfo.className} data-testid="badge-role-type">
                   {typeInfo.label}
