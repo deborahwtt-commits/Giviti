@@ -19,7 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { startOfDay, parseISO } from "date-fns";
+import { startOfDay, parseISO, format } from "date-fns";
 import { Loader2, Cake, Gift, Users, MapPin } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DynamicIcon } from "@/components/DynamicIcon";
@@ -177,7 +177,7 @@ export default function EventForm({
               type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={format(new Date(), "yyyy-MM-dd")}
               required
               data-testid="input-event-date"
             />

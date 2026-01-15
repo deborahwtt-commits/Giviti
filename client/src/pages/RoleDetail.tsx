@@ -2920,7 +2920,7 @@ export default function RoleDetail() {
               type="datetime-local"
               value={rescheduleDate}
               onChange={(e) => setRescheduleDate(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+              min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
               className="mt-2"
               data-testid="input-reschedule-date"
             />
