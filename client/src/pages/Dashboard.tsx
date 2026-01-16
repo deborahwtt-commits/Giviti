@@ -11,7 +11,6 @@ import EventCard from "@/components/EventCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import BirthdayBanner from "@/components/BirthdayBanner";
-import TodayEventsCard from "@/components/TodayEventsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -256,12 +255,6 @@ export default function Dashboard() {
           userName={userName} 
           birthDate={userProfile?.birthDate} 
         />
-        
-        <TodayEventsCard 
-          events={upcomingEvents || []} 
-          roles={roles || []} 
-        />
-        
         <DashboardHero
           userName={userName}
           stats={{
