@@ -67,31 +67,32 @@ import {
   Ban,
   Plus,
   Pencil,
+  UserCheck,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
-import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/schema";
+import type { CollaborativeEvent, CollaborativeEventParticipant, CollaborativeEventTask } from "@shared/schema";
 
 const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
   secret_santa: { 
     label: "Amigo Secreto", 
-    className: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800", 
+    className: "bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:border-yellow-700", 
     Icon: Gift 
   },
   themed_night: { 
     label: "Evento Temático", 
-    className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
+    className: "bg-violet-500 text-white border-violet-600 dark:bg-violet-600 dark:border-violet-700", 
     Icon: PartyPopper 
   },
   collective_gift: { 
     label: "Presente Coletivo", 
-    className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
+    className: "bg-emerald-500 text-white border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700", 
     Icon: Heart 
   },
   creative_challenge: { 
     label: "Desafio Criativo", 
-    className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
+    className: "bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-700", 
     Icon: Sparkles 
   },
 };
@@ -298,11 +299,33 @@ export default function RoleDetail() {
     enabled: !!event && event.eventType === "themed_night" && !!event.themedNightCategoryId,
   });
 
+  // Fetch event tasks/items for themed nights
+  const { data: eventTasks, isLoading: tasksLoading } = useQuery<CollaborativeEventTask[]>({
+    queryKey: ["/api/collab-events", id, "tasks"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/tasks`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao carregar itens");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "themed_night",
+  });
+
+  // State for adding new task items
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [isAddingTask, setIsAddingTask] = useState(false);
+
   // Calculate if current user is owner
   const isOwner = event && user && event.ownerId === user.id;
   
   // Check if current user is a system admin
   const isSystemAdmin = user?.role === "admin";
+  
+  // Find the current user's participant record (for task assignment rules)
+  const currentUserParticipant = participants?.find(p => p.userId === user?.id);
 
   // Draw status query - for owners and system admins
   const { data: drawStatus, isLoading: drawStatusLoading } = useQuery<{
@@ -539,10 +562,6 @@ export default function RoleDetail() {
       setWishlistUrl("");
       setWishlistPrice("");
       setWishlistPriority("3");
-      toast({
-        title: "Item adicionado",
-        description: "O item foi adicionado à sua lista de desejos.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -569,10 +588,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
-      toast({
-        title: "Item removido",
-        description: "O item foi removido da sua lista de desejos.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -601,6 +616,93 @@ export default function RoleDetail() {
     });
   };
 
+  // ========== THEMED NIGHT TASK MUTATIONS ==========
+  
+  // Add task mutation
+  const addTaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks`, "POST", { title });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao adicionar item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+      setNewTaskTitle("");
+      setIsAddingTask(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao adicionar item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}`, "DELETE");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao remover item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Assign task to participant mutation
+  const assignTaskMutation = useMutation({
+    mutationFn: async ({ taskId, participantId }: { taskId: string; participantId: string | null }) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}/assign`, "PATCH", { participantId });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao atribuir responsável");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atribuir responsável",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+
+  // Helper function to get participant name by id
+  const getParticipantName = (participantId: string | null): string | null => {
+    if (!participantId || !participants) return null;
+    const participant = participants.find(p => p.id === participantId);
+    return participant?.name || null;
+  };
+
+  // Get definirResponsaveis setting from typeSpecificData
+  const definirResponsaveis = Boolean(
+    event?.eventType === "themed_night" && 
+    event?.typeSpecificData && 
+    typeof event.typeSpecificData === "object" &&
+    "definirResponsaveis" in event.typeSpecificData &&
+    (event.typeSpecificData as { definirResponsaveis?: boolean }).definirResponsaveis === true
+  );
+
   // Create restriction mutation
   const createRestrictionMutation = useMutation({
     mutationFn: async ({ blockerParticipantId, blockedParticipantId }: { blockerParticipantId: string; blockedParticipantId: string }) => {
@@ -624,10 +726,6 @@ export default function RoleDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
       setSelectedBlockerId("");
       setSelectedBlockedId("");
-      toast({
-        title: "Restrição adicionada",
-        description: "A restrição de par foi criada com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -654,10 +752,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "restrictions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
-      toast({
-        title: "Restrição removida",
-        description: "A restrição de par foi removida com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -731,10 +825,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions", "summary"] });
-      toast({
-        title: "Contribuição atualizada",
-        description: "O status da contribuição foi atualizado.",
-      });
     },
     onError: () => {
       toast({
@@ -762,10 +852,6 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Regras salvas",
-        description: "As regras do Amigo Secreto foram atualizadas.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -795,10 +881,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
       setIsEditingDescription(false);
-      toast({
-        title: "Descrição salva",
-        description: "A descrição do rolê foi atualizada.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -839,10 +921,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
       setIsEditingName(false);
-      toast({
-        title: "Nome salvo",
-        description: "O nome do rolê foi atualizado.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -888,10 +966,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Participante removido",
-        description: "O participante foi removido com sucesso.",
-      });
       setParticipantToRemove(null);
     },
     onError: (error: Error) => {
@@ -911,10 +985,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Status atualizado",
-        description: "O status do participante foi atualizado com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -1006,10 +1076,6 @@ export default function RoleDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "pairs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-pair"] });
-      toast({
-        title: "Pares removidos",
-        description: "Os pares foram removidos. Você pode realizar um novo sorteio.",
-      });
       setConfirmRedrawOpen(false);
     },
     onError: (error: Error) => {
@@ -1246,15 +1312,34 @@ export default function RoleDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Informações do Rolê</CardTitle>
+                <CardTitle className="text-base">Informações do Rolê</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
+                {event.eventType === "themed_night" && themedCategory && (
+                  <div className="flex items-start gap-2">
+                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Qual é a boa?</p>
+                      <Badge 
+                        className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-200 dark:border-amber-300 dark:text-amber-800 mt-1"
+                        data-testid="text-themed-category-name"
+                      >
+                        {themedCategory.name}
+                      </Badge>
+                      {themedCategory.description && (
+                        <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-themed-category-description">
+                          {themedCategory.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {event.eventDate && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-date">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-date">
                         {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
@@ -1269,14 +1354,16 @@ export default function RoleDetail() {
                   const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
                   
                   return (
-                    <div className={`flex items-start gap-3 p-2 rounded-md ${
+                    <div className={`flex items-start gap-2 ${
+                      isExpired || isUrgent ? 'p-2 rounded-md' : ''
+                    } ${
                       isExpired 
                         ? 'bg-destructive/10' 
                         : isUrgent 
-                          ? 'bg-amber-100 dark:bg-amber-950'
+                          ? 'bg-amber-50 dark:bg-amber-950/30'
                           : ''
                     }`}>
-                      <Clock className={`w-5 h-5 mt-0.5 ${
+                      <Clock className={`w-4 h-4 mt-0.5 ${
                         isExpired 
                           ? 'text-destructive' 
                           : isUrgent 
@@ -1293,7 +1380,7 @@ export default function RoleDetail() {
                         }`}>
                           Prazo para Confirmar
                         </p>
-                        <p className={`text-sm ${
+                        <p className={`text-xs ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
@@ -1310,21 +1397,21 @@ export default function RoleDetail() {
                   );
                 })()}
                 {event.location && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Local</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-location">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-location">
                         {event.location}
                       </p>
                     </div>
                   </div>
                 )}
                 {/* Editable description section */}
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1">
                       <p className="text-sm font-medium">Descrição</p>
                       {isOwner && !isEditingDescription && (
                         <Button 
@@ -1372,28 +1459,12 @@ export default function RoleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-description">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-description">
                         {event.description || (isOwner ? "Nenhuma descrição definida. Clique em Editar para adicionar." : "Nenhuma descrição definida.")}
                       </p>
                     )}
                   </div>
                 </div>
-                {event.eventType === "themed_night" && themedCategory && (
-                  <div className="flex items-start gap-3">
-                    <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Qual é a boa?</p>
-                      <p className="text-sm font-semibold" data-testid="text-themed-category-name">
-                        {themedCategory.name}
-                      </p>
-                      {themedCategory.description && (
-                        <p className="text-sm text-muted-foreground mt-1" data-testid="text-themed-category-description">
-                          {themedCategory.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -1512,6 +1583,231 @@ export default function RoleDetail() {
                       </div>
                     );
                   })}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Themed Night Checklist Card */}
+            {event.eventType === "themed_night" && (
+              <Card data-testid="card-themed-checklist">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ClipboardCheck className="w-5 h-5 text-muted-foreground" />
+                    {definirResponsaveis ? "Quem leva o quê?" : "Lista de Itens"}
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {definirResponsaveis 
+                      ? "Organize quem será responsável por cada item"
+                      : "Sugestões de itens para o evento"
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {tasksLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Add new item form */}
+                      {isAddingTask ? (
+                        <div className="flex gap-2" data-testid="form-add-task">
+                          <Input
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            placeholder="Nome do item (ex: Refrigerante)"
+                            className="flex-1"
+                            data-testid="input-new-task"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newTaskTitle.trim()) {
+                                addTaskMutation.mutate(newTaskTitle.trim());
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (newTaskTitle.trim()) {
+                                addTaskMutation.mutate(newTaskTitle.trim());
+                              }
+                            }}
+                            disabled={addTaskMutation.isPending || !newTaskTitle.trim()}
+                            data-testid="button-confirm-add-task"
+                          >
+                            {addTaskMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setIsAddingTask(false);
+                              setNewTaskTitle("");
+                            }}
+                            data-testid="button-cancel-add-task"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsAddingTask(true)}
+                          className="w-full"
+                          data-testid="button-add-task"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Adicionar item
+                        </Button>
+                      )}
+
+                      {/* Tasks list */}
+                      {eventTasks && eventTasks.length > 0 ? (
+                        <div className="space-y-1">
+                          {eventTasks.map((task) => {
+                            const hasNoAssignee = definirResponsaveis && !task.assignedToParticipantId;
+                            
+                            return (
+                              <div
+                                key={task.id}
+                                className={`flex items-center gap-2 p-2 rounded-md border ${
+                                  hasNoAssignee 
+                                    ? "bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-800/50"
+                                    : "bg-muted/30 border-border/50"
+                                }`}
+                                data-testid={`task-item-${task.id}`}
+                              >
+                                {/* Task title */}
+                                <p className="text-sm flex-1 min-w-0 truncate">
+                                  {task.title}
+                                </p>
+                                
+                                {/* Assignee select or display - same line */}
+                                {definirResponsaveis ? (
+                                  isOwner ? (
+                                    // Owner can assign anyone to any item
+                                    <Select
+                                      value={task.assignedToParticipantId || "none"}
+                                      onValueChange={(value) => {
+                                        assignTaskMutation.mutate({ 
+                                          taskId: task.id, 
+                                          participantId: value === "none" ? null : value 
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger 
+                                        className="h-7 text-xs w-auto min-w-[100px] shrink-0"
+                                        data-testid={`select-assignee-${task.id}`}
+                                      >
+                                        <SelectValue placeholder="Quem leva?" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">
+                                          <span className="text-muted-foreground">Ninguém</span>
+                                        </SelectItem>
+                                        {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
+                                          <SelectItem key={p.id} value={p.id}>
+                                            {p.name || p.email}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : task.assignedToParticipantId ? (
+                                    // Participant sees assigned item
+                                    task.assignedToParticipantId === currentUserParticipant?.id ? (
+                                      // Item is assigned to current user - can withdraw
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <Badge variant="secondary" className="text-xs">
+                                          Você
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive"
+                                          onClick={() => {
+                                            assignTaskMutation.mutate({ 
+                                              taskId: task.id, 
+                                              participantId: null 
+                                            });
+                                          }}
+                                          disabled={assignTaskMutation.isPending}
+                                          data-testid={`button-withdraw-task-${task.id}`}
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      // Item is assigned to someone else - cannot change
+                                      <Badge variant="secondary" className="text-xs shrink-0">
+                                        {getParticipantName(task.assignedToParticipantId)}
+                                      </Badge>
+                                    )
+                                  ) : (
+                                    // Participant sees unassigned item - can claim it
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs shrink-0"
+                                      onClick={() => {
+                                        if (currentUserParticipant) {
+                                          assignTaskMutation.mutate({ 
+                                            taskId: task.id, 
+                                            participantId: currentUserParticipant.id 
+                                          });
+                                        }
+                                      }}
+                                      disabled={assignTaskMutation.isPending || !currentUserParticipant}
+                                      data-testid={`button-claim-task-${task.id}`}
+                                    >
+                                      <UserCheck className="w-3 h-3 mr-1" />
+                                      Eu levo
+                                    </Button>
+                                  )
+                                ) : task.assignedToParticipantId ? (
+                                  <span className="text-xs text-muted-foreground shrink-0">
+                                    {getParticipantName(task.assignedToParticipantId)}
+                                  </span>
+                                ) : null}
+                                
+                                {/* Delete button (owner only) */}
+                                {isOwner && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => deleteTaskMutation.mutate(task.id)}
+                                    disabled={deleteTaskMutation.isPending}
+                                    data-testid={`button-delete-task-${task.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <ClipboardCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Nenhum item adicionado ainda</p>
+                          <p className="text-xs">Clique em "Adicionar item" para começar</p>
+                        </div>
+                      )}
+                      
+                      {/* Summary stats */}
+                      {eventTasks && eventTasks.length > 0 && definirResponsaveis && (
+                        <div className="flex justify-between text-xs text-muted-foreground pt-3 mt-2 border-t">
+                          <span>{eventTasks.filter(t => t.assignedToParticipantId).length} de {eventTasks.length} itens atribuídos</span>
+                          <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
+                            {eventTasks.filter(t => !t.assignedToParticipantId).length} sem responsável
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

@@ -781,6 +781,19 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // ========== Checklist Stats Route ==========
+  
+  // GET /api/admin/checklist-stats - Get checklist statistics
+  app.get("/api/admin/checklist-stats", isAuthenticated, hasRole("admin", "manager", "support"), async (req: any, res) => {
+    try {
+      const stats = await storage.getChecklistStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching checklist stats:", error);
+      res.status(500).json({ message: "Failed to fetch checklist stats" });
+    }
+  });
+
   // ========== Public Waitlist Route (no auth required) ==========
   
   // POST /api/waitlist - Join waitlist (public endpoint)
