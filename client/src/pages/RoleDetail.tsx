@@ -1369,7 +1369,7 @@ export default function RoleDetail() {
                     <div>
                       <p className="text-sm font-medium">Qual é a boa?</p>
                       <Badge 
-                        className="bg-yellow-100 text-black border-yellow-200 dark:bg-yellow-200 dark:border-yellow-300 dark:text-black mt-1"
+                        className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-200 dark:border-amber-300 dark:text-amber-800 mt-1"
                         data-testid="text-themed-category-name"
                       >
                         {themedCategory.name}
