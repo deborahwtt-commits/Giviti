@@ -22,6 +22,7 @@ Preferred communication style: Simple, everyday language.
 - **Backend**: Express.js with TypeScript, Node.js.
 - **API Design**: RESTful API for authentication, user profiles, recipients, events, suggestions, statistics, gift management, and collaborative events.
 - **Authentication**: Session-based using `express-session` and bcrypt for password hashing, with a token-based password recovery system.
+  - **Event Invite Registration**: Users invited to collaborative events can create accounts without a VIP pass by using their invite token. The system validates that the registering email matches the invited participant's email, and marks the invite as accepted to prevent token reuse.
 - **Data Layer**: Drizzle ORM for type-safe PostgreSQL queries.
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
