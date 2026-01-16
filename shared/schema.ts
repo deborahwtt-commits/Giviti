@@ -403,6 +403,13 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
   updatedAt: true,
 }).extend({
   interests: z.array(z.string()).max(3, "Máximo de 3 interesses permitidos").default([]),
+  // Accept both Date objects and date strings, transform strings to Date
+  birthDate: z.union([
+    z.date(),
+    z.string().transform((val) => val ? new Date(val) : undefined),
+    z.null(),
+    z.undefined(),
+  ]).optional().nullable(),
 });
 
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
