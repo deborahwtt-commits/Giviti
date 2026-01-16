@@ -1717,10 +1717,35 @@ export default function RoleDetail() {
                                       </SelectContent>
                                     </Select>
                                   ) : task.assignedToParticipantId ? (
-                                    // Participant sees assigned item - cannot change
-                                    <Badge variant="secondary" className="text-xs shrink-0">
-                                      {getParticipantName(task.assignedToParticipantId)}
-                                    </Badge>
+                                    // Participant sees assigned item
+                                    task.assignedToParticipantId === currentUserParticipant?.id ? (
+                                      // Item is assigned to current user - can withdraw
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <Badge variant="secondary" className="text-xs">
+                                          Você
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive"
+                                          onClick={() => {
+                                            assignTaskMutation.mutate({ 
+                                              taskId: task.id, 
+                                              participantId: null 
+                                            });
+                                          }}
+                                          disabled={assignTaskMutation.isPending}
+                                          data-testid={`button-withdraw-task-${task.id}`}
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      // Item is assigned to someone else - cannot change
+                                      <Badge variant="secondary" className="text-xs shrink-0">
+                                        {getParticipantName(task.assignedToParticipantId)}
+                                      </Badge>
+                                    )
                                   ) : (
                                     // Participant sees unassigned item - can claim it
                                     <Button
