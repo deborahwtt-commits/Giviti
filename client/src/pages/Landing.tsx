@@ -46,6 +46,17 @@ export default function Landing() {
     },
   });
 
+  // Check for pending invite token from event invitation
+  const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const token = localStorage.getItem("pendingInviteToken");
+    if (token) {
+      setPendingInviteToken(token);
+      setActiveTab("register");
+    }
+  }, []);
+
   // Register form
   const registerForm = useForm<RegisterUser>({
     resolver: zodResolver(registerUserSchema),
@@ -56,6 +67,7 @@ export default function Landing() {
       firstName: "",
       lastName: "",
       ticketCode: "",
+      inviteToken: "",
     },
   });
 
@@ -192,6 +204,9 @@ export default function Landing() {
     },
     onSuccess: async (data: any) => {
       setRegisterError(null);
+      // Clear pending invite token if any
+      localStorage.removeItem("pendingInviteToken");
+      
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
@@ -242,7 +257,12 @@ export default function Landing() {
   };
 
   const onRegisterSubmit = (data: RegisterUser) => {
-    registerMutation.mutate(data);
+    // Include pending invite token if available
+    const registerData = {
+      ...data,
+      inviteToken: pendingInviteToken || undefined,
+    };
+    registerMutation.mutate(registerData);
   };
 
   // Waitlist mutation
@@ -426,28 +446,52 @@ export default function Landing() {
                   {!showWaitlistMode ? (
                     <Form {...registerForm}>
                       <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                        {/* Ticket Code Field - Required for registration */}
-                        <FormField
-                          control={registerForm.control}
-                          name="ticketCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-1">
-                                <Ticket className="h-4 w-4" />
-                                Passe VIP
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="Digite seu passe VIP"
-                                  className="uppercase"
-                                  data-testid="input-register-ticket"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        {/* Ticket Code Field - Required unless registering via event invite */}
+                        {pendingInviteToken ? (
+                          <div className="space-y-2">
+                            <div className="rounded-md bg-primary/10 p-3 border border-primary/20">
+                              <p className="text-sm text-primary flex items-center gap-2">
+                                <Gift className="h-4 w-4" />
+                                <span>Você foi convidado para um evento! Use o mesmo e-mail do convite.</span>
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-muted-foreground"
+                              onClick={() => {
+                                localStorage.removeItem("pendingInviteToken");
+                                setPendingInviteToken(null);
+                              }}
+                              data-testid="button-use-vip-pass"
+                            >
+                              Prefiro usar um Passe VIP
+                            </Button>
+                          </div>
+                        ) : (
+                          <FormField
+                            control={registerForm.control}
+                            name="ticketCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-1">
+                                  <Ticket className="h-4 w-4" />
+                                  Passe VIP
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    placeholder="Digite seu passe VIP"
+                                    className="uppercase"
+                                    data-testid="input-register-ticket"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
@@ -588,21 +632,23 @@ export default function Landing() {
                           {registerMutation.isPending ? "Criando conta..." : "Criar Conta"}
                         </Button>
 
-                        <div className="text-center pt-2">
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Não tem um passe VIP?
-                          </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setShowWaitlistMode(true)}
-                            data-testid="button-show-waitlist"
-                          >
-                            <Clock className="h-4 w-4 mr-2" />
-                            Entrar na Lista de Espera
-                          </Button>
-                        </div>
+                        {!pendingInviteToken && (
+                          <div className="text-center pt-2">
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Não tem um passe VIP?
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => setShowWaitlistMode(true)}
+                              data-testid="button-show-waitlist"
+                            >
+                              <Clock className="h-4 w-4 mr-2" />
+                              Entrar na Lista de Espera
+                            </Button>
+                          </div>
+                        )}
                       </form>
                     </Form>
                   ) : (
