@@ -92,7 +92,7 @@ export default function ReceivedInvitations() {
 
   const confirmParticipationMutation = useMutation({
     mutationFn: async ({ eventId, participantId }: { eventId: string; participantId: string }) => {
-      await apiRequest('PATCH', `/api/collab-events/${eventId}/participants/${participantId}/status`, { status: 'accepted' });
+      await apiRequest(`/api/collab-events/${eventId}/participants/${participantId}/status`, 'PATCH', { status: 'accepted' });
     },
     onSuccess: () => {
       toast({
