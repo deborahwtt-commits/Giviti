@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Mail, Calendar, Gift, Users, PartyPopper, Sparkles, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, Gift, Users, PartyPopper, Sparkles, Loader2, Clock, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type ReceivedInvitation = {
   id: string;
@@ -83,9 +85,40 @@ function getTypeIcon(type: 'birthday' | 'collaborative', eventType: string) {
 }
 
 export default function ReceivedInvitations() {
+  const { toast } = useToast();
   const { data: invitations, isLoading } = useQuery<ReceivedInvitation[]>({
     queryKey: ['/api/user/invitations'],
   });
+
+  const confirmParticipationMutation = useMutation({
+    mutationFn: async ({ eventId, participantId }: { eventId: string; participantId: string }) => {
+      await apiRequest('PATCH', `/api/collab-events/${eventId}/participants/${participantId}/status`, { status: 'accepted' });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Participação confirmada!",
+        description: "Você confirmou sua participação no evento.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/invitations-count'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao confirmar",
+        description: error.message || "Não foi possível confirmar sua participação.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isPendingStatus = (status: string) => {
+    return status === 'pending' || status === 'invited';
+  };
+
+  // Track which invitation is being confirmed
+  const pendingInvitationId = confirmParticipationMutation.isPending 
+    ? (confirmParticipationMutation.variables as { participantId: string })?.participantId 
+    : null;
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-4xl">
@@ -159,9 +192,31 @@ export default function ReceivedInvitations() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant={statusVariant} className={statusClassName} data-testid={`badge-invitation-status-${invitation.id}`}>
-                      {statusLabel}
-                    </Badge>
+                    {/* Show clickable button for pending collaborative invitations */}
+                    {invitation.type === 'collaborative' && isPendingStatus(invitation.status) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                        onClick={() => confirmParticipationMutation.mutate({ 
+                          eventId: invitation.eventId, 
+                          participantId: invitation.id 
+                        })}
+                        disabled={pendingInvitationId === invitation.id}
+                        data-testid={`button-confirm-participation-${invitation.id}`}
+                      >
+                        {pendingInvitationId === invitation.id ? (
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4 mr-1" />
+                        )}
+                        Vou participar!
+                      </Button>
+                    ) : (
+                      <Badge variant={statusVariant} className={statusClassName} data-testid={`badge-invitation-status-${invitation.id}`}>
+                        {statusLabel}
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
