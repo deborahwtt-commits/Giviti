@@ -558,10 +558,6 @@ export default function RoleDetail() {
       setWishlistUrl("");
       setWishlistPrice("");
       setWishlistPriority("3");
-      toast({
-        title: "Item adicionado",
-        description: "O item foi adicionado à sua lista de desejos.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -588,10 +584,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
-      toast({
-        title: "Item removido",
-        description: "O item foi removido da sua lista de desejos.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -658,10 +650,6 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
-      toast({
-        title: "Item removido",
-        description: "O item foi removido da lista.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -734,10 +722,6 @@ export default function RoleDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
       setSelectedBlockerId("");
       setSelectedBlockedId("");
-      toast({
-        title: "Restrição adicionada",
-        description: "A restrição de par foi criada com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -764,10 +748,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "restrictions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
-      toast({
-        title: "Restrição removida",
-        description: "A restrição de par foi removida com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -841,10 +821,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "contributions", "summary"] });
-      toast({
-        title: "Contribuição atualizada",
-        description: "O status da contribuição foi atualizado.",
-      });
     },
     onError: () => {
       toast({
@@ -872,10 +848,6 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Regras salvas",
-        description: "As regras do Amigo Secreto foram atualizadas.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -905,10 +877,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
       setIsEditingDescription(false);
-      toast({
-        title: "Descrição salva",
-        description: "A descrição do rolê foi atualizada.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -949,10 +917,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
       setIsEditingName(false);
-      toast({
-        title: "Nome salvo",
-        description: "O nome do rolê foi atualizado.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -998,10 +962,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Participante removido",
-        description: "O participante foi removido com sucesso.",
-      });
       setParticipantToRemove(null);
     },
     onError: (error: Error) => {
@@ -1021,10 +981,6 @@ export default function RoleDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
-      toast({
-        title: "Status atualizado",
-        description: "O status do participante foi atualizado com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -1041,10 +997,6 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
-      toast({
-        title: "Convite reenviado",
-        description: "O email de convite foi reenviado com sucesso.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -1116,10 +1068,6 @@ export default function RoleDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "draw-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "pairs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "my-pair"] });
-      toast({
-        title: "Pares removidos",
-        description: "Os pares foram removidos. Você pode realizar um novo sorteio.",
-      });
       setConfirmRedrawOpen(false);
     },
     onError: (error: Error) => {
