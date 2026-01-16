@@ -71,7 +71,8 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
-import type { CollaborativeEvent, CollaborativeEventParticipant } from "@shared/schema";
+import type { CollaborativeEvent, CollaborativeEventParticipant, CollaborativeEventTask } from "@shared/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
   secret_santa: { 
@@ -297,6 +298,25 @@ export default function RoleDetail() {
     queryKey: ["/api/themed-night-categories", event?.themedNightCategoryId, "suggestions"],
     enabled: !!event && event.eventType === "themed_night" && !!event.themedNightCategoryId,
   });
+
+  // Fetch event tasks/items for themed nights
+  const { data: eventTasks, isLoading: tasksLoading } = useQuery<CollaborativeEventTask[]>({
+    queryKey: ["/api/collab-events", id, "tasks"],
+    queryFn: async () => {
+      const response = await fetch(`/api/collab-events/${id}/tasks`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao carregar itens");
+      }
+      return response.json();
+    },
+    enabled: !!id && !!event && event.eventType === "themed_night",
+  });
+
+  // State for adding new task items
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [isAddingTask, setIsAddingTask] = useState(false);
 
   // Calculate if current user is owner
   const isOwner = event && user && event.ownerId === user.id;
@@ -600,6 +620,120 @@ export default function RoleDetail() {
       priority: parseInt(wishlistPriority) || 3,
     });
   };
+
+  // ========== THEMED NIGHT TASK MUTATIONS ==========
+  
+  // Add task mutation
+  const addTaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks`, "POST", { title });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao adicionar item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+      setNewTaskTitle("");
+      setIsAddingTask(false);
+      toast({
+        title: "Item adicionado",
+        description: "O item foi adicionado à lista.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao adicionar item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}`, "DELETE");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao remover item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+      toast({
+        title: "Item removido",
+        description: "O item foi removido da lista.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Assign task to participant mutation
+  const assignTaskMutation = useMutation({
+    mutationFn: async ({ taskId, participantId }: { taskId: string; participantId: string | null }) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}/assign`, "PATCH", { participantId });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao atribuir responsável");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atribuir responsável",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark task as completed mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
+      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}/complete`, "PATCH", { completed });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao marcar item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Helper function to get participant name by id
+  const getParticipantName = (participantId: string | null): string | null => {
+    if (!participantId || !participants) return null;
+    const participant = participants.find(p => p.id === participantId);
+    return participant?.name || null;
+  };
+
+  // Get definirResponsaveis setting from typeSpecificData
+  const definirResponsaveis: boolean = event?.eventType === "themed_night" && 
+    event?.typeSpecificData && 
+    typeof event.typeSpecificData === "object" &&
+    "definirResponsaveis" in event.typeSpecificData &&
+    (event.typeSpecificData as { definirResponsaveis?: boolean }).definirResponsaveis === true;
 
   // Create restriction mutation
   const createRestrictionMutation = useMutation({
@@ -1512,6 +1646,201 @@ export default function RoleDetail() {
                       </div>
                     );
                   })}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Themed Night Checklist Card */}
+            {event.eventType === "themed_night" && (
+              <Card data-testid="card-themed-checklist">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-violet-500" />
+                    {definirResponsaveis ? "Quem leva o quê?" : "Lista de Itens"}
+                  </CardTitle>
+                  <CardDescription>
+                    {definirResponsaveis 
+                      ? "Organize quem será responsável por cada item"
+                      : "Sugestões de itens para o evento"
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {tasksLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Add new item form */}
+                      {isAddingTask ? (
+                        <div className="flex gap-2" data-testid="form-add-task">
+                          <Input
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            placeholder="Nome do item (ex: Refrigerante)"
+                            className="flex-1"
+                            data-testid="input-new-task"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newTaskTitle.trim()) {
+                                addTaskMutation.mutate(newTaskTitle.trim());
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (newTaskTitle.trim()) {
+                                addTaskMutation.mutate(newTaskTitle.trim());
+                              }
+                            }}
+                            disabled={addTaskMutation.isPending || !newTaskTitle.trim()}
+                            data-testid="button-confirm-add-task"
+                          >
+                            {addTaskMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setIsAddingTask(false);
+                              setNewTaskTitle("");
+                            }}
+                            data-testid="button-cancel-add-task"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsAddingTask(true)}
+                          className="w-full"
+                          data-testid="button-add-task"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Adicionar item
+                        </Button>
+                      )}
+
+                      {/* Tasks list */}
+                      {eventTasks && eventTasks.length > 0 ? (
+                        <div className="space-y-2">
+                          {eventTasks.map((task) => {
+                            const assigneeName = getParticipantName(task.assignedToParticipantId);
+                            const hasNoAssignee = definirResponsaveis && !task.assignedToParticipantId;
+                            
+                            return (
+                              <div
+                                key={task.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                  task.isCompleted 
+                                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                                    : hasNoAssignee 
+                                      ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                                      : "bg-muted/50"
+                                }`}
+                                data-testid={`task-item-${task.id}`}
+                              >
+                                {/* Checkbox */}
+                                <Checkbox
+                                  checked={task.isCompleted}
+                                  onCheckedChange={(checked) => {
+                                    completeTaskMutation.mutate({ taskId: task.id, completed: checked === true });
+                                  }}
+                                  data-testid={`checkbox-task-${task.id}`}
+                                />
+                                
+                                {/* Task title */}
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium ${task.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                                    {task.title}
+                                  </p>
+                                  {definirResponsaveis && (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Select
+                                        value={task.assignedToParticipantId || "none"}
+                                        onValueChange={(value) => {
+                                          assignTaskMutation.mutate({ 
+                                            taskId: task.id, 
+                                            participantId: value === "none" ? null : value 
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger 
+                                          className={`h-7 text-xs w-auto min-w-[120px] ${hasNoAssignee ? "border-amber-300 dark:border-amber-700" : ""}`}
+                                          data-testid={`select-assignee-${task.id}`}
+                                        >
+                                          <SelectValue placeholder="Quem leva?" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="none">
+                                            <span className="text-muted-foreground">Ninguém</span>
+                                          </SelectItem>
+                                          {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                              {p.name || p.email}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {hasNoAssignee && (
+                                        <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                                          Sem responsável
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                  {!definirResponsaveis && assigneeName && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Responsável: {assigneeName}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                {/* Delete button (owner only) */}
+                                {isOwner && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => deleteTaskMutation.mutate(task.id)}
+                                    disabled={deleteTaskMutation.isPending}
+                                    data-testid={`button-delete-task-${task.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <ClipboardCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Nenhum item adicionado ainda</p>
+                          <p className="text-xs">Clique em "Adicionar item" para começar</p>
+                        </div>
+                      )}
+                      
+                      {/* Summary stats */}
+                      {eventTasks && eventTasks.length > 0 && (
+                        <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
+                          <span>{eventTasks.filter(t => t.isCompleted).length} de {eventTasks.length} itens confirmados</span>
+                          {definirResponsaveis && (
+                            <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : ""}>
+                              {eventTasks.filter(t => !t.assignedToParticipantId).length} sem responsável
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

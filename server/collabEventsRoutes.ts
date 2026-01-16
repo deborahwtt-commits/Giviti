@@ -1995,4 +1995,197 @@ export function registerCollabEventsRoutes(app: Express) {
       res.status(500).json({ error: "Failed to fetch receiver wishlist" });
     }
   });
+
+  // ========== THEMED NIGHT TASK/CHECKLIST ROUTES ==========
+
+  // GET /api/collab-events/:id/tasks - Get all tasks for a themed event
+  app.get("/api/collab-events/:id/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      const tasks = await storage.getEventTasks(id);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching event tasks:", error);
+      res.status(500).json({ error: "Erro ao buscar itens do evento" });
+    }
+  });
+
+  // POST /api/collab-events/:id/tasks - Create a new task (owner or participant can add)
+  app.post("/api/collab-events/:id/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { title, description, assignedToParticipantId } = req.body;
+      
+      if (!title || typeof title !== "string" || title.trim().length === 0) {
+        return res.status(400).json({ error: "Nome do item é obrigatório" });
+      }
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      // Check for duplicate items (case insensitive)
+      const existingTasks = await storage.getEventTasks(id);
+      const isDuplicate = existingTasks.some(
+        task => task.title.toLowerCase().trim() === title.toLowerCase().trim()
+      );
+      if (isDuplicate) {
+        return res.status(400).json({ error: "Este item já existe na lista" });
+      }
+      
+      const task = await storage.createEventTask({
+        eventId: id,
+        title: title.trim(),
+        description: description?.trim() || null,
+        assignedToParticipantId: assignedToParticipantId || null,
+        createdBy: userId,
+      });
+      
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating event task:", error);
+      res.status(500).json({ error: "Erro ao criar item" });
+    }
+  });
+
+  // PATCH /api/collab-events/:id/tasks/:taskId - Update a task
+  app.patch("/api/collab-events/:id/tasks/:taskId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id, taskId } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { title, description, assignedToParticipantId, isCompleted } = req.body;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      const task = await storage.getEventTask(taskId);
+      if (!task || task.eventId !== id) {
+        return res.status(404).json({ error: "Item não encontrado" });
+      }
+      
+      // Check for duplicates if title is being changed
+      if (title && title.trim().toLowerCase() !== task.title.toLowerCase()) {
+        const existingTasks = await storage.getEventTasks(id);
+        const isDuplicate = existingTasks.some(
+          t => t.id !== taskId && t.title.toLowerCase().trim() === title.toLowerCase().trim()
+        );
+        if (isDuplicate) {
+          return res.status(400).json({ error: "Já existe um item com este nome" });
+        }
+      }
+      
+      const updates: any = {};
+      if (title !== undefined) updates.title = title.trim();
+      if (description !== undefined) updates.description = description?.trim() || null;
+      if (assignedToParticipantId !== undefined) updates.assignedToParticipantId = assignedToParticipantId || null;
+      if (isCompleted !== undefined) {
+        updates.isCompleted = isCompleted;
+        updates.completedAt = isCompleted ? new Date() : null;
+      }
+      
+      const updated = await storage.updateEventTask(taskId, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating event task:", error);
+      res.status(500).json({ error: "Erro ao atualizar item" });
+    }
+  });
+
+  // DELETE /api/collab-events/:id/tasks/:taskId - Delete a task (owner only)
+  app.delete("/api/collab-events/:id/tasks/:taskId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id, taskId } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      // Only owner can delete tasks
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Apenas o organizador pode remover itens" });
+      }
+      
+      const task = await storage.getEventTask(taskId);
+      if (!task || task.eventId !== id) {
+        return res.status(404).json({ error: "Item não encontrado" });
+      }
+      
+      await storage.deleteEventTask(taskId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting event task:", error);
+      res.status(500).json({ error: "Erro ao remover item" });
+    }
+  });
+
+  // PATCH /api/collab-events/:id/tasks/:taskId/assign - Assign/unassign task to participant
+  app.patch("/api/collab-events/:id/tasks/:taskId/assign", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id, taskId } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { participantId } = req.body;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      const task = await storage.getEventTask(taskId);
+      if (!task || task.eventId !== id) {
+        return res.status(404).json({ error: "Item não encontrado" });
+      }
+      
+      // Validate participantId if provided
+      if (participantId) {
+        const participant = await storage.getParticipant(participantId);
+        if (!participant || participant.eventId !== id) {
+          return res.status(400).json({ error: "Participante inválido" });
+        }
+      }
+      
+      const updated = await storage.assignTaskToParticipant(taskId, participantId || null);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error assigning task:", error);
+      res.status(500).json({ error: "Erro ao atribuir responsável" });
+    }
+  });
+
+  // PATCH /api/collab-events/:id/tasks/:taskId/complete - Mark task as completed/incomplete
+  app.patch("/api/collab-events/:id/tasks/:taskId/complete", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id, taskId } = req.params;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { completed } = req.body;
+      
+      const event = await storage.getCollaborativeEvent(id, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado ou acesso negado" });
+      }
+      
+      const task = await storage.getEventTask(taskId);
+      if (!task || task.eventId !== id) {
+        return res.status(404).json({ error: "Item não encontrado" });
+      }
+      
+      const updated = await storage.markTaskCompleted(taskId, completed === true);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking task complete:", error);
+      res.status(500).json({ error: "Erro ao marcar item como concluído" });
+    }
+  });
 }

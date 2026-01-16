@@ -373,6 +373,15 @@ export interface IStorage {
   deleteContribution(id: string): Promise<boolean>;
   getContributionsSummary(eventId: string): Promise<{ totalDue: number; totalPaid: number; participantsCount: number; paidCount: number }>;
   
+  // Collaborative Event Task Operations (Themed night checklist)
+  getEventTasks(eventId: string): Promise<CollaborativeEventTask[]>;
+  getEventTask(id: string): Promise<CollaborativeEventTask | undefined>;
+  createEventTask(task: InsertCollaborativeEventTask): Promise<CollaborativeEventTask>;
+  updateEventTask(id: string, updates: Partial<InsertCollaborativeEventTask>): Promise<CollaborativeEventTask | undefined>;
+  deleteEventTask(id: string): Promise<boolean>;
+  assignTaskToParticipant(taskId: string, participantId: string | null): Promise<CollaborativeEventTask | undefined>;
+  markTaskCompleted(id: string, completed: boolean): Promise<CollaborativeEventTask | undefined>;
+  
   // Horoscope Operations
   getSignoByDate(dia: number, mes: number): Promise<Signo | undefined>;
   getMensagemSemanal(signoId: string, numeroSemana: number): Promise<MensagemSemanal | undefined>;
@@ -2646,6 +2655,70 @@ export class DatabaseStorage implements IStorage {
     const paidCount = contributions.filter(c => c.isPaid).length;
     
     return { totalDue, totalPaid, participantsCount, paidCount };
+  }
+
+  // ========== Collaborative Event Task Operations (Themed night checklist) ==========
+  
+  async getEventTasks(eventId: string): Promise<CollaborativeEventTask[]> {
+    return await db
+      .select()
+      .from(collaborativeEventTasks)
+      .where(eq(collaborativeEventTasks.eventId, eventId))
+      .orderBy(collaborativeEventTasks.createdAt);
+  }
+  
+  async getEventTask(id: string): Promise<CollaborativeEventTask | undefined> {
+    const [task] = await db
+      .select()
+      .from(collaborativeEventTasks)
+      .where(eq(collaborativeEventTasks.id, id));
+    return task;
+  }
+  
+  async createEventTask(task: InsertCollaborativeEventTask): Promise<CollaborativeEventTask> {
+    const [newTask] = await db
+      .insert(collaborativeEventTasks)
+      .values(task)
+      .returning();
+    return newTask;
+  }
+  
+  async updateEventTask(id: string, updates: Partial<InsertCollaborativeEventTask>): Promise<CollaborativeEventTask | undefined> {
+    const [updated] = await db
+      .update(collaborativeEventTasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(collaborativeEventTasks.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteEventTask(id: string): Promise<boolean> {
+    const result = await db
+      .delete(collaborativeEventTasks)
+      .where(eq(collaborativeEventTasks.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+  
+  async assignTaskToParticipant(taskId: string, participantId: string | null): Promise<CollaborativeEventTask | undefined> {
+    const [updated] = await db
+      .update(collaborativeEventTasks)
+      .set({ assignedToParticipantId: participantId, updatedAt: new Date() })
+      .where(eq(collaborativeEventTasks.id, taskId))
+      .returning();
+    return updated;
+  }
+  
+  async markTaskCompleted(id: string, completed: boolean): Promise<CollaborativeEventTask | undefined> {
+    const [updated] = await db
+      .update(collaborativeEventTasks)
+      .set({ 
+        isCompleted: completed, 
+        completedAt: completed ? new Date() : null,
+        updatedAt: new Date() 
+      })
+      .where(eq(collaborativeEventTasks.id, id))
+      .returning();
+    return updated;
   }
 
   // ========== Horoscope Operations ==========
