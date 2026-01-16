@@ -2148,6 +2148,29 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(404).json({ error: "Item não encontrado" });
       }
       
+      const isOwner = event.ownerId === userId;
+      
+      // If not owner, apply business rules for participants
+      if (!isOwner) {
+        // Get the current user's participant record
+        const participants = await storage.getParticipants(id);
+        const currentUserParticipant = participants.find(p => p.userId === userId);
+        
+        if (!currentUserParticipant) {
+          return res.status(403).json({ error: "Você não é participante deste evento" });
+        }
+        
+        // Rule 1: Participants cannot modify already assigned items
+        if (task.assignedToParticipantId !== null) {
+          return res.status(403).json({ error: "Este item já está atribuído e não pode ser alterado" });
+        }
+        
+        // Rule 2: Participants can only assign unassigned items to themselves
+        if (participantId && participantId !== currentUserParticipant.id) {
+          return res.status(403).json({ error: "Você só pode atribuir itens para si mesmo" });
+        }
+      }
+      
       // Validate participantId if provided
       if (participantId) {
         const participant = await storage.getParticipant(participantId);
