@@ -997,6 +997,10 @@ export default function RoleDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      toast({
+        title: "Convite reenviado",
+        description: "O email de convite foi reenviado com sucesso.",
+      });
     },
     onError: (error: Error) => {
       toast({
