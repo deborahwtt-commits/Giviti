@@ -310,6 +310,7 @@ export interface IStorage {
   getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
     inactiveStats: { total: number; byAdmin: number; bySelf: number };
+    registrationSourceStats: { vipPass: number; eventInvite: number; vipPassPercent: number; eventInvitePercent: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -320,7 +321,7 @@ export interface IStorage {
   getUserEventsCount(userId: string): Promise<number>;
   getUserRecipientsCount(userId: string): Promise<number>;
   getUserPurchasedGiftsCount(userId: string): Promise<number>;
-  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean }>>;
+  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean; registrationSource: string }>>;
   
   // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
   
@@ -1801,6 +1802,7 @@ export class DatabaseStorage implements IStorage {
   async getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
     inactiveStats: { total: number; byAdmin: number; bySelf: number };
+    registrationSourceStats: { vipPass: number; eventInvite: number; vipPassPercent: number; eventInvitePercent: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1853,6 +1855,21 @@ export class DatabaseStorage implements IStorage {
         eq(users.isActive, false),
         isNull(users.deactivatedBy)
       ));
+    
+    // Registration source stats (treat null as vip_pass since that's the default for older users)
+    const vipPassUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(sql`${users.registrationSource} = 'vip_pass' OR ${users.registrationSource} IS NULL`);
+    
+    const eventInviteUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.registrationSource, "event_invite"));
+    
+    const vipPassCount = vipPassUsers[0]?.count || 0;
+    const eventInviteCount = eventInviteUsers[0]?.count || 0;
+    const totalForPercent = totalUsers[0]?.count || 0;
     
     // Gift stats
     const totalSuggestions = await db
@@ -1925,6 +1942,12 @@ export class DatabaseStorage implements IStorage {
         total: inactiveUsers[0]?.count || 0,
         byAdmin: inactiveByAdmin[0]?.count || 0,
         bySelf: inactiveBySelf[0]?.count || 0,
+      },
+      registrationSourceStats: {
+        vipPass: vipPassCount,
+        eventInvite: eventInviteCount,
+        vipPassPercent: totalForPercent > 0 ? Math.round((vipPassCount / totalForPercent) * 100) : 0,
+        eventInvitePercent: totalForPercent > 0 ? Math.round((eventInviteCount / totalForPercent) * 100) : 0,
       },
       giftStats: {
         totalSuggestions: totalSuggestions[0]?.count || 0,
@@ -2015,7 +2038,7 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.count || 0;
   }
 
-  async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>> {
+  async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean; registrationSource: string }>> {
     // Optimized query using CTEs to aggregate all stats in a single round trip
     // eventsCount includes both regular events (datas comemorativas) and collaborative events (rolês)
     const result = await db.execute(sql`
@@ -2061,10 +2084,15 @@ export class DatabaseStorage implements IStorage {
       passwordHash: row.password_hash,
       firstName: row.first_name,
       lastName: row.last_name,
+      profileImageUrl: row.profile_image_url,
       role: row.role,
       isActive: row.is_active,
+      deactivatedBy: row.deactivated_by,
+      deactivatedAt: row.deactivated_at,
+      lastLoginAt: row.last_login_at,
+      registrationSource: row.registration_source || "vip_pass",
       createdAt: row.created_at,
-      lastLogin: row.last_login,
+      updatedAt: row.updated_at,
       eventsCount: row.events_count,
       recipientsCount: row.recipients_count,
       purchasedGiftsCount: row.purchased_gifts_count,

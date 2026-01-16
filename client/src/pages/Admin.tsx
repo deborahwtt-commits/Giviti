@@ -49,6 +49,12 @@ interface AdvancedStats {
     byAdmin: number;
     bySelf: number;
   };
+  registrationSourceStats: {
+    vipPass: number;
+    eventInvite: number;
+    vipPassPercent: number;
+    eventInvitePercent: number;
+  };
   giftStats: {
     totalSuggestions: number;
     purchasedGifts: number;
@@ -256,6 +262,36 @@ export default function Admin() {
               </div>
             </Card>
           </div>
+        </div>
+
+        {/* Origem do Cadastro */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Ticket className="w-5 h-5" />
+            Origem do Cadastro
+          </h2>
+          <Card className="p-6" data-testid="card-registration-source">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="text-center p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                <div className="text-sm text-muted-foreground mb-1">VIP Pass</div>
+                <div className="text-3xl font-bold text-purple-700 dark:text-purple-300" data-testid="text-vip-pass-count">
+                  {advancedStats?.registrationSourceStats?.vipPass || 0}
+                </div>
+                <div className="text-sm text-purple-600 dark:text-purple-400 mt-1" data-testid="text-vip-pass-percent">
+                  {advancedStats?.registrationSourceStats?.vipPassPercent || 0}% do total
+                </div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <div className="text-sm text-muted-foreground mb-1">Convite de Evento</div>
+                <div className="text-3xl font-bold text-blue-700 dark:text-blue-300" data-testid="text-event-invite-count">
+                  {advancedStats?.registrationSourceStats?.eventInvite || 0}
+                </div>
+                <div className="text-sm text-blue-600 dark:text-blue-400 mt-1" data-testid="text-event-invite-percent">
+                  {advancedStats?.registrationSourceStats?.eventInvitePercent || 0}% do total
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Controle de Acesso (Soft Launch) */}
