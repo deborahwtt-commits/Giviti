@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserProfileSchema } from "@shared/schema";
+import { insertUserProfileSchema, getZodiacSignFromDate } from "@shared/schema";
 import type { UserProfile, InsertUserProfile, GoogleProductCategory } from "@shared/schema";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,10 @@ export default function Profile() {
 
   useEffect(() => {
     if (profile) {
-      reset(profile);
+      reset({
+        ...profile,
+        interests: profile.interests || [],
+      });
     }
   }, [profile, reset]);
 
@@ -299,26 +302,31 @@ export default function Profile() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Question 1 - Age Range */}
+          {/* Question 1 - Birth Date */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              1. Qual sua faixa etária?
+              1. Qual a sua data de nascimento?
             </Label>
-            <RadioGroup
-              value={watch("ageRange") || ""}
-              onValueChange={(value) => setValue("ageRange", value)}
-            >
-              <div className="space-y-3">
-                {["18–24", "25–34", "35–44", "45–54", "55+"].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`age-${option}`} data-testid={`radio-age-${option}`} />
-                    <Label htmlFor={`age-${option}`} className="cursor-pointer">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
+            <Input
+              type="date"
+              value={watch("birthDate") ? new Date(watch("birthDate")!).toISOString().split('T')[0] : ""}
+              onChange={(e) => {
+                const dateValue = e.target.value;
+                if (dateValue) {
+                  setValue("birthDate", new Date(dateValue + "T12:00:00"));
+                } else {
+                  setValue("birthDate", undefined);
+                }
+              }}
+              max={new Date().toISOString().split('T')[0]}
+              className="max-w-xs"
+              data-testid="input-birth-date"
+            />
+            {watch("birthDate") && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Seu signo: <span className="font-medium">{getZodiacSignFromDate(new Date(watch("birthDate")!))}</span>
+              </p>
+            )}
           </Card>
 
           {/* Question 2 - Gender */}
@@ -343,35 +351,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 3 - Zodiac Sign */}
+          {/* Question 3 - Gift Preference */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              3. Qual é o seu signo?
-            </Label>
-            <RadioGroup
-              value={watch("zodiacSign") || ""}
-              onValueChange={(value) => setValue("zodiacSign", value)}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  "Áries", "Touro", "Gêmeos", "Câncer", "Leão", "Virgem",
-                  "Libra", "Escorpião", "Sagitário", "Capricórnio", "Aquário", "Peixes"
-                ].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`zodiac-${option}`} data-testid={`radio-zodiac-${option}`} />
-                    <Label htmlFor={`zodiac-${option}`} className="cursor-pointer">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
-          </Card>
-
-          {/* Question 4 - Gift Preference */}
-          <Card className="p-6">
-            <Label className="text-base font-semibold mb-4 block">
-              4. O que te faz dizer: "esse presente foi feito pra mim!"?
+              3. O que te faz dizer: "esse presente foi feito pra mim!"?
             </Label>
             <RadioGroup
               value={watch("giftPreference") || ""}
@@ -397,10 +380,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 5 - Free Time Activity */}
+          {/* Question 4 - Free Time Activity */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              5. O que você faz no seu tempo livre (sem julgamentos)?
+              4. O que você faz no seu tempo livre (sem julgamentos)?
             </Label>
             <RadioGroup
               value={watch("freeTimeActivity") || ""}
@@ -425,10 +408,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 6 - Musical Style */}
+          {/* Question 5 - Musical Style */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              6. Se você fosse um estilo musical, qual seria?
+              5. Se você fosse um estilo musical, qual seria?
             </Label>
             <RadioGroup
               value={watch("musicalStyle") || ""}
@@ -453,10 +436,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 7 - Monthly Gift Preference */}
+          {/* Question 6 - Monthly Gift Preference */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              7. Se pudesse ganhar um presente todo mês, o que seria?
+              6. Se pudesse ganhar um presente todo mês, o que seria?
             </Label>
             <RadioGroup
               value={watch("monthlyGiftPreference") || ""}
@@ -482,10 +465,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 8 - Surprise Reaction */}
+          {/* Question 7 - Surprise Reaction */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              8. Como você reage a surpresas?
+              7. Como você reage a surpresas?
             </Label>
             <RadioGroup
               value={watch("surpriseReaction") || ""}
@@ -509,10 +492,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 9 - Gift Priority */}
+          {/* Question 8 - Gift Priority */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              9. Quando o assunto é presente, você prefere:
+              8. Quando o assunto é presente, você prefere:
             </Label>
             <RadioGroup
               value={watch("giftPriority") || ""}
@@ -537,10 +520,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 10 - Gift Giving Style */}
+          {/* Question 9 - Gift Giving Style */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              10. Complete: Eu sou do tipo que…
+              9. Complete: Eu sou do tipo que…
             </Label>
             <RadioGroup
               value={watch("giftGivingStyle") || ""}
@@ -565,10 +548,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 11 - Special Talent */}
+          {/* Question 10 - Special Talent */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              11. Você tem algum talento ou habilidade especial?
+              10. Você tem algum talento ou habilidade especial?
             </Label>
             <RadioGroup
               value={watch("specialTalent") || ""}
@@ -596,10 +579,10 @@ export default function Profile() {
             </RadioGroup>
           </Card>
 
-          {/* Question 12 - Gifts to Avoid */}
+          {/* Question 11 - Gifts to Avoid */}
           <Card className="p-6">
             <Label htmlFor="gifts-to-avoid" className="text-base font-semibold mb-4 block">
-              12. O que você não gosta de ganhar?
+              11. O que você não gosta de ganhar?
             </Label>
             <Textarea
               id="gifts-to-avoid"
@@ -616,13 +599,13 @@ export default function Profile() {
             </p>
           </Card>
 
-          {/* Question 13 - Interests */}
+          {/* Question 12 - Interests */}
           <Card className="p-6">
             <Label className="text-base font-semibold mb-4 block">
-              13. Quais são seus interesses?
+              12. Quais são seus interesses?
             </Label>
             <p className="text-sm text-muted-foreground mb-4">
-              Selecione as categorias que mais combinam com você
+              Selecione até 3 categorias que mais combinam com você
             </p>
             
             <Popover>
@@ -634,7 +617,7 @@ export default function Profile() {
                 >
                   <span className="text-muted-foreground">
                     {(watch("interests") || []).length > 0
-                      ? `${(watch("interests") || []).length} interesse(s) selecionado(s)`
+                      ? `${(watch("interests") || []).length}/3 interesse(s) selecionado(s)`
                       : "Selecionar interesses..."}
                   </span>
                   <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
@@ -645,12 +628,18 @@ export default function Profile() {
                   {googleCategories.filter(cat => cat.isActive).map((category) => {
                     const currentInterests = watch("interests") || [];
                     const isSelected = currentInterests.includes(category.namePtBr);
+                    const isAtLimit = currentInterests.length >= 3 && !isSelected;
                     
                     return (
                       <div
                         key={category.id}
-                        className="flex items-center space-x-2 p-2 hover-elevate rounded-md cursor-pointer"
+                        className={`flex items-center space-x-2 p-2 rounded-md ${
+                          isAtLimit 
+                            ? "opacity-50 cursor-not-allowed" 
+                            : "hover-elevate cursor-pointer"
+                        }`}
                         onClick={() => {
+                          if (isAtLimit) return;
                           const newInterests = isSelected
                             ? currentInterests.filter((i) => i !== category.namePtBr)
                             : [...currentInterests, category.namePtBr];
@@ -660,7 +649,9 @@ export default function Profile() {
                       >
                         <Checkbox
                           checked={isSelected}
+                          disabled={isAtLimit}
                           onCheckedChange={(checked) => {
+                            if (isAtLimit && checked) return;
                             const newInterests = checked
                               ? [...currentInterests, category.namePtBr]
                               : currentInterests.filter((i) => i !== category.namePtBr);
@@ -672,6 +663,11 @@ export default function Profile() {
                     );
                   })}
                 </div>
+                {(watch("interests") || []).length >= 3 && (
+                  <div className="p-2 border-t bg-muted/50 text-xs text-muted-foreground text-center">
+                    Limite de 3 interesses atingido
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
 

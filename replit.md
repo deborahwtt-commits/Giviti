@@ -22,6 +22,7 @@ Preferred communication style: Simple, everyday language.
 - **Backend**: Express.js with TypeScript, Node.js.
 - **API Design**: RESTful API for authentication, user profiles, recipients, events, suggestions, statistics, gift management, and collaborative events.
 - **Authentication**: Session-based using `express-session` and bcrypt for password hashing, with a token-based password recovery system.
+  - **Event Invite Registration**: Users invited to collaborative events can create accounts without a VIP pass by using their invite token. The system validates that the registering email matches the invited participant's email, and marks the invite as accepted to prevent token reuse.
 - **Data Layer**: Drizzle ORM for type-safe PostgreSQL queries.
 - **Data Validation**: Zod schemas generated from Drizzle tables for API request validation.
 
@@ -34,8 +35,10 @@ Preferred communication style: Simple, everyday language.
 - **Event Tracking**: Manages important dates, including archiving and advancing past events, with date validation ensuring future dates.
 - **Gift Management**: Allows saving/tracking purchased and favorited gifts, with universal purchase tracking, external source identification, and spending statistics.
 - **User/Recipient Profiles**: Detailed profiles include personality questionnaires, "Gifts to Avoid" fields, and optional location fields.
+  - **User Profiles**: Use `birthDate` field to store the user's birth date; zodiac sign is auto-calculated using `getZodiacSignFromDate()` utility function.
+  - **Recipient Profiles**: Still use `ageRange` and `zodiacSign` fields (entered manually by the user creating the recipient).
 - **Admin Panel**: Comprehensive administrative module with role-based access control for user management, categories, system settings, audit logs, and gift suggestions.
-- **Astrology Module**: Displays weekly horoscope messages on the Dashboard based on the user's zodiac sign.
+- **Astrology Module**: Displays weekly horoscope messages on the Dashboard based on the user's zodiac sign (auto-calculated from birth date).
 - **Birthday Events ("Meu Aniversário")**: Special event type for managing personal birthday celebrations with wishlists, guest management, and automated email invitations with tracking.
 - **Collaborative Events**: Supports Secret Santa, themed nights, and collective gifts with participant management, draw algorithms, and shareable links. Includes dynamic subcategory systems for themed nights and automated email invitations with status tracking.
 

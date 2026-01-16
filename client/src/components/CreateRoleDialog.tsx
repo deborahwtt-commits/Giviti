@@ -208,11 +208,18 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         ? data.eventDate 
         : data.confirmationDeadline!;
 
+      // Adjust dates to noon to avoid timezone issues when converting to ISO
+      const adjustedEventDate = new Date(data.eventDate);
+      adjustedEventDate.setHours(12, 0, 0, 0);
+      
+      const adjustedDeadline = new Date(effectiveDeadline);
+      adjustedDeadline.setHours(12, 0, 0, 0);
+
       const payload = {
         name: data.name,
         eventType: data.eventType,
-        eventDate: data.eventDate.toISOString(),
-        confirmationDeadline: effectiveDeadline.toISOString(),
+        eventDate: adjustedEventDate.toISOString(),
+        confirmationDeadline: adjustedDeadline.toISOString(),
         location: data.location,
         description: data.description || null,
         isPublic: data.isPublic,
@@ -696,7 +703,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               )}
             />
 
-            {/* Hide public link option for secret_santa - logic preserved for future use */}
+            {/* HIDDEN: Public event option - All events are private by default
             {selectedType !== "secret_santa" && (
               <FormField
                 control={form.control}
@@ -720,6 +727,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                 )}
               />
             )}
+            */}
 
             <div className="flex justify-end gap-3">
               <Button

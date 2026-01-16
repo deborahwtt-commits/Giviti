@@ -349,9 +349,9 @@ export async function sendSecretSantaDrawResultEmail(options: SecretSantaDrawEma
         ${rules.minGiftValue || rules.maxGiftValue ? `
           <p style="color: #78350f; margin: 8px 0; font-size: 14px;">
             <strong>Valor do presente:</strong> 
-            ${rules.minGiftValue ? `mínimo R$ ${rules.minGiftValue.toFixed(2)}` : ''}
+            ${rules.minGiftValue ? `mínimo R$ ${rules.minGiftValue.toFixed(2).replace('.', ',')}` : ''}
             ${rules.minGiftValue && rules.maxGiftValue ? ' - ' : ''}
-            ${rules.maxGiftValue ? `máximo R$ ${rules.maxGiftValue.toFixed(2)}` : ''}
+            ${rules.maxGiftValue ? `máximo R$ ${rules.maxGiftValue.toFixed(2).replace('.', ',')}` : ''}
           </p>
         ` : ''}
         ${rules.rulesDescription ? `
@@ -759,8 +759,8 @@ export async function sendCollectiveGiftInviteEmail(options: CollectiveGiftInvit
 
   const formattedDeadline = formatDateBrazil(confirmationDeadline, false);
   const formattedDate = formatDateBrazil(eventDate, false);
-  const formattedTarget = targetAmount ? (targetAmount / 100).toFixed(2) : null;
-  const formattedPerPerson = amountPerPerson ? (amountPerPerson / 100).toFixed(2) : null;
+  const formattedTarget = targetAmount ? (targetAmount / 100).toFixed(2).replace('.', ',') : null;
+  const formattedPerPerson = amountPerPerson ? (amountPerPerson / 100).toFixed(2).replace('.', ',') : null;
 
   let giftDetailsHtml = '';
   if (giftName || giftDescription) {

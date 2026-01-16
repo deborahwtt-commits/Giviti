@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   deactivatedBy: varchar("deactivated_by"),
   deactivatedAt: timestamp("deactivated_at"),
   lastLoginAt: timestamp("last_login_at"),
+  registrationSource: varchar("registration_source", { length: 20 }).default("vip_pass"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -58,12 +59,17 @@ export const registerUserSchema = insertUserSchema
   .extend({
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
-    ticketCode: z.string().min(1, "Passe VIP é obrigatório"),
+    ticketCode: z.string().optional(),
+    inviteToken: z.string().optional(),
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.ticketCode || data.inviteToken, {
+    message: "Passe VIP ou convite de evento é obrigatório",
+    path: ["ticketCode"],
   });
 
 export const loginUserSchema = z.object({
@@ -379,9 +385,8 @@ export const userProfiles = pgTable("user_profiles", {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  ageRange: varchar("age_range"),
+  birthDate: timestamp("birth_date"),
   gender: varchar("gender"),
-  zodiacSign: varchar("zodiac_sign"),
   giftPreference: varchar("gift_preference"),
   freeTimeActivity: varchar("free_time_activity"),
   musicalStyle: varchar("musical_style"),
@@ -402,10 +407,65 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
   userId: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  interests: z.array(z.string()).max(3, "Máximo de 3 interesses permitidos").default([]),
+  // Accept both Date objects and date strings, transform strings to Date
+  birthDate: z.union([
+    z.date(),
+    z.string().transform((val) => val ? new Date(val) : undefined),
+    z.null(),
+    z.undefined(),
+  ]).optional().nullable(),
 });
 
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
 export type UserProfile = typeof userProfiles.$inferSelect;
+
+// Utility function to calculate zodiac sign from birth date
+export function getZodiacSignFromDate(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  
+  // Handle string dates by converting to Date object
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Validate the date object
+  if (isNaN(dateObj.getTime())) return null;
+  
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  
+  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return "Áries";
+  if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return "Touro";
+  if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return "Gêmeos";
+  if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return "Câncer";
+  if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return "Leão";
+  if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return "Virgem";
+  if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return "Libra";
+  if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return "Escorpião";
+  if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return "Sagitário";
+  if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return "Capricórnio";
+  if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return "Aquário";
+  return "Peixes";
+}
+
+// Utility function to calculate age from birth date
+export function getAgeFromDate(date: Date | string | null | undefined): number | null {
+  if (!date) return null;
+  
+  // Handle string dates by converting to Date object
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Validate the date object
+  if (isNaN(dateObj.getTime())) return null;
+  
+  const today = new Date();
+  let age = today.getFullYear() - dateObj.getFullYear();
+  const monthDiff = today.getMonth() - dateObj.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateObj.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 // Recipient profiles (questionnaire responses for gift recipients)
 export const recipientProfiles = pgTable("recipient_profiles", {

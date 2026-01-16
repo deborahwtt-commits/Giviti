@@ -10,12 +10,13 @@ import GettingStartedWizard from "@/components/GettingStartedWizard";
 import EventCard from "@/components/EventCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
+import BirthdayBanner from "@/components/BirthdayBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Gift, Palette, MapPin, Calendar } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
-import type { EventWithRecipients, Recipient, CollaborativeEvent } from "@shared/schema";
+import type { EventWithRecipients, Recipient, CollaborativeEvent, UserProfile } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -47,6 +48,10 @@ export default function Dashboard() {
 
   const { data: invitationsData } = useQuery<{ count: number }>({
     queryKey: ["/api/user/invitations-count"],
+  });
+
+  const { data: userProfile } = useQuery<UserProfile>({
+    queryKey: ["/api/user/profile"],
   });
 
   useEffect(() => {
@@ -246,6 +251,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <ProfileOnboardingModal />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-12">
+        <BirthdayBanner 
+          userName={userName} 
+          birthDate={userProfile?.birthDate} 
+        />
         <DashboardHero
           userName={userName}
           stats={{

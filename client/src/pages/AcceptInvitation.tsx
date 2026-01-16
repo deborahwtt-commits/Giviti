@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Gift, PartyPopper, Heart, Sparkles, Calendar, MapPin, Loader2, Check, LogIn, UserPlus, Clock, AlertTriangle } from "lucide-react";
+import { Gift, PartyPopper, Heart, Sparkles, Calendar, MapPin, Loader2, Check, Clock, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
@@ -59,6 +59,16 @@ export default function AcceptInvitation() {
     enabled: !!token,
   });
 
+  // Redirect non-authenticated users directly to registration page
+  useEffect(() => {
+    if (!authLoading && !user && invitation && invitation.participant.status !== "accepted") {
+      // Save token and event info for the landing page
+      localStorage.setItem("pendingInviteToken", token || "");
+      localStorage.setItem("pendingInviteEventName", invitation.event.name || "");
+      setLocation("/entrar");
+    }
+  }, [authLoading, user, invitation, token, setLocation]);
+
   const acceptMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest(`/api/invitations/by-token/${token}/accept`, "POST");
@@ -87,17 +97,24 @@ export default function AcceptInvitation() {
 
   const handleAccept = () => {
     if (!user) {
+      // Save both token and event name for landing page
       localStorage.setItem("pendingInviteToken", token || "");
+      if (invitation?.event?.name) {
+        localStorage.setItem("pendingInviteEventName", invitation.event.name);
+      }
       setLocation("/entrar");
       return;
     }
     acceptMutation.mutate();
   };
 
+  // Auto-accept invitation when user returns after login/register
   useEffect(() => {
     const pendingToken = localStorage.getItem("pendingInviteToken");
     if (user && pendingToken === token && !hasAccepted && invitation && invitation.participant.status !== "accepted") {
+      // Clear both token and event name before accepting
       localStorage.removeItem("pendingInviteToken");
+      localStorage.removeItem("pendingInviteEventName");
       acceptMutation.mutate();
     }
   }, [user, token, hasAccepted, invitation]);
@@ -233,7 +250,8 @@ export default function AcceptInvitation() {
             })()}
           </div>
 
-          {user ? (
+          {/* Only show accept button for authenticated users - non-authenticated are redirected automatically */}
+          {user && (
             <Button 
               onClick={handleAccept} 
               className="w-full" 
@@ -253,37 +271,6 @@ export default function AcceptInvitation() {
                 </>
               )}
             </Button>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-center text-muted-foreground">
-                Para aceitar o convite, você precisa estar conectado
-              </p>
-              <div className="flex gap-3">
-                <Button 
-                  onClick={() => {
-                    localStorage.setItem("pendingInviteToken", token || "");
-                    setLocation("/entrar");
-                  }}
-                  className="flex-1"
-                  data-testid="button-login"
-                >
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Entrar
-                </Button>
-                <Button 
-                  onClick={() => {
-                    localStorage.setItem("pendingInviteToken", token || "");
-                    setLocation("/cadastro");
-                  }}
-                  variant="outline"
-                  className="flex-1"
-                  data-testid="button-register"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Cadastrar
-                </Button>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>

@@ -26,6 +26,7 @@ import {
   collectiveGiftContributions,
   collaborativeEventTasks,
   clicks,
+  getZodiacSignFromDate,
   type User,
   type UpsertUser,
   type Recipient,
@@ -141,7 +142,7 @@ export type ParticipantWithProfile = CollaborativeEventParticipant & {
   wishlistItemsCount: number;
   userIsActive: boolean;
   userProfile: {
-    ageRange: string | null;
+    birthDate: Date | null;
     gender: string | null;
     zodiacSign: string | null;
     giftPreference: string | null;
@@ -162,7 +163,7 @@ export interface IStorage {
   // User operations - email/password authentication
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User>;
+  createUser(email: string, passwordHash: string, firstName?: string, lastName?: string, registrationSource?: string): Promise<User>;
   updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean>;
 
   // Password reset tokens
@@ -309,6 +310,7 @@ export interface IStorage {
   getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
     inactiveStats: { total: number; byAdmin: number; bySelf: number };
+    registrationSourceStats: { vipPass: number; eventInvite: number; vipPassPercent: number; eventInvitePercent: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -319,7 +321,7 @@ export interface IStorage {
   getUserEventsCount(userId: string): Promise<number>;
   getUserRecipientsCount(userId: string): Promise<number>;
   getUserPurchasedGiftsCount(userId: string): Promise<number>;
-  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean }>>;
+  getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean; registrationSource: string }>>;
   
   // ========== COLLABORATIVE EVENTS (Planeje seu rolê!) ==========
   
@@ -338,7 +340,7 @@ export interface IStorage {
   getParticipant(id: string): Promise<CollaborativeEventParticipant | undefined>;
   getParticipantByInviteToken(token: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
-  updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantInviteToken(id: string, inviteToken: string | null): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
   linkParticipantsByEmail(email: string, userId: string): Promise<number>;
@@ -449,7 +451,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User> {
+  async createUser(email: string, passwordHash: string, firstName?: string, lastName?: string, registrationSource?: string): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
@@ -457,6 +459,7 @@ export class DatabaseStorage implements IStorage {
         passwordHash,
         firstName,
         lastName,
+        registrationSource: registrationSource || "vip_pass",
       })
       .returning();
     return user;
@@ -1436,9 +1439,10 @@ export class DatabaseStorage implements IStorage {
 
     // Update from profile if available
     if (userProfile) {
-      // Zodiac sign is already in the correct format (Áries, Touro, etc.)
-      if (userProfile.zodiacSign) {
-        updateData.zodiacSign = userProfile.zodiacSign;
+      // Calculate zodiac sign from birth date
+      const zodiacSign = getZodiacSignFromDate(userProfile.birthDate);
+      if (zodiacSign) {
+        updateData.zodiacSign = zodiacSign;
       }
       // Gender needs mapping from profile format to recipient format
       if (userProfile.gender) {
@@ -1798,6 +1802,7 @@ export class DatabaseStorage implements IStorage {
   async getAdvancedStats(): Promise<{
     userStats: { total: number; active: number; byRole: Record<string, number> };
     inactiveStats: { total: number; byAdmin: number; bySelf: number };
+    registrationSourceStats: { vipPass: number; eventInvite: number; vipPassPercent: number; eventInvitePercent: number };
     giftStats: { totalSuggestions: number; purchasedGifts: number; favoriteGifts: number };
     topCategories: Array<{ category: string; count: number }>;
     recentActivity: { newUsersToday: number; newEventsToday: number; giftsMarkedTodayAsPurchased: number };
@@ -1850,6 +1855,21 @@ export class DatabaseStorage implements IStorage {
         eq(users.isActive, false),
         isNull(users.deactivatedBy)
       ));
+    
+    // Registration source stats (treat null as vip_pass since that's the default for older users)
+    const vipPassUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(sql`${users.registrationSource} = 'vip_pass' OR ${users.registrationSource} IS NULL`);
+    
+    const eventInviteUsers = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.registrationSource, "event_invite"));
+    
+    const vipPassCount = vipPassUsers[0]?.count || 0;
+    const eventInviteCount = eventInviteUsers[0]?.count || 0;
+    const totalForPercent = totalUsers[0]?.count || 0;
     
     // Gift stats
     const totalSuggestions = await db
@@ -1922,6 +1942,12 @@ export class DatabaseStorage implements IStorage {
         total: inactiveUsers[0]?.count || 0,
         byAdmin: inactiveByAdmin[0]?.count || 0,
         bySelf: inactiveBySelf[0]?.count || 0,
+      },
+      registrationSourceStats: {
+        vipPass: vipPassCount,
+        eventInvite: eventInviteCount,
+        vipPassPercent: totalForPercent > 0 ? Math.round((vipPassCount / totalForPercent) * 100) : 0,
+        eventInvitePercent: totalForPercent > 0 ? Math.round((eventInviteCount / totalForPercent) * 100) : 0,
       },
       giftStats: {
         totalSuggestions: totalSuggestions[0]?.count || 0,
@@ -2012,7 +2038,7 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.count || 0;
   }
 
-  async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number }>> {
+  async getAllUsersWithStats(): Promise<Array<User & { eventsCount: number; recipientsCount: number; purchasedGiftsCount: number; profileCompleted: boolean; registrationSource: string }>> {
     // Optimized query using CTEs to aggregate all stats in a single round trip
     // eventsCount includes both regular events (datas comemorativas) and collaborative events (rolês)
     const result = await db.execute(sql`
@@ -2058,10 +2084,15 @@ export class DatabaseStorage implements IStorage {
       passwordHash: row.password_hash,
       firstName: row.first_name,
       lastName: row.last_name,
+      profileImageUrl: row.profile_image_url,
       role: row.role,
       isActive: row.is_active,
+      deactivatedBy: row.deactivated_by,
+      deactivatedAt: row.deactivated_at,
+      lastLoginAt: row.last_login_at,
+      registrationSource: row.registration_source || "vip_pass",
       createdAt: row.created_at,
-      lastLogin: row.last_login,
+      updatedAt: row.updated_at,
       eventsCount: row.events_count,
       recipientsCount: row.recipients_count,
       purchasedGiftsCount: row.purchased_gifts_count,
@@ -2303,9 +2334,9 @@ export class DatabaseStorage implements IStorage {
       wishlistItemsCount: wishlistCountMap.get(participant.id) || 0,
       userIsActive: userIsActive ?? true, // Default to true if no user linked (email-only participant)
       userProfile: profile ? {
-        ageRange: profile.ageRange,
+        birthDate: profile.birthDate,
         gender: profile.gender,
-        zodiacSign: profile.zodiacSign,
+        zodiacSign: getZodiacSignFromDate(profile.birthDate),
         giftPreference: profile.giftPreference,
         freeTimeActivity: profile.freeTimeActivity,
         musicalStyle: profile.musicalStyle,
@@ -2350,7 +2381,7 @@ export class DatabaseStorage implements IStorage {
     return updatedParticipant;
   }
 
-  async updateParticipantInviteToken(id: string, inviteToken: string): Promise<CollaborativeEventParticipant | undefined> {
+  async updateParticipantInviteToken(id: string, inviteToken: string | null): Promise<CollaborativeEventParticipant | undefined> {
     const [updatedParticipant] = await db
       .update(collaborativeEventParticipants)
       .set({
@@ -2663,7 +2694,9 @@ export class DatabaseStorage implements IStorage {
   async getHoroscope(userId: string): Promise<{ signo: Signo; mensagem: MensagemSemanal } | null> {
     const profile = await this.getUserProfile(userId);
     
-    if (!profile || !profile.zodiacSign) {
+    // Calculate zodiac sign from birth date
+    const zodiacSign = getZodiacSignFromDate(profile?.birthDate);
+    if (!profile || !zodiacSign) {
       return null;
     }
     
@@ -2690,7 +2723,7 @@ export class DatabaseStorage implements IStorage {
       "peixes": "Peixes",
     };
     
-    const signoNome = signoNameMap[profile.zodiacSign.toLowerCase()] || profile.zodiacSign;
+    const signoNome = signoNameMap[zodiacSign.toLowerCase()] || zodiacSign;
     
     const [signo] = await db
       .select()

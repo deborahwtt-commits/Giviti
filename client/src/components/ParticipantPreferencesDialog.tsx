@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 interface UserProfile {
-  ageRange: string | null;
+  birthDate?: Date | string | null;
   gender: string | null;
   zodiacSign: string | null;
   giftPreference: string | null;
@@ -43,7 +43,7 @@ interface ParticipantPreferencesDialogProps {
 }
 
 const labelMap: Record<string, string> = {
-  ageRange: "Faixa Etária",
+  birthDate: "Data de Nascimento",
   gender: "Gênero",
   zodiacSign: "Signo",
   giftPreference: "Preferência de Presente",
@@ -59,13 +59,6 @@ const labelMap: Record<string, string> = {
 };
 
 const valueTranslations: Record<string, Record<string, string>> = {
-  ageRange: {
-    "crianca": "Criança (até 12 anos)",
-    "adolescente": "Adolescente (13-17 anos)",
-    "jovem-adulto": "Jovem Adulto (18-25 anos)",
-    "adulto": "Adulto (26-59 anos)",
-    "idoso": "Idoso (60+ anos)",
-  },
   gender: {
     "masculino": "Masculino",
     "feminino": "Feminino",
@@ -132,7 +125,7 @@ const valueTranslations: Record<string, Record<string, string>> = {
 };
 
 const iconMap: Record<string, typeof User> = {
-  ageRange: User,
+  birthDate: User,
   gender: User,
   zodiacSign: Star,
   giftPreference: Gift,

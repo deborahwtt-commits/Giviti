@@ -18,6 +18,7 @@ import {
   insertGiftSuggestionSchema,
   updateGiftSuggestionSchema,
   insertThemedNightSuggestionSchema,
+  getZodiacSignFromDate,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { registerAdminRoutes } from "./adminRoutes";
@@ -216,7 +217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: user.lastName,
         },
         profile: profile ? {
-          zodiacSign: profile.zodiacSign,
+          birthDate: profile.birthDate,
+          zodiacSign: getZodiacSignFromDate(profile.birthDate),
           gender: profile.gender,
           giftPreference: profile.giftPreference,
           freeTimeActivity: profile.freeTimeActivity,
@@ -360,7 +362,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate event date is not in the past
       if (validatedData.eventDate) {
-        const eventDate = new Date(validatedData.eventDate);
+        // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+        let dateString = validatedData.eventDate;
+        if (typeof dateString === 'string' && !dateString.includes('T')) {
+          dateString = dateString + 'T12:00:00';
+        }
+        const eventDate = new Date(dateString);
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
@@ -435,7 +442,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate event date is not in the past if being updated
       if (validatedData.eventDate !== undefined) {
-        const eventDate = new Date(validatedData.eventDate);
+        // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+        let dateString = validatedData.eventDate;
+        if (typeof dateString === 'string' && !dateString.includes('T')) {
+          dateString = dateString + 'T12:00:00';
+        }
+        const eventDate = new Date(dateString);
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
@@ -1352,6 +1364,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/user/profile - Get user profile (alias for Dashboard birthday banner)
+  app.get("/api/user/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const profile = await storage.getUserProfile(userId);
+      
+      if (!profile) {
+        return res.json(null);
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
   // POST /api/profile - Create or update user profile
   app.post("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
@@ -1898,7 +1927,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: user?.lastName,
         },
         profile: userProfile ? {
-          zodiacSign: userProfile.zodiacSign,
+          birthDate: userProfile.birthDate,
+          zodiacSign: getZodiacSignFromDate(userProfile.birthDate),
           giftPreference: userProfile.giftPreference,
           freeTimeActivity: userProfile.freeTimeActivity,
           musicalStyle: userProfile.musicalStyle,

@@ -37,6 +37,7 @@ interface UserWithStats {
   recipientsCount: number;
   purchasedGiftsCount: number;
   profileCompleted: boolean;
+  registrationSource: string;
 }
 
 const roleLabels: Record<string, string> = {
@@ -134,6 +135,7 @@ export default function UserList() {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Perfil</TableHead>
+              <TableHead>Origem</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Questionário</TableHead>
               <TableHead>Data de Criação</TableHead>
@@ -162,6 +164,19 @@ export default function UserList() {
                       data-testid={`badge-role-${user.id}`}
                     >
                       {roleLabels[user.role] || user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        user.registrationSource === "event_invite"
+                          ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700"
+                          : "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700"
+                      }
+                      data-testid={`badge-source-${user.id}`}
+                    >
+                      {user.registrationSource === "event_invite" ? "Convite" : "VIP Pass"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -240,7 +255,7 @@ export default function UserList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={11} className="text-center py-8">
                   <p className="text-muted-foreground">
                     Nenhum usuário encontrado
                   </p>

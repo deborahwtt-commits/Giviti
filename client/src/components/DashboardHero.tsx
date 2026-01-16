@@ -164,7 +164,7 @@ export default function DashboardHero({
                 {stats.giftsPurchased}
               </div>
               <div className="text-xs text-muted-foreground">
-                Presentes dados
+                Presentes comprados
               </div>
               {stats.totalSpent > 0 && (
                 <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium" data-testid="stat-total-spent">

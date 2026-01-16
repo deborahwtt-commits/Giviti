@@ -46,16 +46,43 @@ export async function setupAuth(app: Express): Promise<void> {
     try {
       const validatedData = registerUserSchema.parse(req.body);
       
-      // Validate access ticket (soft launch requirement)
-      const ticket = await storage.getAccessTicketByCode(validatedData.ticketCode);
-      if (!ticket) {
-        return res.status(400).json({ message: "Passe VIP inválido" });
+      let ticket = null;
+      let registeredViaInvite = false;
+      let inviteParticipant: any = null;
+      
+      // Check if registering via event invite token (bypass VIP pass requirement)
+      if (validatedData.inviteToken) {
+        const participant = await storage.getParticipantByInviteToken(validatedData.inviteToken);
+        if (participant && participant.status !== "accepted") {
+          // Validate that the registering email matches the invited participant's email
+          const participantEmail = participant.email?.toLowerCase().trim();
+          const registerEmail = validatedData.email.toLowerCase().trim();
+          
+          if (participantEmail && participantEmail === registerEmail) {
+            registeredViaInvite = true;
+            inviteParticipant = participant;
+            console.log(`[Register] User ${registerEmail} registering via event invite token`);
+          } else {
+            console.log(`[Register] Invite token email mismatch: expected ${participantEmail}, got ${registerEmail}`);
+          }
+        }
       }
-      if (!ticket.isActive) {
-        return res.status(400).json({ message: "Este passe VIP não está mais ativo" });
-      }
-      if (ticket.usedAccounts >= ticket.maxAccounts) {
-        return res.status(400).json({ message: "Este passe VIP já atingiu o limite de contas permitidas" });
+      
+      // If not registering via invite, validate access ticket (soft launch requirement)
+      if (!registeredViaInvite) {
+        if (!validatedData.ticketCode) {
+          return res.status(400).json({ message: "Passe VIP é obrigatório" });
+        }
+        ticket = await storage.getAccessTicketByCode(validatedData.ticketCode);
+        if (!ticket) {
+          return res.status(400).json({ message: "Passe VIP inválido" });
+        }
+        if (!ticket.isActive) {
+          return res.status(400).json({ message: "Este passe VIP não está mais ativo" });
+        }
+        if (ticket.usedAccounts >= ticket.maxAccounts) {
+          return res.status(400).json({ message: "Este passe VIP já atingiu o limite de contas permitidas" });
+        }
       }
       
       // Check if user already exists
@@ -67,16 +94,28 @@ export async function setupAuth(app: Express): Promise<void> {
       // Hash password
       const passwordHash = await bcrypt.hash(validatedData.password, SALT_ROUNDS);
 
+      // Determine registration source
+      const registrationSource = registeredViaInvite ? "event_invite" : "vip_pass";
+
       // Create user
       const newUser = await storage.createUser(
         validatedData.email,
         passwordHash,
         validatedData.firstName ?? undefined,
-        validatedData.lastName ?? undefined
+        validatedData.lastName ?? undefined,
+        registrationSource
       );
       
-      // Record ticket usage
-      await storage.useAccessTicket(ticket.id, newUser.id);
+      // Record ticket usage (only if registered via ticket)
+      if (ticket) {
+        await storage.useAccessTicket(ticket.id, newUser.id);
+      }
+      
+      // If registered via invite, mark the participant as accepted
+      if (registeredViaInvite && inviteParticipant) {
+        await storage.updateParticipantStatus(inviteParticipant.id, "accepted");
+        console.log(`[Register] Marked participant ${inviteParticipant.id} as accepted for user ${newUser.id}`);
+      }
 
       // Link any pending participant invitations to this new user
       const linkedCount = await storage.linkParticipantsByEmail(validatedData.email, newUser.id);

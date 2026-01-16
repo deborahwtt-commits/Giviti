@@ -6,6 +6,7 @@ import {
   insertCollaborativeEventSchema,
   insertCollaborativeEventParticipantSchema,
   insertCollaborativeEventLinkSchema,
+  getZodiacSignFromDate,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
@@ -125,8 +126,8 @@ export function registerCollabEventsRoutes(app: Express) {
       // Update participant status to accepted and link to user
       const updatedParticipant = await storage.updateParticipantStatus(participant.id, "accepted");
       
-      // Clear the invite token so it can't be used again
-      await storage.updateParticipantInviteToken(participant.id, "");
+      // Clear the invite token so it can't be used again (use null to avoid unique constraint violation)
+      await storage.updateParticipantInviteToken(participant.id, null);
       
       // Link participant to user if they have an email
       if (userEmail) {
@@ -214,7 +215,18 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Validate event date is not in the past
       if (validatedData.eventDate) {
-        const eventDate = new Date(validatedData.eventDate);
+        // eventDate may be Date (from Zod coercion) or string (raw input)
+        let eventDate: Date;
+        if (validatedData.eventDate instanceof Date) {
+          eventDate = validatedData.eventDate;
+        } else {
+          // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+          let dateString = validatedData.eventDate as unknown as string;
+          if (typeof dateString === 'string' && !dateString.includes('T')) {
+            dateString = dateString + 'T12:00:00';
+          }
+          eventDate = new Date(dateString);
+        }
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
@@ -277,7 +289,12 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Validate event date is not in the past if being updated
       if (req.body.eventDate !== undefined) {
-        const eventDate = new Date(req.body.eventDate);
+        // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+        let dateString = req.body.eventDate;
+        if (typeof dateString === 'string' && !dateString.includes('T')) {
+          dateString = dateString + 'T12:00:00';
+        }
+        const eventDate = new Date(dateString);
         
         // Check if date is valid
         if (isNaN(eventDate.getTime())) {
@@ -321,7 +338,12 @@ export function registerCollabEventsRoutes(app: Express) {
         return res.status(400).json({ error: "Nova data é obrigatória" });
       }
       
-      const newDate = new Date(eventDate);
+      // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
+      let dateString = eventDate;
+      if (typeof dateString === 'string' && !dateString.includes('T')) {
+        dateString = dateString + 'T12:00:00';
+      }
+      const newDate = new Date(dateString);
       
       // Check if date is valid
       if (isNaN(newDate.getTime())) {
@@ -1140,7 +1162,7 @@ export function registerCollabEventsRoutes(app: Express) {
               const profile = await storage.getUserProfile(receiver.userId);
               if (profile && profile.isCompleted) {
                 receiverProfile = {
-                  zodiacSign: profile.zodiacSign,
+                  zodiacSign: getZodiacSignFromDate(profile.birthDate),
                   giftPreference: profile.giftPreference,
                   freeTimeActivity: profile.freeTimeActivity,
                   musicalStyle: profile.musicalStyle,

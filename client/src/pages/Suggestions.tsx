@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles, ShoppingBag, Calendar } from "lucide-react";
 import { parseISO, isBefore, startOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,23 +43,64 @@ interface PurchaseModalProps {
   onSuccess: () => void;
 }
 
+// Currency formatting helpers
+function formatCurrencyInput(value: string): string {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/\D/g, "");
+  
+  if (!numericValue) return "";
+  
+  // Convert to number (in cents) and format
+  const cents = parseInt(numericValue, 10);
+  const reais = cents / 100;
+  
+  return reais.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function parseCurrencyToNumber(formattedValue: string): number {
+  // Remove currency symbol, dots (thousands) and replace comma with dot
+  const numericString = formattedValue
+    .replace(/[R$\s]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  
+  return parseFloat(numericString) || 0;
+}
+
 function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId, onSuccess }: PurchaseModalProps) {
   const { toast } = useToast();
   const [recipientId, setRecipientId] = useState(selectedRecipientId || "");
-  const [price, setPrice] = useState(product.price.toString());
+  const [priceDisplay, setPriceDisplay] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
       setRecipientId(selectedRecipientId || "");
-      setPrice(product.price.toString());
+      // Format initial price as currency
+      const initialPrice = product.price || 0;
+      setPriceDisplay(
+        initialPrice.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      );
       setPurchaseDate(format(new Date(), "yyyy-MM-dd"));
     }
   }, [open, selectedRecipientId, product.price]);
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCurrencyInput(e.target.value);
+    setPriceDisplay(formatted);
+  };
+
   const handleSubmit = async () => {
-    if (!price || parseFloat(price) <= 0) {
+    const numericPrice = parseCurrencyToNumber(priceDisplay);
+    
+    if (!priceDisplay || numericPrice <= 0) {
       toast({
         title: "Valor inválido",
         description: "Informe o valor pago pelo presente.",
@@ -73,19 +113,25 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
     try {
       const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
       
+      // "none" and "myself" both mean no specific recipient
+      const finalRecipientId = recipientId && recipientId !== "none" && recipientId !== "myself" 
+        ? recipientId 
+        : null;
+      
       await apiRequest("/api/gifts", "POST", {
-        recipientId: recipientId || null,
+        recipientId: finalRecipientId,
         suggestionId: internalId,
         name: product.name,
         description: product.description || product.store || "",
         imageUrl: product.imageUrl,
-        price: parseFloat(price).toFixed(2),
+        price: numericPrice.toFixed(2),
         purchaseUrl: product.productUrl || "",
         externalSource: product.source === "google" ? "google_shopping" : null,
         currencyCode: "BRL",
         isFavorite: false,
         isPurchased: true,
-        purchasedAt: new Date(purchaseDate).toISOString(),
+        // Parse date as local time by adding noon time to avoid UTC midnight timezone issues
+        purchasedAt: new Date(purchaseDate + "T12:00:00").toISOString(),
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
@@ -93,7 +139,7 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
       
       toast({
         title: "Presente registrado!",
-        description: `${product.name} foi marcado como comprado por R$ ${parseFloat(price).toFixed(2)}.`,
+        description: `${product.name} foi marcado como comprado por ${priceDisplay}.`,
       });
       
       onSuccess();
@@ -145,12 +191,11 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
               </Label>
               <Input
                 id="purchase-price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
+                type="text"
+                inputMode="numeric"
+                value={priceDisplay}
+                onChange={handlePriceChange}
+                placeholder="R$ 0,00"
                 className="mt-1"
                 data-testid="input-purchase-price"
               />
@@ -181,6 +226,7 @@ function PurchaseModal({ open, onClose, product, recipients, selectedRecipientId
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Não especificar</SelectItem>
+                  <SelectItem value="myself">Eu!</SelectItem>
                   {recipients.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
@@ -260,31 +306,43 @@ interface UnifiedProductCardProps {
 function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts }: UnifiedProductCardProps) {
   const internalId = product.source === "internal" ? product.id.replace("internal-", "") : null;
   
-  const existingGift = recipientId && internalId
-    ? userGifts?.find(ug => ug.suggestionId === internalId && ug.recipientId === recipientId)
+  // Find existing gift by suggestionId - for purchase status, check ANY gift with this suggestionId
+  const existingGift = internalId
+    ? userGifts?.find(ug => ug.suggestionId === internalId && (recipientId ? ug.recipientId === recipientId : !ug.recipientId))
     : undefined;
+  
+  // Check if this product was purchased (with ANY recipientId) - used to disable the purchase button
+  // For internal products: match by suggestionId
+  // For Google products: match by purchaseUrl (product URL)
+  const isPurchasedAnywhere = internalId
+    ? userGifts?.some(ug => ug.suggestionId === internalId && ug.isPurchased)
+    : product.productUrl
+      ? userGifts?.some(ug => ug.purchaseUrl === product.productUrl && ug.isPurchased)
+      : false;
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
-  const [purchased, setPurchased] = useState(existingGift?.isPurchased ?? false);
+  const [purchased, setPurchased] = useState(isPurchasedAnywhere ?? false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     setFavorite(existingGift?.isFavorite ?? false);
-    setPurchased(existingGift?.isPurchased ?? false);
-  }, [existingGift]);
+    // Only update purchased state if server confirms purchase - never reset to false
+    // This prevents the optimistic update from being overridden before refetch completes
+    if (isPurchasedAnywhere) {
+      setPurchased(true);
+    }
+  }, [existingGift, isPurchasedAnywhere]);
 
   const createGiftMutation = useMutation({
     mutationFn: async (data: { isFavorite: boolean; isPurchased: boolean }) => {
-      if (!recipientId) {
-        throw new Error("Recipient required to save gift");
-      }
       return await apiRequest("/api/gifts", "POST", {
-        recipientId,
+        recipientId: recipientId || null,
         suggestionId: internalId,
         name: product.name,
         description: product.description,
         imageUrl: product.imageUrl,
         price: product.price,
+        purchaseUrl: product.productUrl || "",
         isFavorite: data.isFavorite,
         isPurchased: data.isPurchased,
       });
@@ -347,60 +405,6 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
     }
   };
 
-  const handlePurchasedToggle = async (checked: boolean) => {
-    if (!recipientId) {
-      toast({
-        title: "Selecione um presenteado",
-        description: "Para marcar como comprado, escolha um presenteado específico no filtro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (product.source === "google") {
-      toast({
-        title: "Funcionalidade não disponível",
-        description: "Status de compra só pode ser salvo para produtos internos.",
-      });
-      return;
-    }
-
-    setPurchased(checked);
-
-    try {
-      if (existingGift) {
-        await updateGiftMutation.mutateAsync({
-          isFavorite: favorite,
-          isPurchased: checked,
-        });
-        if (checked) {
-          toast({
-            title: "Presente Comprado!",
-            description: `${product.name} foi marcado como comprado.`,
-          });
-        }
-      } else {
-        await createGiftMutation.mutateAsync({
-          isFavorite: false,
-          isPurchased: checked,
-        });
-        if (checked) {
-          toast({
-            title: "Presente Comprado!",
-            description: `${product.name} foi marcado como comprado.`,
-          });
-        }
-      }
-    } catch (error) {
-      setPurchased(!checked);
-      toast({
-        title: "Erro",
-        description: "Não foi possível marcar como comprado",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <Card className="overflow-hidden group hover-elevate" data-testid={`card-product-${product.id}`}>
       <div className="relative aspect-square bg-muted">
@@ -413,40 +417,22 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
           }}
         />
         
+        {/* Funcionalidade de favoritar temporariamente oculta
         {product.source === "internal" && (
-          <>
-            <button
-              onClick={handleFavoriteToggle}
-              className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
-                favorite
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background/80 text-foreground hover-elevate"
-              }`}
-              data-testid={`button-favorite-${product.id}`}
-              aria-label="Favoritar"
-            >
-              <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
-            </button>
-
-            <div className="absolute bottom-2 left-2">
-              <div className="flex items-center gap-1.5">
-                <Checkbox
-                  checked={purchased}
-                  onCheckedChange={handlePurchasedToggle}
-                  id={`purchased-${product.id}`}
-                  data-testid={`checkbox-purchased-${product.id}`}
-                  className="bg-background h-4 w-4"
-                />
-                <label
-                  htmlFor={`purchased-${product.id}`}
-                  className="text-xs font-medium text-background bg-foreground/90 px-1.5 py-0.5 rounded cursor-pointer"
-                >
-                  Comprado
-                </label>
-              </div>
-            </div>
-          </>
+          <button
+            onClick={handleFavoriteToggle}
+            className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${
+              favorite
+                ? "bg-primary text-primary-foreground"
+                : "bg-background/80 text-foreground hover-elevate"
+            }`}
+            data-testid={`button-favorite-${product.id}`}
+            aria-label="Favoritar"
+          >
+            <Heart className={`w-3 h-3 ${favorite ? "fill-current" : ""}`} />
+          </button>
         )}
+        */}
       </div>
       
       <div className="p-3">
