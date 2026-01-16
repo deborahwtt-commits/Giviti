@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   deactivatedBy: varchar("deactivated_by"),
   deactivatedAt: timestamp("deactivated_at"),
   lastLoginAt: timestamp("last_login_at"),
+  registrationSource: varchar("registration_source", { length: 20 }).default("vip_pass"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
