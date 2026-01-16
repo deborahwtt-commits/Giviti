@@ -729,11 +729,13 @@ export default function RoleDetail() {
   };
 
   // Get definirResponsaveis setting from typeSpecificData
-  const definirResponsaveis: boolean = event?.eventType === "themed_night" && 
+  const definirResponsaveis = Boolean(
+    event?.eventType === "themed_night" && 
     event?.typeSpecificData && 
     typeof event.typeSpecificData === "object" &&
     "definirResponsaveis" in event.typeSpecificData &&
-    (event.typeSpecificData as { definirResponsaveis?: boolean }).definirResponsaveis === true;
+    (event.typeSpecificData as { definirResponsaveis?: boolean }).definirResponsaveis === true
+  );
 
   // Create restriction mutation
   const createRestrictionMutation = useMutation({
@@ -1380,15 +1382,15 @@ export default function RoleDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Informações do Rolê</CardTitle>
+                <CardTitle className="text-base">Informações do Rolê</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {event.eventDate && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-date">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-date">
                         {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
@@ -1403,14 +1405,16 @@ export default function RoleDetail() {
                   const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
                   
                   return (
-                    <div className={`flex items-start gap-3 p-2 rounded-md ${
+                    <div className={`flex items-start gap-2 ${
+                      isExpired || isUrgent ? 'p-2 rounded-md' : ''
+                    } ${
                       isExpired 
                         ? 'bg-destructive/10' 
                         : isUrgent 
-                          ? 'bg-amber-100 dark:bg-amber-950'
+                          ? 'bg-amber-50 dark:bg-amber-950/30'
                           : ''
                     }`}>
-                      <Clock className={`w-5 h-5 mt-0.5 ${
+                      <Clock className={`w-4 h-4 mt-0.5 ${
                         isExpired 
                           ? 'text-destructive' 
                           : isUrgent 
@@ -1427,7 +1431,7 @@ export default function RoleDetail() {
                         }`}>
                           Prazo para Confirmar
                         </p>
-                        <p className={`text-sm ${
+                        <p className={`text-xs ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
@@ -1444,21 +1448,21 @@ export default function RoleDetail() {
                   );
                 })()}
                 {event.location && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Local</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-location">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-location">
                         {event.location}
                       </p>
                     </div>
                   </div>
                 )}
                 {/* Editable description section */}
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1">
                       <p className="text-sm font-medium">Descrição</p>
                       {isOwner && !isEditingDescription && (
                         <Button 
@@ -1506,22 +1510,22 @@ export default function RoleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground" data-testid="text-event-description">
+                      <p className="text-xs text-muted-foreground" data-testid="text-event-description">
                         {event.description || (isOwner ? "Nenhuma descrição definida. Clique em Editar para adicionar." : "Nenhuma descrição definida.")}
                       </p>
                     )}
                   </div>
                 </div>
                 {event.eventType === "themed_night" && themedCategory && (
-                  <div className="flex items-start gap-3">
-                    <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-2">
+                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Qual é a boa?</p>
-                      <p className="text-sm font-semibold" data-testid="text-themed-category-name">
+                      <p className="text-sm" data-testid="text-themed-category-name">
                         {themedCategory.name}
                       </p>
                       {themedCategory.description && (
-                        <p className="text-sm text-muted-foreground mt-1" data-testid="text-themed-category-description">
+                        <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-themed-category-description">
                           {themedCategory.description}
                         </p>
                       )}
@@ -1654,11 +1658,11 @@ export default function RoleDetail() {
             {event.eventType === "themed_night" && (
               <Card data-testid="card-themed-checklist">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ClipboardCheck className="w-5 h-5 text-violet-500" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ClipboardCheck className="w-5 h-5 text-muted-foreground" />
                     {definirResponsaveis ? "Quem leva o quê?" : "Lista de Itens"}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     {definirResponsaveis 
                       ? "Organize quem será responsável por cada item"
                       : "Sugestões de itens para o evento"
@@ -1738,12 +1742,12 @@ export default function RoleDetail() {
                             return (
                               <div
                                 key={task.id}
-                                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                className={`flex items-center gap-3 p-2 rounded-md border ${
                                   task.isCompleted 
-                                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                                    ? "bg-green-50/50 dark:bg-green-950/10 border-green-200/50 dark:border-green-800/50" 
                                     : hasNoAssignee 
-                                      ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
-                                      : "bg-muted/50"
+                                      ? "bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-800/50"
+                                      : "bg-muted/30 border-border/50"
                                 }`}
                                 data-testid={`task-item-${task.id}`}
                               >
@@ -1758,7 +1762,7 @@ export default function RoleDetail() {
                                 
                                 {/* Task title */}
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium ${task.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                                  <p className={`text-sm ${task.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                                     {task.title}
                                   </p>
                                   {definirResponsaveis && (
@@ -1773,7 +1777,7 @@ export default function RoleDetail() {
                                         }}
                                       >
                                         <SelectTrigger 
-                                          className={`h-7 text-xs w-auto min-w-[120px] ${hasNoAssignee ? "border-amber-300 dark:border-amber-700" : ""}`}
+                                          className="h-7 text-xs w-auto min-w-[100px]"
                                           data-testid={`select-assignee-${task.id}`}
                                         >
                                           <SelectValue placeholder="Quem leva?" />
@@ -1789,11 +1793,6 @@ export default function RoleDetail() {
                                           ))}
                                         </SelectContent>
                                       </Select>
-                                      {hasNoAssignee && (
-                                        <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                                          Sem responsável
-                                        </Badge>
-                                      )}
                                     </div>
                                   )}
                                   {!definirResponsaveis && assigneeName && (
@@ -1830,10 +1829,10 @@ export default function RoleDetail() {
                       
                       {/* Summary stats */}
                       {eventTasks && eventTasks.length > 0 && (
-                        <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
+                        <div className="flex justify-between text-xs text-muted-foreground pt-3 mt-2 border-t">
                           <span>{eventTasks.filter(t => t.isCompleted).length} de {eventTasks.length} itens confirmados</span>
                           {definirResponsaveis && (
-                            <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : ""}>
+                            <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
                               {eventTasks.filter(t => !t.assignedToParticipantId).length} sem responsável
                             </span>
                           )}
