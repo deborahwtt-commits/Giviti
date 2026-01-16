@@ -58,12 +58,17 @@ export const registerUserSchema = insertUserSchema
   .extend({
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
-    ticketCode: z.string().min(1, "Passe VIP é obrigatório"),
+    ticketCode: z.string().optional(),
+    inviteToken: z.string().optional(),
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.ticketCode || data.inviteToken, {
+    message: "Passe VIP ou convite de evento é obrigatório",
+    path: ["ticketCode"],
   });
 
 export const loginUserSchema = z.object({
