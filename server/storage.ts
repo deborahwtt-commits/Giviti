@@ -101,13 +101,11 @@ import {
   accessTickets,
   accessTicketUsage,
   waitlist,
-  userInvitations,
   type AccessTicket,
   type InsertAccessTicket,
   type AccessTicketUsage,
   type Waitlist,
   type InsertWaitlist,
-  type UserInvitation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, sql, inArray, isNull, isNotNull, desc, or, not } from "drizzle-orm";
@@ -437,15 +435,6 @@ export interface IStorage {
   createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist>;
   updateWaitlistEntry(id: string, updates: Partial<{ status: string; invitedAt: Date; ticketId: string }>): Promise<Waitlist | undefined>;
   deleteWaitlistEntry(id: string): Promise<boolean>;
-  
-  // ========== USER INVITATIONS (MAGIC LINK) ==========
-  createUserInvitation(inviterId: string, inviteeEmail: string, token: string, expiresAt: Date): Promise<UserInvitation>;
-  getUserInvitations(inviterId: string): Promise<UserInvitation[]>;
-  getUserInvitationByToken(token: string): Promise<UserInvitation | undefined>;
-  getUserInvitationByEmail(inviterId: string, inviteeEmail: string): Promise<UserInvitation | undefined>;
-  markInvitationUsed(invitationId: string, usedByUserId: string): Promise<UserInvitation | undefined>;
-  getUserInvitationsCount(inviterId: string): Promise<number>;
-  incrementUserInvitationsUsed(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3160,80 +3149,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(waitlist.id, id))
       .returning();
     return result.length > 0;
-  }
-
-  // ========== USER INVITATIONS (MAGIC LINK) ==========
-
-  async createUserInvitation(inviterId: string, inviteeEmail: string, token: string, expiresAt: Date): Promise<UserInvitation> {
-    const [invitation] = await db
-      .insert(userInvitations)
-      .values({
-        inviterId,
-        inviteeEmail: inviteeEmail.toLowerCase().trim(),
-        token,
-        expiresAt,
-      })
-      .returning();
-    return invitation;
-  }
-
-  async getUserInvitations(inviterId: string): Promise<UserInvitation[]> {
-    return await db
-      .select()
-      .from(userInvitations)
-      .where(eq(userInvitations.inviterId, inviterId))
-      .orderBy(desc(userInvitations.createdAt));
-  }
-
-  async getUserInvitationByToken(token: string): Promise<UserInvitation | undefined> {
-    const [invitation] = await db
-      .select()
-      .from(userInvitations)
-      .where(eq(userInvitations.token, token));
-    return invitation;
-  }
-
-  async getUserInvitationByEmail(inviterId: string, inviteeEmail: string): Promise<UserInvitation | undefined> {
-    const [invitation] = await db
-      .select()
-      .from(userInvitations)
-      .where(
-        and(
-          eq(userInvitations.inviterId, inviterId),
-          eq(userInvitations.inviteeEmail, inviteeEmail.toLowerCase().trim())
-        )
-      );
-    return invitation;
-  }
-
-  async markInvitationUsed(invitationId: string, usedByUserId: string): Promise<UserInvitation | undefined> {
-    const [updated] = await db
-      .update(userInvitations)
-      .set({
-        status: "used",
-        usedAt: new Date(),
-        usedByUserId,
-      })
-      .where(eq(userInvitations.id, invitationId))
-      .returning();
-    return updated;
-  }
-
-  async getUserInvitationsCount(inviterId: string): Promise<number> {
-    const result = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(userInvitations)
-      .where(eq(userInvitations.inviterId, inviterId));
-    return result[0]?.count || 0;
-  }
-
-  async incrementUserInvitationsUsed(userId: string): Promise<void> {
-    await db
-      .update(users)
-      .set({
-        invitationsUsed: sql`${users.invitationsUsed} + 1`,
-      })
-      .where(eq(users.id, userId));
   }
 }
 
