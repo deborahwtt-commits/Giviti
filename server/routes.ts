@@ -1521,7 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send email with magic link
       const inviterName = user.firstName || user.email.split("@")[0];
-      const magicLink = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://giviti.app"}/convite/${token}`;
+      const magicLink = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://giviti.app"}/registro/${token}`;
       
       try {
         const { Resend } = await import("resend");
@@ -1628,6 +1628,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error validating invitation:", error);
       res.status(500).json({ valid: false, message: "Failed to validate invitation" });
+    }
+  });
+
+  // POST /api/register-invite - Register a new user via magic link invitation (public route)
+  app.post("/api/register-invite", async (req: any, res) => {
+    try {
+      const { email, password, confirmPassword, firstName, lastName, inviteToken } = req.body;
+
+      // Validate required fields
+      if (!email || !password || !inviteToken) {
+        return res.status(400).json({ message: "Email, senha e token são obrigatórios" });
+      }
+
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "As senhas não coincidem" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres" });
+      }
+
+      // Validate invitation token
+      const invitation = await storage.getUserInvitationByToken(inviteToken);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status === "used") {
+        return res.status(400).json({ message: "Este convite já foi utilizado" });
+      }
+
+      if (new Date() > invitation.expiresAt) {
+        return res.status(400).json({ message: "Este convite expirou" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Verify the email matches the invitation
+      if (normalizedEmail !== invitation.inviteeEmail) {
+        return res.status(400).json({ message: "O email não corresponde ao convite" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(400).json({ message: "Este email já está cadastrado" });
+      }
+
+      // Hash password and create user
+      const bcrypt = await import("bcrypt");
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      const newUser = await storage.createUser(normalizedEmail, passwordHash, firstName, lastName);
+
+      // Mark invitation as used
+      await storage.markInvitationUsed(invitation.id, newUser.id);
+
+      // Log the user in automatically
+      req.login(newUser, (err: Error | null) => {
+        if (err) {
+          console.error("Error logging in after registration:", err);
+          return res.status(201).json({ 
+            message: "Conta criada! Faça login para continuar.",
+            ...newUser 
+          });
+        }
+
+        const { passwordHash: _, ...userWithoutPassword } = newUser;
+        res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Error registering via invitation:", error);
+      res.status(500).json({ message: "Erro ao criar conta" });
     }
   });
 

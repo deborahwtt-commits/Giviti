@@ -29,6 +29,7 @@ import BirthdayManage from "@/pages/BirthdayManage";
 import PublicBirthday from "@/pages/PublicBirthday";
 import ReceivedInvitations from "@/pages/ReceivedInvitations";
 import AcceptInvitation from "@/pages/AcceptInvitation";
+import InviteRegister from "@/pages/InviteRegister";
 import FAQ from "@/pages/FAQ";
 
 function AuthenticatedApp() {
@@ -75,6 +76,15 @@ function AuthenticatedApp() {
     return (
       <Switch>
         <Route path="/convite/:token" component={AcceptInvitation} />
+      </Switch>
+    );
+  }
+
+  // Allow magic link registration page without authentication
+  if (location.startsWith("/registro/")) {
+    return (
+      <Switch>
+        <Route path="/registro/:token" component={InviteRegister} />
       </Switch>
     );
   }
