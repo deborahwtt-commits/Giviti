@@ -163,7 +163,7 @@ export interface IStorage {
   // User operations - email/password authentication
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User>;
+  createUser(email: string, passwordHash: string, firstName?: string, lastName?: string, registrationSource?: string): Promise<User>;
   updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean>;
 
   // Password reset tokens
@@ -450,7 +450,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(email: string, passwordHash: string, firstName?: string, lastName?: string): Promise<User> {
+  async createUser(email: string, passwordHash: string, firstName?: string, lastName?: string, registrationSource?: string): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
@@ -458,6 +458,7 @@ export class DatabaseStorage implements IStorage {
         passwordHash,
         firstName,
         lastName,
+        registrationSource: registrationSource || "vip_pass",
       })
       .returning();
     return user;

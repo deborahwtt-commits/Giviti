@@ -94,12 +94,16 @@ export async function setupAuth(app: Express): Promise<void> {
       // Hash password
       const passwordHash = await bcrypt.hash(validatedData.password, SALT_ROUNDS);
 
+      // Determine registration source
+      const registrationSource = registeredViaInvite ? "event_invite" : "vip_pass";
+
       // Create user
       const newUser = await storage.createUser(
         validatedData.email,
         passwordHash,
         validatedData.firstName ?? undefined,
-        validatedData.lastName ?? undefined
+        validatedData.lastName ?? undefined,
+        registrationSource
       );
       
       // Record ticket usage (only if registered via ticket)
