@@ -67,6 +67,7 @@ import {
   Ban,
   Plus,
   Pencil,
+  UserCheck,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -322,6 +323,9 @@ export default function RoleDetail() {
   
   // Check if current user is a system admin
   const isSystemAdmin = user?.role === "admin";
+  
+  // Find the current user's participant record (for task assignment rules)
+  const currentUserParticipant = participants?.find(p => p.userId === user?.id);
 
   // Draw status query - for owners and system admins
   const { data: drawStatus, isLoading: drawStatusLoading } = useQuery<{
@@ -1684,32 +1688,60 @@ export default function RoleDetail() {
                                 
                                 {/* Assignee select or display - same line */}
                                 {definirResponsaveis ? (
-                                  <Select
-                                    value={task.assignedToParticipantId || "none"}
-                                    onValueChange={(value) => {
-                                      assignTaskMutation.mutate({ 
-                                        taskId: task.id, 
-                                        participantId: value === "none" ? null : value 
-                                      });
-                                    }}
-                                  >
-                                    <SelectTrigger 
-                                      className="h-7 text-xs w-auto min-w-[100px] shrink-0"
-                                      data-testid={`select-assignee-${task.id}`}
+                                  isOwner ? (
+                                    // Owner can assign anyone to any item
+                                    <Select
+                                      value={task.assignedToParticipantId || "none"}
+                                      onValueChange={(value) => {
+                                        assignTaskMutation.mutate({ 
+                                          taskId: task.id, 
+                                          participantId: value === "none" ? null : value 
+                                        });
+                                      }}
                                     >
-                                      <SelectValue placeholder="Quem leva?" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">
-                                        <span className="text-muted-foreground">Ninguém</span>
-                                      </SelectItem>
-                                      {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
-                                        <SelectItem key={p.id} value={p.id}>
-                                          {p.name || p.email}
+                                      <SelectTrigger 
+                                        className="h-7 text-xs w-auto min-w-[100px] shrink-0"
+                                        data-testid={`select-assignee-${task.id}`}
+                                      >
+                                        <SelectValue placeholder="Quem leva?" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">
+                                          <span className="text-muted-foreground">Ninguém</span>
                                         </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                        {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
+                                          <SelectItem key={p.id} value={p.id}>
+                                            {p.name || p.email}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : task.assignedToParticipantId ? (
+                                    // Participant sees assigned item - cannot change
+                                    <Badge variant="secondary" className="text-xs shrink-0">
+                                      {getParticipantName(task.assignedToParticipantId)}
+                                    </Badge>
+                                  ) : (
+                                    // Participant sees unassigned item - can claim it
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs shrink-0"
+                                      onClick={() => {
+                                        if (currentUserParticipant) {
+                                          assignTaskMutation.mutate({ 
+                                            taskId: task.id, 
+                                            participantId: currentUserParticipant.id 
+                                          });
+                                        }
+                                      }}
+                                      disabled={assignTaskMutation.isPending || !currentUserParticipant}
+                                      data-testid={`button-claim-task-${task.id}`}
+                                    >
+                                      <UserCheck className="w-3 h-3 mr-1" />
+                                      Eu levo
+                                    </Button>
+                                  )
                                 ) : task.assignedToParticipantId ? (
                                   <span className="text-xs text-muted-foreground shrink-0">
                                     {getParticipantName(task.assignedToParticipantId)}
