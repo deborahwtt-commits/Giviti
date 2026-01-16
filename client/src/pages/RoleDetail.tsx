@@ -1363,6 +1363,22 @@ export default function RoleDetail() {
                 <CardTitle className="text-base">Informações do Rolê</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {event.eventType === "themed_night" && themedCategory && (
+                  <div className="flex items-start gap-2">
+                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Qual é a boa?</p>
+                      <p className="text-sm" data-testid="text-themed-category-name">
+                        {themedCategory.name}
+                      </p>
+                      {themedCategory.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-themed-category-description">
+                          {themedCategory.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {event.eventDate && (
                   <div className="flex items-start gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
@@ -1494,22 +1510,6 @@ export default function RoleDetail() {
                     )}
                   </div>
                 </div>
-                {event.eventType === "themed_night" && themedCategory && (
-                  <div className="flex items-start gap-2">
-                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Qual é a boa?</p>
-                      <p className="text-sm" data-testid="text-themed-category-name">
-                        {themedCategory.name}
-                      </p>
-                      {themedCategory.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-themed-category-description">
-                          {themedCategory.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
