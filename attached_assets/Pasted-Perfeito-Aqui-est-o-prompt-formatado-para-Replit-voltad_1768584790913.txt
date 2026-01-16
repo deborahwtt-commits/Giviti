@@ -1,0 +1,103 @@
+Perfeito! Aqui está o prompt formatado para Replit, voltado para desenvolvedores implementarem o novo tipo de rolê “Viagem em Grupo” no Giviti, com uma lógica simplificada para MVP.
+
+⸻
+
+🟢 Prompt Replit – Novo Tipo de Rolê: Viagem em Grupo
+
+Objetivo:
+Adicionar o tipo de rolê “Viagem em Grupo” no app Giviti com funcionalidades mínimas viáveis (MVP) para planejamento colaborativo, incluindo sugestão de destinos com valores estimados e votação entre os participantes.
+
+⸻
+
+✅ Funcionalidades obrigatórias (MVP):
+
+1. Novo tipo de rolê
+	•	Adicionar “Viagem em Grupo” como opção no seletor de tipo de evento.
+	•	Chave a ser usada: "tipoRole": "viagem_grupo"
+
+⸻
+
+2. Sugestão de destinos + votação (opcional)
+	•	Adicionar opção:
+“Deseja sugerir locais para votação?” → boolean (true / false)
+	•	Se true: permitir inserir até 3 sugestões de destinos com valor estimado:
+
+"sugestoesViagem": [
+  { "local": "Praia do Rosa", "valorEstimado": 500 },
+  { "local": "Campos do Jordão", "valorEstimado": 650 },
+  { "local": "Capitólio", "valorEstimado": 550 }
+]
+
+	•	Participantes poderão votar em 1 dos 3 destinos
+	•	Mostrar votos acumulados para cada opção
+	•	Definir local escolhido com base na maioria
+
+⸻
+
+3. Confirmação de presença
+	•	Participantes devem confirmar se vão:
+Botão: "Vai nessa viagem?" → adiciona nome à lista confirmados
+
+"confirmados": ["João", "Lia", "Carlos"]
+
+
+⸻
+
+4. Campo de custo estimado por pessoa (opcional)
+	•	Inserido pelo organizador:
+
+"custoPorPessoa": 550
+
+
+⸻
+
+5. Checklist de itens compartilhados (como em festas)
+	•	Lista com campos de nome do item e responsável (editável)
+
+"itensCompartilhados": [
+  { "nome": "Caixa de som", "responsavel": "João" },
+  { "nome": "Cooler", "responsavel": "" }
+]
+
+
+⸻
+
+6. Campo opcional: link do destino (Google Maps ou site)
+
+"linkDestino": "https://maps.google.com/?q=Campos+do+Jordão"
+
+
+⸻
+
+📦 Exemplo de estrutura final do evento (viagem_grupo):
+
+{
+  "tipoRole": "viagem_grupo",
+  "sugestoesViagem": [
+    { "local": "Praia do Rosa", "valorEstimado": 500, "votos": 3 },
+    { "local": "Campos do Jordão", "valorEstimado": 650, "votos": 5 },
+    { "local": "Capitólio", "valorEstimado": 550, "votos": 2 }
+  ],
+  "confirmados": ["João", "Lia", "Carlos"],
+  "custoPorPessoa": 550,
+  "itensCompartilhados": [
+    { "nome": "Caixa de som", "responsavel": "João" },
+    { "nome": "Cooler", "responsavel": "" }
+  ],
+  "linkDestino": "https://maps.google.com/?q=Campos+do+Jordão"
+}
+
+
+⸻
+
+⚙️ Sugestões técnicas:
+	•	Criar componentes reutilizáveis para:
+	•	Votação
+	•	Lista de confirmados
+	•	Itens compartilhados
+	•	Reutilizar lógicas existentes de checklist de festas
+	•	Usar um campo tipoRole para condicionar qual layout ou formulário será renderizado
+
+⸻
+
+Se quiser, posso te ajudar a gerar os componentes (ex: React ou Vue) ou definir um schema para banco (MongoDB, Firebase, etc). Deseja isso também?
