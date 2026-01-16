@@ -1368,11 +1368,14 @@ export default function RoleDetail() {
                     <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Qual é a boa?</p>
-                      <p className="text-sm" data-testid="text-themed-category-name">
+                      <Badge 
+                        className="bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-700 mt-1"
+                        data-testid="text-themed-category-name"
+                      >
                         {themedCategory.name}
-                      </p>
+                      </Badge>
                       {themedCategory.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-themed-category-description">
+                        <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-themed-category-description">
                           {themedCategory.description}
                         </p>
                       )}
