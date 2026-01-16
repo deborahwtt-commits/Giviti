@@ -48,11 +48,14 @@ export default function Landing() {
 
   // Check for pending invite token from event invitation
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
+  const [pendingInviteEventName, setPendingInviteEventName] = useState<string | null>(null);
   
   useEffect(() => {
     const token = localStorage.getItem("pendingInviteToken");
+    const eventName = localStorage.getItem("pendingInviteEventName");
     if (token) {
       setPendingInviteToken(token);
+      setPendingInviteEventName(eventName);
       setActiveTab("register");
     }
   }, []);
@@ -158,6 +161,10 @@ export default function Landing() {
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
+      // Clear pending invite token and event name if any (user logged in instead of registering)
+      localStorage.removeItem("pendingInviteToken");
+      localStorage.removeItem("pendingInviteEventName");
+      
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
       if (keepLoggedIn) {
@@ -213,8 +220,9 @@ export default function Landing() {
     },
     onSuccess: async (data: any) => {
       setRegisterError(null);
-      // Clear pending invite token if any
+      // Clear pending invite token and event name if any
       localStorage.removeItem("pendingInviteToken");
+      localStorage.removeItem("pendingInviteEventName");
       
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
@@ -461,7 +469,12 @@ export default function Landing() {
                             <div className="rounded-md bg-primary/10 p-3 border border-primary/20">
                               <p className="text-sm text-primary flex items-center gap-2">
                                 <Gift className="h-4 w-4" />
-                                <span>Você foi convidado para um evento! Use o mesmo e-mail do convite.</span>
+                                <span>
+                                  {pendingInviteEventName 
+                                    ? `Você foi convidado para "${pendingInviteEventName}"! Use o mesmo e-mail do convite.`
+                                    : "Você foi convidado para um evento! Use o mesmo e-mail do convite."
+                                  }
+                                </span>
                               </p>
                             </div>
                             <Button
@@ -471,7 +484,9 @@ export default function Landing() {
                               className="text-xs text-muted-foreground"
                               onClick={() => {
                                 localStorage.removeItem("pendingInviteToken");
+                                localStorage.removeItem("pendingInviteEventName");
                                 setPendingInviteToken(null);
+                                setPendingInviteEventName(null);
                               }}
                               data-testid="button-use-vip-pass"
                             >
