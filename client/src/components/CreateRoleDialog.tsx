@@ -315,9 +315,9 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                             data-testid={`option-type-${option.value}`}
                           >
                             <div className="flex items-center gap-2">
-                              <Icon className="w-4 h-4" />
+                              <Icon className="w-4 h-4 text-muted-foreground" />
                               <div>
-                                <div className="font-medium">{option.label}</div>
+                                <div className="text-sm font-medium">{option.label}</div>
                                 <div className="text-xs text-muted-foreground">
                                   {option.description}
                                 </div>
@@ -364,7 +364,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                                 data-testid={`option-category-${category.id}`}
                               >
                                 <div>
-                                  <div className="font-medium">{category.name}</div>
+                                  <div className="text-sm font-medium">{category.name}</div>
                                   {category.description && (
                                     <div className="text-xs text-muted-foreground">
                                       {category.description}
@@ -376,7 +376,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                           )}
                         </SelectContent>
                       </Select>
-                      <FormDescription>
+                      <FormDescription className="text-xs">
                         Escolha o tema da noite temática
                       </FormDescription>
                       <FormMessage />
@@ -384,11 +384,11 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                       {/* Show selected category description */}
                       {selectedCategory?.description && (
                         <div 
-                          className="mt-3 p-3 rounded-md bg-muted/50 border border-muted text-sm text-muted-foreground"
+                          className="mt-2 p-3 rounded-lg border text-sm"
                           data-testid="themed-category-description"
                         >
-                          <p className="font-medium text-foreground mb-1">{selectedCategory.name}</p>
-                          <p>{selectedCategory.description}</p>
+                          <p className="font-medium text-sm mb-0.5">{selectedCategory.name}</p>
+                          <p className="text-xs text-muted-foreground">{selectedCategory.description}</p>
                         </div>
                       )}
                     </FormItem>
@@ -400,13 +400,13 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                   control={form.control}
                   name="definirResponsaveis"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-violet-50/50 dark:bg-violet-950/20">
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 gap-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4 text-violet-500" />
+                        <FormLabel className="text-sm font-medium flex items-center gap-2">
+                          <ClipboardList className="w-4 h-4 text-muted-foreground" />
                           Definir quem leva o quê?
                         </FormLabel>
-                        <FormDescription className="text-sm">
+                        <FormDescription className="text-xs">
                           Crie uma lista de itens e atribua responsáveis para cada um
                         </FormDescription>
                       </div>
