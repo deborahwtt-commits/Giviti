@@ -636,10 +636,6 @@ export default function RoleDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
       setNewTaskTitle("");
       setIsAddingTask(false);
-      toast({
-        title: "Item adicionado",
-        description: "O item foi adicionado à lista.",
-      });
     },
     onError: (error: Error) => {
       toast({
