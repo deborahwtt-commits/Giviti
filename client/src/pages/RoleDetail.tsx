@@ -68,6 +68,9 @@ import {
   Plus,
   Pencil,
   UserCheck,
+  Plane,
+  Hotel,
+  Map,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,6 +97,11 @@ const eventTypeInfo: Record<string, { label: string; className: string; Icon: Lu
     label: "Desafio Criativo", 
     className: "bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-700", 
     Icon: Sparkles 
+  },
+  group_trip: { 
+    label: "Viagem em Grupo", 
+    className: "bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-700", 
+    Icon: Plane 
   },
 };
 
@@ -169,6 +177,15 @@ interface CollectiveGiftData {
   giftDescription?: string;
   purchaseLink?: string;
   recipientName?: string;
+}
+
+interface GroupTripData {
+  destino?: string;
+  googleMapsLink?: string;
+  hospedagemLink?: string;
+  custoEstimadoPorPessoa?: string;
+  dataFim?: string;
+  definirResponsaveis?: boolean;
 }
 
 interface ContributionWithParticipant {
@@ -311,7 +328,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "themed_night",
+    enabled: !!id && !!event && (event.eventType === "themed_night" || event.eventType === "group_trip"),
   });
 
   // State for adding new task items
@@ -695,8 +712,9 @@ export default function RoleDetail() {
   };
 
   // Get definirResponsaveis setting from typeSpecificData
+  // For group_trip, checklist is always enabled
   const definirResponsaveis = Boolean(
-    event?.eventType === "themed_night" && 
+    (event?.eventType === "themed_night" || event?.eventType === "group_trip") && 
     event?.typeSpecificData && 
     typeof event.typeSpecificData === "object" &&
     "definirResponsaveis" in event.typeSpecificData &&
@@ -830,6 +848,33 @@ export default function RoleDetail() {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar a contribuição",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Confirm trip participation mutation
+  const confirmTripMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUserParticipant) throw new Error("Participante não encontrado");
+      const response = await apiRequest(`/api/collab-events/${id}/participants/${currentUserParticipant.id}/status`, "PATCH", { status: "accepted" });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao confirmar participação");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      toast({
+        title: "Presença confirmada!",
+        description: "Você confirmou que vai nessa viagem.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao confirmar",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -1587,8 +1632,8 @@ export default function RoleDetail() {
               </Card>
             )}
 
-            {/* Themed Night Checklist Card */}
-            {event.eventType === "themed_night" && (
+            {/* Themed Night / Group Trip Checklist Card */}
+            {(event.eventType === "themed_night" || event.eventType === "group_trip") && (
               <Card data-testid="card-themed-checklist">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -1989,6 +2034,179 @@ export default function RoleDetail() {
                       </CardContent>
                     </Card>
                   )}
+                </>
+              );
+            })()}
+
+            {/* Group Trip Section */}
+            {event.eventType === "group_trip" && (() => {
+              const tripData = event.typeSpecificData as GroupTripData | null;
+              const confirmedParticipants = participants?.filter(p => p.status === "accepted") || [];
+              const pendingParticipants = participants?.filter(p => p.status !== "accepted" && p.status !== "declined") || [];
+              
+              return (
+                <>
+                  {/* Trip Details Card */}
+                  <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Plane className="w-5 h-5 text-blue-500" />
+                        Detalhes da Viagem
+                      </CardTitle>
+                      {tripData?.destino && (
+                        <CardDescription>
+                          Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Dates */}
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Período</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM", { locale: ptBR })}
+                            {tripData?.dataFim && (
+                              <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Cost */}
+                      {tripData?.custoEstimadoPorPessoa && (
+                        <div className="flex items-start gap-3 pt-2 border-t">
+                          <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium">Custo estimado por pessoa</p>
+                            <p className="text-lg font-semibold" data-testid="text-custo-estimado">
+                              {tripData.custoEstimadoPorPessoa}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Links */}
+                      <div className="flex flex-wrap gap-2 pt-2 border-t">
+                        {tripData?.googleMapsLink && (
+                          <a 
+                            href={tripData.googleMapsLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
+                              <Map className="w-4 h-4" />
+                              Ver no Maps
+                            </Button>
+                          </a>
+                        )}
+                        {tripData?.hospedagemLink && (
+                          <a 
+                            href={tripData.hospedagemLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
+                              <Hotel className="w-4 h-4" />
+                              Ver Hospedagem
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Confirmation Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserCheck className="w-5 h-5" />
+                        Confirmados ({confirmedParticipants.length})
+                      </CardTitle>
+                      <CardDescription>
+                        Quem vai nessa viagem
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {/* RSVP Button for participants */}
+                      {currentUserParticipant && currentUserParticipant.status !== "accepted" && (
+                        <div className="mb-4 pb-4 border-b">
+                          <Button
+                            onClick={() => confirmTripMutation.mutate()}
+                            disabled={confirmTripMutation.isPending}
+                            className="w-full bg-blue-500 hover:bg-blue-600"
+                            data-testid="button-confirm-trip"
+                          >
+                            {confirmTripMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <Check className="w-4 h-4 mr-2" />
+                            )}
+                            Vou nessa viagem!
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Confirmed list */}
+                      {confirmedParticipants.length > 0 ? (
+                        <div className="space-y-2">
+                          {confirmedParticipants.map((participant) => {
+                            const name = participant.name || participant.email || "Participante";
+                            const initials = name.substring(0, 2).toUpperCase();
+                            return (
+                              <div 
+                                key={participant.id}
+                                className="flex items-center gap-3 p-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+                                data-testid={`confirmed-participant-${participant.id}`}
+                              >
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="text-xs bg-green-100 dark:bg-green-900">{initials}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium">{name}</span>
+                                <Badge className="ml-auto bg-green-500 hover:bg-green-600">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  Confirmado
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Nenhuma confirmação ainda</p>
+                        </div>
+                      )}
+                      
+                      {/* Pending list */}
+                      {pendingParticipants.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            Aguardando confirmação ({pendingParticipants.length})
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {pendingParticipants.map((participant) => {
+                              const name = participant.name || participant.email || "Participante";
+                              const initials = name.substring(0, 2).toUpperCase();
+                              return (
+                                <Tooltip key={participant.id}>
+                                  <TooltipTrigger>
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </>
               );
             })()}
