@@ -72,27 +72,26 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
 import type { CollaborativeEvent, CollaborativeEventParticipant, CollaborativeEventTask } from "@shared/schema";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const eventTypeInfo: Record<string, { label: string; className: string; Icon: LucideIcon }> = {
   secret_santa: { 
     label: "Amigo Secreto", 
-    className: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800", 
+    className: "bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:border-yellow-700", 
     Icon: Gift 
   },
   themed_night: { 
     label: "Evento Temático", 
-    className: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800", 
+    className: "bg-violet-500 text-white border-violet-600 dark:bg-violet-600 dark:border-violet-700", 
     Icon: PartyPopper 
   },
   collective_gift: { 
     label: "Presente Coletivo", 
-    className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800", 
+    className: "bg-emerald-500 text-white border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700", 
     Icon: Heart 
   },
   creative_challenge: { 
     label: "Desafio Criativo", 
-    className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
+    className: "bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-700", 
     Icon: Sparkles 
   },
 };
@@ -699,27 +698,6 @@ export default function RoleDetail() {
     },
   });
 
-  // Mark task as completed mutation
-  const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
-      const response = await apiRequest(`/api/collab-events/${id}/tasks/${taskId}/complete`, "PATCH", { completed });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Erro ao marcar item");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "tasks"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar item",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   // Helper function to get participant name by id
   const getParticipantName = (participantId: string | null): string | null => {
@@ -1734,85 +1712,69 @@ export default function RoleDetail() {
 
                       {/* Tasks list */}
                       {eventTasks && eventTasks.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {eventTasks.map((task) => {
-                            const assigneeName = getParticipantName(task.assignedToParticipantId);
                             const hasNoAssignee = definirResponsaveis && !task.assignedToParticipantId;
                             
                             return (
                               <div
                                 key={task.id}
-                                className={`flex items-center gap-3 p-2 rounded-md border ${
-                                  task.isCompleted 
-                                    ? "bg-green-50/50 dark:bg-green-950/10 border-green-200/50 dark:border-green-800/50" 
-                                    : hasNoAssignee 
-                                      ? "bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-800/50"
-                                      : "bg-muted/30 border-border/50"
+                                className={`flex items-center gap-2 p-2 rounded-md border ${
+                                  hasNoAssignee 
+                                    ? "bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-800/50"
+                                    : "bg-muted/30 border-border/50"
                                 }`}
                                 data-testid={`task-item-${task.id}`}
                               >
-                                {/* Checkbox */}
-                                <Checkbox
-                                  checked={task.isCompleted}
-                                  onCheckedChange={(checked) => {
-                                    completeTaskMutation.mutate({ taskId: task.id, completed: checked === true });
-                                  }}
-                                  data-testid={`checkbox-task-${task.id}`}
-                                />
-                                
                                 {/* Task title */}
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm ${task.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                                    {task.title}
-                                  </p>
-                                  {definirResponsaveis && (
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Select
-                                        value={task.assignedToParticipantId || "none"}
-                                        onValueChange={(value) => {
-                                          assignTaskMutation.mutate({ 
-                                            taskId: task.id, 
-                                            participantId: value === "none" ? null : value 
-                                          });
-                                        }}
-                                      >
-                                        <SelectTrigger 
-                                          className="h-7 text-xs w-auto min-w-[100px]"
-                                          data-testid={`select-assignee-${task.id}`}
-                                        >
-                                          <SelectValue placeholder="Quem leva?" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="none">
-                                            <span className="text-muted-foreground">Ninguém</span>
-                                          </SelectItem>
-                                          {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                              {p.name || p.email}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  )}
-                                  {!definirResponsaveis && assigneeName && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Responsável: {assigneeName}
-                                    </p>
-                                  )}
-                                </div>
+                                <p className="text-sm flex-1 min-w-0 truncate">
+                                  {task.title}
+                                </p>
+                                
+                                {/* Assignee select or display - same line */}
+                                {definirResponsaveis ? (
+                                  <Select
+                                    value={task.assignedToParticipantId || "none"}
+                                    onValueChange={(value) => {
+                                      assignTaskMutation.mutate({ 
+                                        taskId: task.id, 
+                                        participantId: value === "none" ? null : value 
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger 
+                                      className="h-7 text-xs w-auto min-w-[100px] shrink-0"
+                                      data-testid={`select-assignee-${task.id}`}
+                                    >
+                                      <SelectValue placeholder="Quem leva?" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">
+                                        <span className="text-muted-foreground">Ninguém</span>
+                                      </SelectItem>
+                                      {participants?.filter(p => p.status === "accepted" || p.role === "owner").map((p) => (
+                                        <SelectItem key={p.id} value={p.id}>
+                                          {p.name || p.email}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : task.assignedToParticipantId ? (
+                                  <span className="text-xs text-muted-foreground shrink-0">
+                                    {getParticipantName(task.assignedToParticipantId)}
+                                  </span>
+                                ) : null}
                                 
                                 {/* Delete button (owner only) */}
                                 {isOwner && (
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 shrink-0"
                                     onClick={() => deleteTaskMutation.mutate(task.id)}
                                     disabled={deleteTaskMutation.isPending}
                                     data-testid={`button-delete-task-${task.id}`}
                                   >
-                                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                                    <Trash2 className="w-4 h-4 text-muted-foreground" />
                                   </Button>
                                 )}
                               </div>
@@ -1828,14 +1790,12 @@ export default function RoleDetail() {
                       )}
                       
                       {/* Summary stats */}
-                      {eventTasks && eventTasks.length > 0 && (
+                      {eventTasks && eventTasks.length > 0 && definirResponsaveis && (
                         <div className="flex justify-between text-xs text-muted-foreground pt-3 mt-2 border-t">
-                          <span>{eventTasks.filter(t => t.isCompleted).length} de {eventTasks.length} itens confirmados</span>
-                          {definirResponsaveis && (
-                            <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
-                              {eventTasks.filter(t => !t.assignedToParticipantId).length} sem responsável
-                            </span>
-                          )}
+                          <span>{eventTasks.filter(t => t.assignedToParticipantId).length} de {eventTasks.length} itens atribuídos</span>
+                          <span className={eventTasks.filter(t => !t.assignedToParticipantId).length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
+                            {eventTasks.filter(t => !t.assignedToParticipantId).length} sem responsável
+                          </span>
                         </div>
                       )}
                     </>
