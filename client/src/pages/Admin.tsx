@@ -17,7 +17,10 @@ import {
   ExternalLink,
   Clock,
   UserX,
-  Ticket
+  Ticket,
+  ClipboardCheck,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -89,6 +92,14 @@ interface WishlistClickedItem {
   ownerName: string;
 }
 
+interface ChecklistStats {
+  totalItems: number;
+  assignedItems: number;
+  unassignedItems: number;
+  assignedPercentage: number;
+  topItems: Array<{ name: string; count: number }>;
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -124,6 +135,11 @@ export default function Admin() {
 
   const { data: wishlistClicks } = useQuery<WishlistClickedItem[]>({
     queryKey: ["/api/admin/wishlist-clicks"],
+    enabled: hasAdminAccess,
+  });
+
+  const { data: checklistStats } = useQuery<ChecklistStats>({
+    queryKey: ["/api/admin/checklist-stats"],
     enabled: hasAdminAccess,
   });
 
@@ -465,6 +481,56 @@ export default function Admin() {
                 <MousePointerClick className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Nenhum clique registrado ainda</p>
                 <p className="text-sm mt-1">Os cliques nos links de produtos aparecerão aqui</p>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Estatísticas do Checklist "Quem leva o quê" */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5" />
+            Checklist: Quem Leva o Quê
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+            <AdminStatsCard
+              title="Total de Itens"
+              value={checklistStats?.totalItems || 0}
+              icon={ClipboardCheck}
+            />
+            <AdminStatsCard
+              title="Itens Atribuídos"
+              value={checklistStats?.assignedItems || 0}
+              icon={CheckCircle2}
+              description={`${checklistStats?.assignedPercentage || 0}% do total`}
+            />
+            <AdminStatsCard
+              title="Sem Responsável"
+              value={checklistStats?.unassignedItems || 0}
+              icon={AlertCircle}
+            />
+          </div>
+          <Card className="p-6" data-testid="checklist-top-items-section">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">Top 10 Itens Mais Adicionados</h3>
+            {checklistStats?.topItems && checklistStats.topItems.length > 0 ? (
+              <div className="space-y-3">
+                {checklistStats.topItems.map((item, index) => (
+                  <div key={item.name} className="flex justify-between items-center" data-testid={`top-item-row-${index}`}>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={index < 3 ? "default" : "secondary"} className="w-8 justify-center">
+                        {index + 1}
+                      </Badge>
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    <Badge variant="outline">{item.count}x</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <ClipboardCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhum item registrado ainda</p>
+                <p className="text-sm mt-1">Os itens de eventos temáticos aparecerão aqui</p>
               </div>
             )}
           </Card>
