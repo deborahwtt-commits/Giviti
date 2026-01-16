@@ -381,6 +381,13 @@ export interface IStorage {
   deleteEventTask(id: string): Promise<boolean>;
   assignTaskToParticipant(taskId: string, participantId: string | null): Promise<CollaborativeEventTask | undefined>;
   markTaskCompleted(id: string, completed: boolean): Promise<CollaborativeEventTask | undefined>;
+  getChecklistStats(): Promise<{
+    totalItems: number;
+    assignedItems: number;
+    unassignedItems: number;
+    assignedPercentage: number;
+    topItems: Array<{ name: string; count: number }>;
+  }>;
   
   // Horoscope Operations
   getSignoByDate(dia: number, mes: number): Promise<Signo | undefined>;
@@ -2719,6 +2726,45 @@ export class DatabaseStorage implements IStorage {
       .where(eq(collaborativeEventTasks.id, id))
       .returning();
     return updated;
+  }
+  
+  async getChecklistStats(): Promise<{
+    totalItems: number;
+    assignedItems: number;
+    unassignedItems: number;
+    assignedPercentage: number;
+    topItems: Array<{ name: string; count: number }>;
+  }> {
+    // Get all tasks
+    const allTasks = await db.select().from(collaborativeEventTasks);
+    
+    const totalItems = allTasks.length;
+    const assignedItems = allTasks.filter(t => t.assignedToParticipantId !== null).length;
+    const unassignedItems = totalItems - assignedItems;
+    const assignedPercentage = totalItems > 0 ? Math.round((assignedItems / totalItems) * 100) : 0;
+    
+    // Group by normalized title (lowercase, trimmed) and count occurrences
+    const titleCounts: Record<string, { name: string; count: number }> = {};
+    for (const task of allTasks) {
+      const normalizedTitle = task.title.toLowerCase().trim();
+      if (!titleCounts[normalizedTitle]) {
+        titleCounts[normalizedTitle] = { name: task.title.trim(), count: 0 };
+      }
+      titleCounts[normalizedTitle].count++;
+    }
+    
+    // Sort by count descending and take top 10
+    const topItems = Object.values(titleCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    
+    return {
+      totalItems,
+      assignedItems,
+      unassignedItems,
+      assignedPercentage,
+      topItems,
+    };
   }
 
   // ========== Horoscope Operations ==========
