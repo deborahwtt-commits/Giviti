@@ -2160,13 +2160,18 @@ export function registerCollabEventsRoutes(app: Express) {
           return res.status(403).json({ error: "Você não é participante deste evento" });
         }
         
-        // Rule 1: Participants cannot modify already assigned items
-        if (task.assignedToParticipantId !== null) {
-          return res.status(403).json({ error: "Este item já está atribuído e não pode ser alterado" });
+        // Rule 1: Participants cannot modify items assigned to others
+        if (task.assignedToParticipantId !== null && task.assignedToParticipantId !== currentUserParticipant.id) {
+          return res.status(403).json({ error: "Este item está atribuído a outro participante" });
         }
         
-        // Rule 2: Participants can only assign unassigned items to themselves
-        if (participantId && participantId !== currentUserParticipant.id) {
+        // Rule 2: If item is assigned to current user, they can only unassign (participantId = null)
+        if (task.assignedToParticipantId === currentUserParticipant.id && participantId !== null && participantId !== undefined) {
+          return res.status(403).json({ error: "Você só pode desistir deste item" });
+        }
+        
+        // Rule 3: Participants can only assign unassigned items to themselves
+        if (task.assignedToParticipantId === null && participantId && participantId !== currentUserParticipant.id) {
           return res.status(403).json({ error: "Você só pode atribuir itens para si mesmo" });
         }
       }
