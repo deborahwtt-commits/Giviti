@@ -1,6 +1,7 @@
 // API routes for Giviti - Email/password authentication
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { isAdmin, hasRole, isActive } from "./middleware/authMiddleware";
@@ -1443,6 +1444,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error saving recipient profile:", error);
       res.status(500).json({ message: "Failed to save recipient profile" });
+    }
+  });
+
+  // ========== User Invitations (Magic Link) Routes ==========
+
+  const MAX_INVITATIONS_PER_USER = 100;
+
+  // GET /api/invitations - Get all invitations sent by current user
+  app.get("/api/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const invitations = await storage.getUserInvitations(userId);
+      const count = await storage.getUserInvitationsCount(userId);
+      res.json({ 
+        invitations,
+        used: count,
+        limit: MAX_INVITATIONS_PER_USER,
+        remaining: Math.max(0, MAX_INVITATIONS_PER_USER - count)
+      });
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // POST /api/invitations - Send a new invitation
+  app.post("/api/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = req.user!;
+      const { email } = req.body;
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check if user has reached invitation limit
+      const invitationCount = await storage.getUserInvitationsCount(userId);
+      if (invitationCount >= MAX_INVITATIONS_PER_USER) {
+        return res.status(400).json({ 
+          message: `Você atingiu o limite de ${MAX_INVITATIONS_PER_USER} convites` 
+        });
+      }
+
+      // Check if email is already registered
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: "Este email já está cadastrado no Giviti" 
+        });
+      }
+
+      // Check if invitation already sent to this email by this user
+      const existingInvitation = await storage.getUserInvitationByEmail(userId, normalizedEmail);
+      if (existingInvitation) {
+        return res.status(400).json({ 
+          message: "Você já enviou um convite para este email" 
+        });
+      }
+
+      // Generate unique token
+      const token = crypto.randomUUID();
+      
+      // Invitation expires in 7 days
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Create invitation
+      const invitation = await storage.createUserInvitation(userId, normalizedEmail, token, expiresAt);
+      
+      // Increment user's invitation count
+      await storage.incrementUserInvitationsUsed(userId);
+
+      // Send email with magic link
+      const inviterName = user.firstName || user.email.split("@")[0];
+      const magicLink = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://giviti.app"}/convite/${token}`;
+      
+      try {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        await resend.emails.send({
+          from: "Giviti <noreply@resend.dev>",
+          to: normalizedEmail,
+          subject: `${inviterName} te convidou para o Giviti!`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f8f8; margin: 0; padding: 20px;">
+              <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #e91e63 0%, #9c27b0 100%); padding: 40px 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-size: 28px;">Giviti</h1>
+                  <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Você presente.</p>
+                </div>
+                
+                <div style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Você foi escolhido(a)!</h2>
+                  
+                  <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Enquanto milhares aguardam na fila de espera do Giviti, você ganhou um atalho exclusivo. 
+                    <strong>${inviterName}</strong> te convidou para fazer parte!
+                  </p>
+                  
+                  <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                    Seu convite já é seu <strong>Passe VIP</strong> — é só clicar e entrar!
+                  </p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${magicLink}" 
+                       style="display: inline-block; background: linear-gradient(135deg, #e91e63 0%, #9c27b0 100%); 
+                              color: white; text-decoration: none; padding: 16px 40px; border-radius: 8px; 
+                              font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);">
+                      Aceitar Convite
+                    </a>
+                  </div>
+                  
+                  <p style="color: #888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; text-align: center;">
+                    Este convite expira em 7 dias.
+                  </p>
+                </div>
+                
+                <div style="background: #f8f8f8; padding: 20px 30px; text-align: center; border-top: 1px solid #eee;">
+                  <p style="color: #888; font-size: 12px; margin: 0;">
+                    Giviti - A arte de presentear com carinho
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Error sending invitation email:", emailError);
+        // Still return success - invitation was created, email just failed
+      }
+
+      res.status(201).json({ 
+        message: "Convite enviado com sucesso!",
+        invitation,
+        remaining: Math.max(0, MAX_INVITATIONS_PER_USER - invitationCount - 1)
+      });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // GET /api/invitations/validate/:token - Validate an invitation token (public route)
+  app.get("/api/invitations/validate/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const invitation = await storage.getUserInvitationByToken(token);
+
+      if (!invitation) {
+        return res.status(404).json({ valid: false, message: "Convite não encontrado" });
+      }
+
+      if (invitation.status === "used") {
+        return res.status(400).json({ valid: false, message: "Este convite já foi utilizado" });
+      }
+
+      if (new Date() > invitation.expiresAt) {
+        return res.status(400).json({ valid: false, message: "Este convite expirou" });
+      }
+
+      // Get inviter info
+      const inviter = await storage.getUser(invitation.inviterId);
+      const inviterName = inviter?.firstName || inviter?.email?.split("@")[0] || "Um amigo";
+
+      res.json({ 
+        valid: true, 
+        inviterName,
+        inviteeEmail: invitation.inviteeEmail,
+        expiresAt: invitation.expiresAt
+      });
+    } catch (error) {
+      console.error("Error validating invitation:", error);
+      res.status(500).json({ valid: false, message: "Failed to validate invitation" });
     }
   });
 
