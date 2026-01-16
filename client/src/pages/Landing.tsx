@@ -71,6 +71,15 @@ export default function Landing() {
     },
   });
 
+  // Update form inviteToken when pendingInviteToken changes
+  useEffect(() => {
+    if (pendingInviteToken) {
+      registerForm.setValue("inviteToken", pendingInviteToken);
+    } else {
+      registerForm.setValue("inviteToken", "");
+    }
+  }, [pendingInviteToken, registerForm]);
+
   // Waitlist form
   const waitlistForm = useForm<InsertWaitlist>({
     resolver: zodResolver(insertWaitlistSchema),
