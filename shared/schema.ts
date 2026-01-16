@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   deactivatedBy: varchar("deactivated_by"),
   deactivatedAt: timestamp("deactivated_at"),
   lastLoginAt: timestamp("last_login_at"),
+  invitationsUsed: integer("invitations_used").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -89,6 +90,32 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 });
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// User invitations table - Magic Link invitation system
+export const userInvitations = pgTable("user_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inviterId: varchar("inviter_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  inviteeEmail: varchar("invitee_email").notNull(),
+  token: varchar("token").notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  usedByUserId: varchar("used_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserInvitationSchema = createInsertSchema(userInvitations).omit({
+  id: true,
+  status: true,
+  usedAt: true,
+  usedByUserId: true,
+  createdAt: true,
+});
+
+export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
+export type UserInvitation = typeof userInvitations.$inferSelect;
 
 // Recipients table (presenteados)
 export const recipients = pgTable("recipients", {
