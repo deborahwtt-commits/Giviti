@@ -255,6 +255,14 @@ export default function RoleDetail() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState<string>("");
 
+  // Group trip editing states
+  const [isEditingTripDetails, setIsEditingTripDetails] = useState(false);
+  const [editedTripDestino, setEditedTripDestino] = useState<string>("");
+  const [editedTripDataFim, setEditedTripDataFim] = useState<string>("");
+  const [editedTripHospedagemLink, setEditedTripHospedagemLink] = useState<string>("");
+  const [editedTripCusto, setEditedTripCusto] = useState<string>("");
+  const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
+
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
     queryFn: async () => {
@@ -981,6 +989,63 @@ export default function RoleDetail() {
     setIsEditingName(true);
   };
 
+  // Mutation to save trip details
+  const saveTripDetailsMutation = useMutation({
+    mutationFn: async (tripData: GroupTripData) => {
+      return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
+        typeSpecificData: tripData
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      setIsEditingTripDetails(false);
+      toast({
+        title: "Detalhes atualizados",
+        description: "As informações da viagem foram salvas.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar detalhes",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartEditTripDetails = () => {
+    const tripData = event?.typeSpecificData as GroupTripData | null;
+    setEditedTripDestino(tripData?.destino || "");
+    setEditedTripDataFim(tripData?.dataFim?.split("T")[0] || "");
+    setEditedTripHospedagemLink(tripData?.hospedagemLink || "");
+    setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
+    setEditedTripMapsLink(tripData?.googleMapsLink || "");
+    setIsEditingTripDetails(true);
+  };
+
+  const handleCancelEditTripDetails = () => {
+    setIsEditingTripDetails(false);
+    setEditedTripDestino("");
+    setEditedTripDataFim("");
+    setEditedTripHospedagemLink("");
+    setEditedTripCusto("");
+    setEditedTripMapsLink("");
+  };
+
+  const handleSaveTripDetails = () => {
+    const currentData = event?.typeSpecificData as GroupTripData | null;
+    const updatedTripData: GroupTripData = {
+      ...currentData,
+      destino: editedTripDestino.trim() || undefined,
+      dataFim: editedTripDataFim || undefined,
+      hospedagemLink: editedTripHospedagemLink.trim() || undefined,
+      custoEstimadoPorPessoa: editedTripCusto.trim() || undefined,
+      googleMapsLink: editedTripMapsLink.trim() || undefined,
+      definirResponsaveis: true,
+    };
+    saveTripDetailsMutation.mutate(updatedTripData);
+  };
+
   const handleCancelEditName = () => {
     setIsEditingName(false);
     setEditedName("");
@@ -1361,15 +1426,29 @@ export default function RoleDetail() {
               return (
                 <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Plane className="w-5 h-5 text-blue-500" />
-                      Detalhes da Viagem
-                    </CardTitle>
-                    {tripData?.destino && (
-                      <CardDescription>
-                        Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
-                      </CardDescription>
-                    )}
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Plane className="w-5 h-5 text-blue-500" />
+                          Detalhes da Viagem
+                        </CardTitle>
+                        {tripData?.destino && (
+                          <CardDescription>
+                            Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
+                          </CardDescription>
+                        )}
+                      </div>
+                      {isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleStartEditTripDetails}
+                          data-testid="button-edit-trip-details"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Dates */}
@@ -3673,6 +3752,92 @@ export default function RoleDetail() {
           
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-close-wishlist-dialog">Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog for editing trip details */}
+      <AlertDialog open={isEditingTripDetails} onOpenChange={(open) => !open && handleCancelEditTripDetails()}>
+        <AlertDialogContent className="max-w-lg" data-testid="dialog-edit-trip-details">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Plane className="w-5 h-5 text-blue-500" />
+              Editar Detalhes da Viagem
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Atualize as informações da viagem. Todos os participantes verão as alterações.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trip-destino">Destino</Label>
+              <Input
+                id="trip-destino"
+                value={editedTripDestino}
+                onChange={(e) => setEditedTripDestino(e.target.value)}
+                placeholder="Ex: Praia do Rosa, SC"
+                data-testid="input-trip-destino"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-data-fim">Data de Retorno</Label>
+              <Input
+                id="trip-data-fim"
+                type="date"
+                value={editedTripDataFim}
+                onChange={(e) => setEditedTripDataFim(e.target.value)}
+                data-testid="input-trip-data-fim"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-custo">Custo Estimado por Pessoa</Label>
+              <Input
+                id="trip-custo"
+                value={editedTripCusto}
+                onChange={(e) => setEditedTripCusto(e.target.value)}
+                placeholder="Ex: R$ 800,00"
+                data-testid="input-trip-custo"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-hospedagem">Link da Hospedagem</Label>
+              <Input
+                id="trip-hospedagem"
+                value={editedTripHospedagemLink}
+                onChange={(e) => setEditedTripHospedagemLink(e.target.value)}
+                placeholder="https://airbnb.com/..."
+                data-testid="input-trip-hospedagem"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-maps">Link do Google Maps</Label>
+              <Input
+                id="trip-maps"
+                value={editedTripMapsLink}
+                onChange={(e) => setEditedTripMapsLink(e.target.value)}
+                placeholder="https://maps.google.com/..."
+                data-testid="input-trip-maps"
+              />
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-edit-trip">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSaveTripDetails}
+              disabled={saveTripDetailsMutation.isPending}
+              data-testid="button-save-trip-details"
+            >
+              {saveTripDetailsMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Salvar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
