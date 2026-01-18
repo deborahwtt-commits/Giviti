@@ -1355,6 +1355,82 @@ export default function RoleDetail() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Group Trip Details Card - First in overview */}
+            {event.eventType === "group_trip" && (() => {
+              const tripData = event.typeSpecificData as GroupTripData | null;
+              return (
+                <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plane className="w-5 h-5 text-blue-500" />
+                      Detalhes da Viagem
+                    </CardTitle>
+                    {tripData?.destino && (
+                      <CardDescription>
+                        Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Dates */}
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Período</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM", { locale: ptBR })}
+                          {tripData?.dataFim && (
+                            <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Cost */}
+                    {tripData?.custoEstimadoPorPessoa && (
+                      <div className="flex items-start gap-3 pt-2 border-t">
+                        <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Custo estimado por pessoa</p>
+                          <p className="text-lg font-semibold" data-testid="text-custo-estimado">
+                            {tripData.custoEstimadoPorPessoa}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Links */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      {tripData?.googleMapsLink && (
+                        <a 
+                          href={tripData.googleMapsLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
+                            <Map className="w-4 h-4" />
+                            Ver no Maps
+                          </Button>
+                        </a>
+                      )}
+                      {tripData?.hospedagemLink && (
+                        <a 
+                          href={tripData.hospedagemLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
+                            <Hotel className="w-4 h-4" />
+                            Ver Hospedagem
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Informações do Rolê</CardTitle>
@@ -2134,77 +2210,6 @@ export default function RoleDetail() {
                           </div>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Trip Details Card - At the end */}
-                  <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Plane className="w-5 h-5 text-blue-500" />
-                        Detalhes da Viagem
-                      </CardTitle>
-                      {tripData?.destino && (
-                        <CardDescription>
-                          Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Dates */}
-                      <div className="flex items-start gap-3">
-                        <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Período</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM", { locale: ptBR })}
-                            {tripData?.dataFim && (
-                              <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Cost */}
-                      {tripData?.custoEstimadoPorPessoa && (
-                        <div className="flex items-start gap-3 pt-2 border-t">
-                          <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">Custo estimado por pessoa</p>
-                            <p className="text-lg font-semibold" data-testid="text-custo-estimado">
-                              {tripData.custoEstimadoPorPessoa}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Links */}
-                      <div className="flex flex-wrap gap-2 pt-2 border-t">
-                        {tripData?.googleMapsLink && (
-                          <a 
-                            href={tripData.googleMapsLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
-                            <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
-                              <Map className="w-4 h-4" />
-                              Ver no Maps
-                            </Button>
-                          </a>
-                        )}
-                        {tripData?.hospedagemLink && (
-                          <a 
-                            href={tripData.hospedagemLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
-                            <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
-                              <Hotel className="w-4 h-4" />
-                              Ver Hospedagem
-                            </Button>
-                          </a>
-                        )}
-                      </div>
                     </CardContent>
                   </Card>
                 </>
