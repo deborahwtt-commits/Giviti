@@ -730,6 +730,40 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // PATCH /api/collab-events/:eventId/participants/:participantId/payment - Update participant payment status
+  app.patch("/api/collab-events/:eventId/participants/:participantId/payment", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { eventId, participantId } = req.params;
+      const { paymentConfirmed } = req.body;
+      
+      if (typeof paymentConfirmed !== 'boolean') {
+        return res.status(400).json({ error: "paymentConfirmed (boolean) is required" });
+      }
+      
+      // Check if user is the event owner
+      const event = await storage.getCollaborativeEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can update payment status" });
+      }
+      
+      const participant = await storage.updateParticipantPaymentStatus(participantId, paymentConfirmed);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      res.json(participant);
+    } catch (error) {
+      console.error("Error updating participant payment status:", error);
+      res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
   // DELETE /api/collab-events/:eventId/participants/:participantId - Remove a participant
   app.delete("/api/collab-events/:eventId/participants/:participantId", isAuthenticated, async (req: Request, res: Response) => {
     try {
