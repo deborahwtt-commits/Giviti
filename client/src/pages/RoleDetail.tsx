@@ -1092,43 +1092,36 @@ export default function RoleDetail() {
   const handleShare = async () => {
     if (!event) return;
     
-    try {
-      // Get or create short link
-      const response = await apiRequest("/api/short-links", "POST", {
-        targetType: "collab_event",
-        targetId: event.id,
-      });
-      const data = await response.json() as { code: string };
-      const shortCode = data.code;
-      const eventUrl = `${window.location.origin}/r/${shortCode}`;
-      let message = "";
-      
-      switch (event.eventType) {
-        case "group_trip": {
-          const tripData = event.typeSpecificData as GroupTripData | null;
-          const destino = tripData?.destino || event.name;
-          const dataFormatted = event.eventDate 
-            ? format(new Date(event.eventDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-            : "";
-          message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
-          break;
-        }
-        case "collective_gift": {
-          const giftData = event.typeSpecificData as { presenteado?: string } | null;
-          const presenteado = giftData?.presenteado || "alguém especial";
-          message = `🎁 Estamos juntando uma vaquinha para presentear ${presenteado}! Quer participar? Veja os detalhes e contribua: ${eventUrl}`;
-          break;
-        }
-        case "themed_night": {
-          const themeData = event.typeSpecificData as { subcategory?: string } | null;
-          const tema = themeData?.subcategory || event.name;
-          message = `🎬 Convite especial! Estou organizando uma noite temática de ${tema}. Confirme sua presença e veja o que precisa trazer: ${eventUrl}`;
-          break;
-        }
-        default:
-          message = `🎉 Você foi convidado(a) para ${event.name}! Clique no link para participar: ${eventUrl}`;
+    const eventUrl = `${window.location.origin}/roles/${event.id}`;
+    let message = "";
+    
+    switch (event.eventType) {
+      case "group_trip": {
+        const tripData = event.typeSpecificData as GroupTripData | null;
+        const destino = tripData?.destino || event.name;
+        const dataFormatted = event.eventDate 
+          ? format(new Date(event.eventDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+          : "";
+        message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
+        break;
       }
-      
+      case "collective_gift": {
+        const giftData = event.typeSpecificData as { presenteado?: string } | null;
+        const presenteado = giftData?.presenteado || "alguém especial";
+        message = `🎁 Estamos juntando uma vaquinha para presentear ${presenteado}! Quer participar? Veja os detalhes e contribua: ${eventUrl}`;
+        break;
+      }
+      case "themed_night": {
+        const themeData = event.typeSpecificData as { subcategory?: string } | null;
+        const tema = themeData?.subcategory || event.name;
+        message = `🎬 Convite especial! Estou organizando uma noite temática de ${tema}. Confirme sua presença e veja o que precisa trazer: ${eventUrl}`;
+        break;
+      }
+      default:
+        message = `🎉 Você foi convidado(a) para ${event.name}! Clique no link para participar: ${eventUrl}`;
+    }
+    
+    try {
       await navigator.clipboard.writeText(message);
       toast({
         title: "Mensagem copiada!",
