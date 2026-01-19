@@ -128,8 +128,9 @@ export default function UserList() {
         </div>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
+      <div className="border rounded-lg relative">
+        <div className="overflow-x-auto">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
@@ -263,7 +264,10 @@ export default function UserList() {
               </TableRow>
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
+        {/* Gradient fade indicator for horizontal scroll */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent" />
       </div>
     </div>
   );
