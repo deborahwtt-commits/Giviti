@@ -263,6 +263,7 @@ export default function RoleDetail() {
   const [editedTripHospedagemLink, setEditedTripHospedagemLink] = useState<string>("");
   const [editedTripCusto, setEditedTripCusto] = useState<string>("");
   const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
+  const [editedTripPaymentInfo, setEditedTripPaymentInfo] = useState<string>("");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -1021,6 +1022,7 @@ export default function RoleDetail() {
     setEditedTripHospedagemLink(tripData?.hospedagemLink || "");
     setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
     setEditedTripMapsLink(tripData?.googleMapsLink || "");
+    setEditedTripPaymentInfo(tripData?.paymentInfo || "");
     setIsEditingTripDetails(true);
   };
 
@@ -1031,6 +1033,7 @@ export default function RoleDetail() {
     setEditedTripHospedagemLink("");
     setEditedTripCusto("");
     setEditedTripMapsLink("");
+    setEditedTripPaymentInfo("");
   };
 
   const handleSaveTripDetails = () => {
@@ -1042,6 +1045,7 @@ export default function RoleDetail() {
       hospedagemLink: editedTripHospedagemLink.trim() || undefined,
       custoEstimadoPorPessoa: editedTripCusto.trim() || undefined,
       googleMapsLink: editedTripMapsLink.trim() || undefined,
+      paymentInfo: editedTripPaymentInfo.trim() || undefined,
       definirResponsaveis: true,
     };
     saveTripDetailsMutation.mutate(updatedTripData);
@@ -1721,6 +1725,21 @@ export default function RoleDetail() {
                     )}
                   </div>
                 </div>
+                {/* Payment info for group_trip */}
+                {event.eventType === "group_trip" && (() => {
+                  const tripData = event.typeSpecificData as GroupTripData | null;
+                  return (
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium mb-1">Pagamento</p>
+                        <p className="text-xs text-muted-foreground whitespace-pre-wrap" data-testid="text-payment-info">
+                          {tripData?.paymentInfo || (isOwner ? "Nenhuma instrução de pagamento definida. Edite nos Detalhes da Viagem." : "Nenhuma instrução de pagamento definida.")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -3878,6 +3897,18 @@ export default function RoleDetail() {
                 onChange={(e) => setEditedTripMapsLink(e.target.value)}
                 placeholder="https://maps.google.com/..."
                 data-testid="input-trip-maps"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-payment-info">Instruções de Pagamento</Label>
+              <Textarea
+                id="trip-payment-info"
+                value={editedTripPaymentInfo}
+                onChange={(e) => setEditedTripPaymentInfo(e.target.value)}
+                placeholder="Ex: PIX: (11) 99999-9999 - João Silva&#10;Banco XYZ, Ag 0001, Conta 12345-6"
+                className="min-h-[80px]"
+                data-testid="input-trip-payment-info"
               />
             </div>
           </div>
