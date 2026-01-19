@@ -1428,7 +1428,7 @@ export default function RoleDetail() {
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
                           <Plane className="w-5 h-5 text-blue-500" />
                           Detalhes da Viagem
                         </CardTitle>
@@ -1724,7 +1724,7 @@ export default function RoleDetail() {
             {event.eventType === "secret_santa" && !isOwner && (
               <Card data-testid="card-profile-status">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <Heart className="w-5 h-5 text-pink-500" />
                     Seu Perfil de Presentes
                   </CardTitle>
@@ -1764,7 +1764,7 @@ export default function RoleDetail() {
             {event.eventType === "themed_night" && themedSuggestions && themedSuggestions.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <Lightbulb className="w-5 h-5" />
                     Sugestões para o Rolê
                   </CardTitle>
