@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, User as UserIcon, AlertCircle } from "lucide-react";
+import { ArrowLeft, User as UserIcon, AlertCircle, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -266,8 +266,12 @@ export default function UserList() {
           </TableBody>
           </Table>
         </div>
-        {/* Gradient fade indicator for horizontal scroll */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent" />
+        {/* Gradient fade indicator with arrow for horizontal scroll */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent flex items-center justify-end pr-1">
+          <div className="bg-muted/80 rounded-full p-1 animate-pulse">
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </div>
       </div>
     </div>
   );
