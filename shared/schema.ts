@@ -716,6 +716,7 @@ export const collaborativeEventParticipants = pgTable("collaborative_event_parti
   emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
   inviteToken: varchar("invite_token").unique(),
   participantData: jsonb("participant_data"), // For wishlists, preferences, etc.
+  paymentConfirmed: boolean("payment_confirmed").default(false), // For group trip payment tracking
   joinedAt: timestamp("joined_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

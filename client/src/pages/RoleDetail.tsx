@@ -186,6 +186,7 @@ interface GroupTripData {
   custoEstimadoPorPessoa?: string;
   dataFim?: string;
   definirResponsaveis?: boolean;
+  paymentInfo?: string;
 }
 
 interface ContributionWithParticipant {
