@@ -1427,20 +1427,10 @@ export default function RoleDetail() {
                 <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
-                      <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Plane className="w-5 h-5 text-blue-500" />
-                          Detalhes da Viagem
-                        </CardTitle>
-                        {tripData?.destino && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <MapPin className="w-4 h-4 text-blue-500" />
-                            <span className="text-lg font-semibold text-foreground capitalize">
-                              {tripData.destino}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Plane className="w-5 h-5 text-blue-500" />
+                        Detalhes da Viagem
+                      </CardTitle>
                       {isOwner && (
                         <Button
                           variant="outline"
@@ -1456,6 +1446,19 @@ export default function RoleDetail() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Destination */}
+                    {tripData?.destino && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Destino</p>
+                          <p className="text-lg font-semibold text-foreground capitalize">
+                            {tripData.destino}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Dates */}
                     <div className="flex items-start gap-3">
                       <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
