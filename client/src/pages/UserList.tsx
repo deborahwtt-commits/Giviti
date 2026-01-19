@@ -19,7 +19,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 
@@ -58,9 +58,16 @@ const roleVariants: Record<string, "default" | "secondary" | "destructive"> = {
 
 export default function UserList() {
   const { toast } = useToast();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { data: users, isLoading, error } = useQuery<UserWithStats[]>({
     queryKey: ["/api/admin/users/detailed"],
   });
+
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: "smooth" });
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -129,7 +136,7 @@ export default function UserList() {
       </div>
 
       <div className="border rounded-lg relative">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" ref={scrollContainerRef}>
           <Table>
           <TableHeader>
             <TableRow>
@@ -266,13 +273,17 @@ export default function UserList() {
           </TableBody>
           </Table>
         </div>
-        {/* Scroll indicator in header area */}
-        <div className="pointer-events-none absolute right-0 top-0 h-12 w-16 bg-gradient-to-l from-background via-background/90 to-transparent flex items-center justify-end pr-2">
+        {/* Scroll indicator in header area - clickable */}
+        <button
+          onClick={handleScrollRight}
+          className="absolute right-0 top-0 h-12 w-16 bg-gradient-to-l from-background via-background/90 to-transparent flex items-center justify-end pr-2 cursor-pointer hover:opacity-80 transition-opacity"
+          data-testid="button-scroll-right"
+        >
           <div className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-1">
             <span className="text-xs font-medium">Mais</span>
             <ChevronRight className="w-4 h-4" />
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );
