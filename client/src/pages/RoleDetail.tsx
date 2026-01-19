@@ -1425,27 +1425,32 @@ export default function RoleDetail() {
               const tripData = event.typeSpecificData as GroupTripData | null;
               return (
                 <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
-                      <div>
+                      <div className="space-y-1">
                         <CardTitle className="flex items-center gap-2">
                           <Plane className="w-5 h-5 text-blue-500" />
                           Detalhes da Viagem
                         </CardTitle>
                         {tripData?.destino && (
-                          <CardDescription>
-                            Destino: <span className="font-semibold text-foreground">{tripData.destino}</span>
-                          </CardDescription>
+                          <div className="flex items-center gap-2 mt-2">
+                            <MapPin className="w-4 h-4 text-blue-500" />
+                            <span className="text-lg font-semibold text-foreground capitalize">
+                              {tripData.destino}
+                            </span>
+                          </div>
                         )}
                       </div>
                       {isOwner && (
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={handleStartEditTripDetails}
                           data-testid="button-edit-trip-details"
+                          className="gap-1.5"
                         >
-                          <Pencil className="w-4 h-4" />
+                          <Pencil className="w-3.5 h-3.5" />
+                          Editar
                         </Button>
                       )}
                     </div>
@@ -1462,49 +1467,69 @@ export default function RoleDetail() {
                             <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
                           )}
                         </p>
+                        {/* Duration calculation */}
+                        {tripData?.dataFim && (() => {
+                          const startDate = parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00");
+                          const endDate = parseISO(tripData.dataFim.split("T")[0] + "T12:00:00");
+                          const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                          return (
+                            <Badge variant="outline" className="mt-1.5 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700">
+                              {diffDays} {diffDays === 1 ? 'dia' : 'dias'}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
                     
                     {/* Cost */}
                     {tripData?.custoEstimadoPorPessoa && (
-                      <div className="flex items-start gap-3 pt-2 border-t">
+                      <div className="flex items-start gap-3">
                         <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">Custo estimado por pessoa</p>
-                          <p className="text-lg font-semibold" data-testid="text-custo-estimado">
-                            {tripData.custoEstimadoPorPessoa}
+                          <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
+                            {/^\d+([.,]\d+)?$/.test(tripData.custoEstimadoPorPessoa.trim()) 
+                              ? `R$ ${parseFloat(tripData.custoEstimadoPorPessoa.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : tripData.custoEstimadoPorPessoa
+                            }
                           </p>
                         </div>
                       </div>
                     )}
                     
                     {/* Links */}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      {tripData?.googleMapsLink && (
-                        <a 
-                          href={tripData.googleMapsLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                        >
-                          <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
-                            <Map className="w-4 h-4" />
-                            Ver no Maps
-                          </Button>
-                        </a>
-                      )}
-                      {tripData?.hospedagemLink && (
-                        <a 
-                          href={tripData.hospedagemLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                        >
-                          <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
-                            <Hotel className="w-4 h-4" />
-                            Ver Hospedagem
-                          </Button>
-                        </a>
-                      )}
-                    </div>
+                    {(tripData?.googleMapsLink || tripData?.hospedagemLink) && (
+                      <div className="pt-3 border-t space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Links úteis</p>
+                        <div className="flex flex-wrap gap-2">
+                          {tripData?.googleMapsLink && (
+                            <a 
+                              href={tripData.googleMapsLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
+                                <Map className="w-4 h-4" />
+                                Ver no Maps
+                              </Button>
+                            </a>
+                          )}
+                          {tripData?.hospedagemLink && (
+                            <a 
+                              href={tripData.hospedagemLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
+                                <Hotel className="w-4 h-4" />
+                                Ver Hospedagem
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
