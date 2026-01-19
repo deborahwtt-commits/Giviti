@@ -266,10 +266,11 @@ export default function UserList() {
           </TableBody>
           </Table>
         </div>
-        {/* Gradient fade indicator with arrow for horizontal scroll */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent flex items-center justify-end pr-1">
-          <div className="bg-muted/80 rounded-full p-1 animate-pulse">
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        {/* Scroll indicator in header area */}
+        <div className="pointer-events-none absolute right-0 top-0 h-12 w-16 bg-gradient-to-l from-background via-background/90 to-transparent flex items-center justify-end pr-2">
+          <div className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-1">
+            <span className="text-xs font-medium">Mais</span>
+            <ChevronRight className="w-4 h-4" />
           </div>
         </div>
       </div>
