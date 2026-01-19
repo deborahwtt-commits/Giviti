@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -884,6 +885,23 @@ export default function RoleDetail() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao confirmar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update payment status mutation
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ participantId, paymentConfirmed }: { participantId: string; paymentConfirmed: boolean }) => {
+      return await apiRequest(`/api/collab-events/${id}/participants/${participantId}/payment`, "PATCH", { paymentConfirmed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar pagamento",
         description: error.message,
         variant: "destructive",
       });
@@ -2313,6 +2331,7 @@ export default function RoleDetail() {
                           {confirmedParticipants.map((participant) => {
                             const name = participant.name || participant.email || "Participante";
                             const initials = name.substring(0, 2).toUpperCase();
+                            const isPaid = participant.paymentConfirmed === true;
                             return (
                               <div 
                                 key={participant.id}
@@ -2322,8 +2341,45 @@ export default function RoleDetail() {
                                 <Avatar className="h-8 w-8">
                                   <AvatarFallback className="text-xs bg-green-100 dark:bg-green-900">{initials}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-sm font-medium">{name}</span>
-                                <Badge className="ml-auto bg-green-500 hover:bg-green-600">
+                                <span className="text-sm font-medium flex-1">{name}</span>
+                                {/* Payment status - owner sees checkbox, others see icon */}
+                                {isOwner ? (
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={`payment-${participant.id}`}
+                                      checked={isPaid}
+                                      onCheckedChange={(checked) => {
+                                        updatePaymentStatusMutation.mutate({
+                                          participantId: participant.id,
+                                          paymentConfirmed: checked === true
+                                        });
+                                      }}
+                                      disabled={updatePaymentStatusMutation.isPending}
+                                      data-testid={`checkbox-payment-${participant.id}`}
+                                    />
+                                    <Label 
+                                      htmlFor={`payment-${participant.id}`}
+                                      className={`text-xs ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}
+                                    >
+                                      {isPaid ? 'Pago' : 'Pendente'}
+                                    </Label>
+                                  </div>
+                                ) : (
+                                  isPaid && (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700">
+                                          <DollarSign className="w-3 h-3 mr-1" />
+                                          Pago
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Pagamento confirmado</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )
+                                )}
+                                <Badge className="bg-green-500 hover:bg-green-600">
                                   <Check className="w-3 h-3 mr-1" />
                                   Confirmado
                                 </Badge>
