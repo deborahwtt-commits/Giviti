@@ -3919,7 +3919,7 @@ export default function RoleDetail() {
 
       {/* Dialog for editing trip details */}
       <AlertDialog open={isEditingTripDetails} onOpenChange={(open) => !open && handleCancelEditTripDetails()}>
-        <AlertDialogContent className="max-w-lg" data-testid="dialog-edit-trip-details">
+        <AlertDialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="dialog-edit-trip-details">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Plane className="w-5 h-5 text-blue-500" />
