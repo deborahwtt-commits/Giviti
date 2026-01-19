@@ -1089,6 +1089,53 @@ export default function RoleDetail() {
     setEditedName("");
   };
 
+  const handleShare = async () => {
+    if (!event) return;
+    
+    const eventUrl = `${window.location.origin}/roles/${event.id}`;
+    let message = "";
+    
+    switch (event.eventType) {
+      case "group_trip": {
+        const tripData = event.typeSpecificData as GroupTripData | null;
+        const destino = tripData?.destino || event.name;
+        const dataFormatted = event.eventDate 
+          ? format(new Date(event.eventDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+          : "";
+        message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
+        break;
+      }
+      case "collective_gift": {
+        const giftData = event.typeSpecificData as { presenteado?: string } | null;
+        const presenteado = giftData?.presenteado || "alguém especial";
+        message = `🎁 Estamos juntando uma vaquinha para presentear ${presenteado}! Quer participar? Veja os detalhes e contribua: ${eventUrl}`;
+        break;
+      }
+      case "themed_night": {
+        const themeData = event.typeSpecificData as { subcategory?: string } | null;
+        const tema = themeData?.subcategory || event.name;
+        message = `🎬 Convite especial! Estou organizando uma noite temática de ${tema}. Confirme sua presença e veja o que precisa trazer: ${eventUrl}`;
+        break;
+      }
+      default:
+        message = `🎉 Você foi convidado(a) para ${event.name}! Clique no link para participar: ${eventUrl}`;
+    }
+    
+    try {
+      await navigator.clipboard.writeText(message);
+      toast({
+        title: "Mensagem copiada!",
+        description: "Cole no WhatsApp ou onde preferir para convidar seus amigos.",
+      });
+    } catch {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar a mensagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveEditName = () => {
     // Only save if there's an actual change and name is not empty
     const currentName = event?.name || "";
@@ -1445,7 +1492,7 @@ export default function RoleDetail() {
           )}
           {/* Hide share button for Secret Santa - participants are added directly by organizer */}
           {event.eventType !== "secret_santa" && (
-            <Button variant="outline" size="sm" data-testid="button-share-role">
+            <Button variant="outline" size="sm" onClick={handleShare} data-testid="button-share-role">
               <Share2 className="w-4 h-4 mr-2" />
               Compartilhar
             </Button>
