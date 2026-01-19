@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, User as UserIcon, AlertCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, User as UserIcon, AlertCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 
@@ -56,18 +57,40 @@ const roleVariants: Record<string, "default" | "secondary" | "destructive"> = {
   readonly: "secondary",
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function UserList() {
   const { toast } = useToast();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const { data: users, isLoading, error } = useQuery<UserWithStats[]>({
     queryKey: ["/api/admin/users/detailed"],
   });
 
-  const handleScrollRight = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 200, behavior: "smooth" });
-    }
-  };
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    if (!searchTerm.trim()) return users;
+    
+    const term = searchTerm.toLowerCase();
+    return users.filter((user) => {
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      const email = user.email.toLowerCase();
+      const role = (roleLabels[user.role] || user.role).toLowerCase();
+      
+      return fullName.includes(term) || email.includes(term) || role.includes(term);
+    });
+  }, [users, searchTerm]);
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredUsers, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (error) {
@@ -135,8 +158,20 @@ export default function UserList() {
         </div>
       </div>
 
-      <div className="border rounded-lg relative">
-        <div className="overflow-x-auto" ref={scrollContainerRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Buscar por nome, email ou perfil..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 max-w-md"
+          data-testid="input-search-users"
+        />
+      </div>
+
+      <div className="border rounded-lg">
+        <div className="overflow-x-auto">
           <Table>
           <TableHeader>
             <TableRow>
@@ -154,8 +189,8 @@ export default function UserList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users && users.length > 0 ? (
-              users.map((user) => (
+            {paginatedUsers && paginatedUsers.length > 0 ? (
+              paginatedUsers.map((user) => (
                 <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -273,18 +308,46 @@ export default function UserList() {
           </TableBody>
           </Table>
         </div>
-        {/* Scroll indicator in header area - clickable */}
-        <button
-          onClick={handleScrollRight}
-          className="absolute right-0 top-0 h-12 w-16 bg-gradient-to-l from-background via-background/90 to-transparent flex items-center justify-end pr-2 cursor-pointer hover:opacity-80 transition-opacity"
-          data-testid="button-scroll-right"
-        >
-          <div className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-1">
-            <span className="text-xs font-medium">Mais</span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuários
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              data-testid="button-prev-page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              data-testid="button-next-page"
+            >
+              Próximo
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {filteredUsers.length === 0 && searchTerm && (
+        <p className="text-center text-muted-foreground py-4">
+          Nenhum usuário encontrado para "{searchTerm}"
+        </p>
+      )}
     </div>
   );
 }
