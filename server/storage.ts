@@ -26,6 +26,7 @@ import {
   collectiveGiftContributions,
   collaborativeEventTasks,
   clicks,
+  shortLinks,
   getZodiacSignFromDate,
   type User,
   type UpsertUser,
@@ -81,6 +82,7 @@ import {
   type InsertCollaborativeEventTask,
   type Click,
   type GoogleProductCategory,
+  type ShortLink,
   signos,
   mensagensSemanais,
   type Signo,
@@ -3311,6 +3313,68 @@ export class DatabaseStorage implements IStorage {
       .where(eq(waitlist.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  // Short Links Operations
+  async getShortLinkByCode(code: string): Promise<ShortLink | undefined> {
+    const [link] = await db
+      .select()
+      .from(shortLinks)
+      .where(eq(shortLinks.code, code));
+    return link;
+  }
+
+  async getShortLinkByTarget(targetType: string, targetId: string): Promise<ShortLink | undefined> {
+    const [link] = await db
+      .select()
+      .from(shortLinks)
+      .where(and(
+        eq(shortLinks.targetType, targetType),
+        eq(shortLinks.targetId, targetId)
+      ));
+    return link;
+  }
+
+  async createShortLink(targetType: string, targetId: string, createdBy: string): Promise<string> {
+    // Generate a short unique code (6 characters)
+    const generateCode = () => {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return code;
+    };
+
+    let code = generateCode();
+    let attempts = 0;
+    
+    // Ensure uniqueness
+    while (attempts < 10) {
+      const existing = await this.getShortLinkByCode(code);
+      if (!existing) break;
+      code = generateCode();
+      attempts++;
+    }
+
+    const [newLink] = await db
+      .insert(shortLinks)
+      .values({
+        code,
+        targetType,
+        targetId,
+        createdBy,
+      })
+      .returning();
+    
+    return newLink.code;
+  }
+
+  async incrementShortLinkClickCount(id: string): Promise<void> {
+    await db
+      .update(shortLinks)
+      .set({ clickCount: sql`${shortLinks.clickCount} + 1` })
+      .where(eq(shortLinks.id, id));
   }
 }
 

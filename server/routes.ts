@@ -1994,6 +1994,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Short Links Routes ==========
+
+  // POST /api/short-links - Create a short link for an event
+  app.post("/api/short-links", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const { targetType, targetId } = req.body;
+      
+      if (!targetType || !targetId) {
+        return res.status(400).json({ message: "targetType e targetId são obrigatórios" });
+      }
+      
+      // Check if short link already exists for this target
+      const existingLink = await storage.getShortLinkByTarget(targetType, targetId);
+      if (existingLink) {
+        return res.json({ code: existingLink.code });
+      }
+      
+      // Generate unique short code
+      const code = await storage.createShortLink(targetType, targetId, userId);
+      res.json({ code });
+    } catch (error) {
+      console.error("Error creating short link:", error);
+      res.status(500).json({ message: "Failed to create short link" });
+    }
+  });
+
+  // GET /r/:code - Redirect short link to target (public, no auth required)
+  app.get("/r/:code", async (req: any, res) => {
+    try {
+      const { code } = req.params;
+      
+      const shortLink = await storage.getShortLinkByCode(code);
+      if (!shortLink) {
+        return res.status(404).send("Link não encontrado");
+      }
+      
+      // Increment click count
+      await storage.incrementShortLinkClickCount(shortLink.id);
+      
+      // Redirect based on target type
+      let redirectUrl = "/";
+      switch (shortLink.targetType) {
+        case "collab_event":
+          redirectUrl = `/roles/${shortLink.targetId}`;
+          break;
+        case "birthday_event":
+          redirectUrl = `/birthday/${shortLink.targetId}`;
+          break;
+        default:
+          redirectUrl = `/roles/${shortLink.targetId}`;
+      }
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error("Error redirecting short link:", error);
+      res.status(500).send("Erro ao processar link");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
