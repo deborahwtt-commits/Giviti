@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban, Plane } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -85,6 +85,11 @@ export default function CollaborativeEvents() {
       label: "Desafio Criativo", 
       className: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", 
       Icon: Sparkles 
+    },
+    group_trip: { 
+      label: "Viagem em Grupo", 
+      className: "bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800", 
+      Icon: Plane 
     },
   };
 
