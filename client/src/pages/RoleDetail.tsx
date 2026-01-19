@@ -1536,13 +1536,29 @@ export default function RoleDetail() {
             })()}
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Informações do Rolê</CardTitle>
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base">
+                    {event.eventType === "group_trip" ? "Informações Gerais" : "Informações do Rolê"}
+                  </CardTitle>
+                  {isOwner && !isEditingDescription && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleStartEditDescription}
+                      data-testid="button-edit-description"
+                      className="gap-1.5"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {event.eventType === "themed_night" && themedCategory && (
-                  <div className="flex items-start gap-2">
-                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-3">
+                    <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Qual é a boa?</p>
                       <Badge 
@@ -1559,12 +1575,13 @@ export default function RoleDetail() {
                     </div>
                   </div>
                 )}
-                {event.eventDate && (
-                  <div className="flex items-start gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                {/* Hide Date/Time for group_trip - already shown in trip details card */}
+                {event.eventType !== "group_trip" && event.eventDate && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-date">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-date">
                         {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
@@ -1576,79 +1593,89 @@ export default function RoleDetail() {
                     : event.confirmationDeadline;
                   const now = new Date();
                   const isExpired = now > deadline;
-                  const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
+                  const diffTime = deadline.getTime() - now.getTime();
+                  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const isUrgent = !isExpired && daysRemaining <= 3;
+                  const isNear = !isExpired && !isUrgent && daysRemaining <= 7;
                   
                   return (
-                    <div className={`flex items-start gap-2 ${
-                      isExpired || isUrgent ? 'p-2 rounded-md' : ''
+                    <div className={`flex items-start gap-3 ${
+                      isExpired || isUrgent ? 'p-3 rounded-lg' : ''
                     } ${
                       isExpired 
                         ? 'bg-destructive/10' 
                         : isUrgent 
-                          ? 'bg-amber-50 dark:bg-amber-950/30'
+                          ? 'bg-rose-50 dark:bg-rose-950/30'
                           : ''
                     }`}>
-                      <Clock className={`w-4 h-4 mt-0.5 ${
+                      <Clock className={`w-5 h-5 mt-0.5 ${
                         isExpired 
                           ? 'text-destructive' 
                           : isUrgent 
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-muted-foreground'
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : isNear
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-muted-foreground'
                       }`} />
                       <div>
                         <p className={`text-sm font-medium ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
-                              ? 'text-amber-700 dark:text-amber-300'
+                              ? 'text-rose-700 dark:text-rose-300'
                               : ''
                         }`}>
                           Prazo para Confirmar
                         </p>
-                        <p className={`text-xs ${
+                        <p className={`text-sm ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
-                              ? 'text-amber-600 dark:text-amber-400'
+                              ? 'text-rose-600 dark:text-rose-400'
                               : 'text-muted-foreground'
                         }`} data-testid="text-confirmation-deadline">
-                          {isExpired 
-                            ? `Encerrado em ${format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
-                            : format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                          }
+                          {format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
+                        {/* Days remaining badge */}
+                        {isExpired ? (
+                          <Badge variant="outline" className="mt-1.5 text-destructive border-destructive">
+                            Prazo encerrado
+                          </Badge>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className={`mt-1.5 ${
+                              isUrgent 
+                                ? 'text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700'
+                                : isNear
+                                  ? 'text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700'
+                                  : 'text-muted-foreground'
+                            }`}
+                          >
+                            {daysRemaining === 0 ? 'Último dia!' : daysRemaining === 1 ? 'Falta 1 dia' : `Faltam ${daysRemaining} dias`}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   );
                 })()}
-                {event.location && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                {/* Hide Location for group_trip - already shown in trip details card */}
+                {event.eventType !== "group_trip" && event.location && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Local</p>
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-location">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-location">
                         {event.location}
                       </p>
                     </div>
                   </div>
                 )}
                 {/* Editable description section */}
-                <div className="flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium">Descrição</p>
-                      {isOwner && !isEditingDescription && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleStartEditDescription}
-                          data-testid="button-edit-description"
-                        >
-                          Editar
-                        </Button>
-                      )}
-                    </div>
+                    <p className="text-sm font-medium mb-1">Descrição</p>
                     {isEditingDescription ? (
                       <div className="space-y-3">
                         <Textarea
