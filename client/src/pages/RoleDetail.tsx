@@ -1092,17 +1092,6 @@ export default function RoleDetail() {
   const handleShare = async () => {
     if (!event) return;
     
-    // DEBUG: Log event dates to identify the issue
-    console.log("DEBUG handleShare - Event data:", {
-      eventId: event.id,
-      eventName: event.name,
-      eventDate: event.eventDate,
-      confirmationDeadline: event.confirmationDeadline,
-      eventDateType: typeof event.eventDate,
-      eventDateFormatted: event.eventDate ? format(new Date(event.eventDate), "dd/MM/yyyy") : "N/A",
-      confirmationFormatted: event.confirmationDeadline ? format(new Date(event.confirmationDeadline), "dd/MM/yyyy") : "N/A"
-    });
-    
     const eventUrl = `${window.location.origin}/roles/${event.id}`;
     let message = "";
     
@@ -1110,8 +1099,9 @@ export default function RoleDetail() {
       case "group_trip": {
         const tripData = event.typeSpecificData as GroupTripData | null;
         const destino = tripData?.destino || event.name;
+        // Use parseISO with neutral time to avoid timezone issues (same pattern as Período display)
         const dataFormatted = event.eventDate 
-          ? format(new Date(event.eventDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+          ? format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
           : "";
         message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
         break;
