@@ -180,6 +180,8 @@ interface CollectiveGiftData {
   recipientName?: string;
 }
 
+type TripStatus = 'idea' | 'planning' | 'confirmed' | 'cancelled' | 'completed';
+
 interface GroupTripData {
   destino?: string;
   googleMapsLink?: string;
@@ -188,7 +190,16 @@ interface GroupTripData {
   dataFim?: string;
   definirResponsaveis?: boolean;
   paymentInfo?: string;
+  tripStatus?: TripStatus;
 }
+
+const TRIP_STATUS_CONFIG: Record<TripStatus, { label: string; color: string; bgColor: string }> = {
+  idea: { label: 'Ideia', color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' },
+  planning: { label: 'Em Planejamento', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' },
+  confirmed: { label: 'Confirmada', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700' },
+  cancelled: { label: 'Cancelada', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700' },
+  completed: { label: 'Concluída', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700' },
+};
 
 interface ContributionWithParticipant {
   id: string;
@@ -265,6 +276,7 @@ export default function RoleDetail() {
   const [editedTripCusto, setEditedTripCusto] = useState<string>("");
   const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
   const [editedTripPaymentInfo, setEditedTripPaymentInfo] = useState<string>("");
+  const [editedTripStatus, setEditedTripStatus] = useState<TripStatus>("planning");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -1041,6 +1053,7 @@ export default function RoleDetail() {
     setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
     setEditedTripMapsLink(tripData?.googleMapsLink || "");
     setEditedTripPaymentInfo(tripData?.paymentInfo || "");
+    setEditedTripStatus(tripData?.tripStatus || "planning");
     setIsEditingTripDetails(true);
   };
 
@@ -1052,6 +1065,7 @@ export default function RoleDetail() {
     setEditedTripCusto("");
     setEditedTripMapsLink("");
     setEditedTripPaymentInfo("");
+    setEditedTripStatus("planning");
   };
 
   const handleSaveTripDetails = () => {
@@ -1064,6 +1078,7 @@ export default function RoleDetail() {
       custoEstimadoPorPessoa: editedTripCusto.trim() || undefined,
       googleMapsLink: editedTripMapsLink.trim() || undefined,
       paymentInfo: editedTripPaymentInfo.trim() || undefined,
+      tripStatus: editedTripStatus,
       definirResponsaveis: true,
     };
     saveTripDetailsMutation.mutate(updatedTripData);
@@ -1389,6 +1404,21 @@ export default function RoleDetail() {
                 <Badge variant="outline" data-testid="badge-role-status">
                   {statusLabels[event.status]}
                 </Badge>
+                {/* Trip status badge for group_trip events */}
+                {event.eventType === "group_trip" && (() => {
+                  const tripData = event.typeSpecificData as GroupTripData | null;
+                  const tripStatus = tripData?.tripStatus || "planning";
+                  const statusConfig = TRIP_STATUS_CONFIG[tripStatus];
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`${statusConfig.color} ${statusConfig.bgColor}`}
+                      data-testid="badge-trip-status"
+                    >
+                      {statusConfig.label}
+                    </Badge>
+                  );
+                })()}
                 {/* HIDDEN: Public badge - All events are private
                 {event.isPublic && (
                   <Badge variant="outline" data-testid="badge-role-public">
@@ -3910,6 +3940,22 @@ export default function RoleDetail() {
                 placeholder="Ex: Praia do Rosa, SC"
                 data-testid="input-trip-destino"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="trip-status">Status da Viagem</Label>
+              <Select value={editedTripStatus} onValueChange={(value: TripStatus) => setEditedTripStatus(value)}>
+                <SelectTrigger data-testid="select-trip-status">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="idea">Ideia</SelectItem>
+                  <SelectItem value="planning">Em Planejamento</SelectItem>
+                  <SelectItem value="confirmed">Confirmada</SelectItem>
+                  <SelectItem value="cancelled">Cancelada</SelectItem>
+                  <SelectItem value="completed">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
