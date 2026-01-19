@@ -2327,7 +2327,7 @@ export default function RoleDetail() {
                   {/* Confirmation Card - First, for participant action */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
                         <UserCheck className="w-5 h-5" />
                         Confirmados ({confirmedParticipants.length})
                       </CardTitle>
