@@ -1092,6 +1092,17 @@ export default function RoleDetail() {
   const handleShare = async () => {
     if (!event) return;
     
+    // DEBUG: Log event dates to identify the issue
+    console.log("DEBUG handleShare - Event data:", {
+      eventId: event.id,
+      eventName: event.name,
+      eventDate: event.eventDate,
+      confirmationDeadline: event.confirmationDeadline,
+      eventDateType: typeof event.eventDate,
+      eventDateFormatted: event.eventDate ? format(new Date(event.eventDate), "dd/MM/yyyy") : "N/A",
+      confirmationFormatted: event.confirmationDeadline ? format(new Date(event.confirmationDeadline), "dd/MM/yyyy") : "N/A"
+    });
+    
     const eventUrl = `${window.location.origin}/roles/${event.id}`;
     let message = "";
     
