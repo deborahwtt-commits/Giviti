@@ -1877,7 +1877,7 @@ export default function RoleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-description">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-description">
                         {event.description || (isOwner ? "Nenhuma descrição definida. Clique em Editar para adicionar." : "Nenhuma descrição definida.")}
                       </p>
                     )}
@@ -1891,7 +1891,7 @@ export default function RoleDetail() {
                       <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm font-medium mb-1">Pagamento</p>
-                        <p className="text-xs text-muted-foreground whitespace-pre-wrap" data-testid="text-payment-info">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-payment-info">
                           {tripData?.paymentInfo || (isOwner ? "Nenhuma instrução de pagamento definida. Edite nos Detalhes da Viagem." : "Nenhuma instrução de pagamento definida.")}
                         </p>
                       </div>
