@@ -1642,11 +1642,8 @@ export default function RoleDetail() {
                           {tripData?.totalEstimado && (
                             <div>
                               <p className="text-sm font-medium">Total estimado da viagem</p>
-                              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400" data-testid="text-total-estimado">
-                                {/^\d+([.,]\d+)?$/.test(tripData.totalEstimado.trim()) 
-                                  ? `R$ ${parseFloat(tripData.totalEstimado.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                  : tripData.totalEstimado
-                                }
+                              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400" data-testid="text-total-estimado">
+                                R$ {tripData.totalEstimado.replace(/[^\d.,]/g, '')}
                               </p>
                             </div>
                           )}
@@ -1658,11 +1655,8 @@ export default function RoleDetail() {
                                   <span className="text-xs text-muted-foreground ml-1">(calculado)</span>
                                 )}
                               </p>
-                              <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
-                                {/^\d+([.,]\d+)?$/.test(tripData.custoEstimadoPorPessoa.trim()) 
-                                  ? `R$ ${parseFloat(tripData.custoEstimadoPorPessoa.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                  : tripData.custoEstimadoPorPessoa
-                                }
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
+                                R$ {tripData.custoEstimadoPorPessoa.replace(/[^\d.,]/g, '')}
                               </p>
                             </div>
                           )}
