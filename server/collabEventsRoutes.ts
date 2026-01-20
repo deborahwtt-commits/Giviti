@@ -39,7 +39,11 @@ async function recalculateTripCostPerPerson(eventId: string): Promise<void> {
     }
 
     // Parse the total value (remove currency formatting)
-    const totalStr = String(typeData.totalEstimado).replace(/[^\d.,]/g, '').replace(',', '.');
+    // Brazilian format: "5.000,00" -> remove thousand separators (dots), then replace decimal comma with dot
+    const totalStr = String(typeData.totalEstimado)
+      .replace(/[^\d.,]/g, '')  // Keep only digits, dots and commas
+      .replace(/\./g, '')       // Remove all dots (thousand separators)
+      .replace(',', '.');       // Replace comma with dot (decimal separator)
     const totalValue = parseFloat(totalStr);
     if (isNaN(totalValue) || totalValue <= 0) {
       return;
