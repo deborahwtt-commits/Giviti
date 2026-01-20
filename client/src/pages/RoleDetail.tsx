@@ -4120,13 +4120,17 @@ export default function RoleDetail() {
             
             <div className="space-y-2">
               <Label htmlFor="trip-total-estimado">Total Estimado da Viagem</Label>
-              <Input
-                id="trip-total-estimado"
-                value={editedTripTotalEstimado}
-                onChange={(e) => setEditedTripTotalEstimado(e.target.value)}
-                placeholder="Ex: R$ 5.000,00"
-                data-testid="input-trip-total-estimado"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <Input
+                  id="trip-total-estimado"
+                  value={editedTripTotalEstimado}
+                  onChange={(e) => setEditedTripTotalEstimado(formatCurrencyInput(e.target.value))}
+                  placeholder="0,00"
+                  className="pl-10"
+                  data-testid="input-trip-total-estimado"
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Se preenchido, o custo por pessoa será calculado automaticamente.
               </p>
@@ -4134,14 +4138,18 @@ export default function RoleDetail() {
             
             <div className="space-y-2">
               <Label htmlFor="trip-custo">Custo Estimado por Pessoa</Label>
-              <Input
-                id="trip-custo"
-                value={editedTripCusto}
-                onChange={(e) => setEditedTripCusto(e.target.value)}
-                placeholder="Ex: R$ 800,00"
-                data-testid="input-trip-custo"
-                disabled={!!editedTripTotalEstimado.trim()}
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <Input
+                  id="trip-custo"
+                  value={editedTripCusto}
+                  onChange={(e) => setEditedTripCusto(formatCurrencyInput(e.target.value))}
+                  placeholder="0,00"
+                  className="pl-10"
+                  data-testid="input-trip-custo"
+                  disabled={!!editedTripTotalEstimado.trim()}
+                />
+              </div>
               {editedTripTotalEstimado.trim() && (
                 <p className="text-xs text-muted-foreground">
                   Calculado automaticamente a partir do total estimado.
