@@ -187,6 +187,7 @@ interface GroupTripData {
   googleMapsLink?: string;
   hospedagemLink?: string;
   custoEstimadoPorPessoa?: string;
+  totalEstimado?: string;
   dataFim?: string;
   definirResponsaveis?: boolean;
   paymentInfo?: string;
@@ -276,6 +277,7 @@ export default function RoleDetail() {
   const [editedTripConfirmationDeadline, setEditedTripConfirmationDeadline] = useState<string>("");
   const [editedTripHospedagemLink, setEditedTripHospedagemLink] = useState<string>("");
   const [editedTripCusto, setEditedTripCusto] = useState<string>("");
+  const [editedTripTotalEstimado, setEditedTripTotalEstimado] = useState<string>("");
   const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
   const [editedTripPaymentInfo, setEditedTripPaymentInfo] = useState<string>("");
   const [editedTripStatus, setEditedTripStatus] = useState<TripStatus>("planning");
@@ -1061,6 +1063,7 @@ export default function RoleDetail() {
     setEditedTripConfirmationDeadline(confirmationStr);
     setEditedTripHospedagemLink(tripData?.hospedagemLink || "");
     setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
+    setEditedTripTotalEstimado(tripData?.totalEstimado || "");
     setEditedTripMapsLink(tripData?.googleMapsLink || "");
     setEditedTripPaymentInfo(tripData?.paymentInfo || "");
     setEditedTripStatus(tripData?.tripStatus || "planning");
@@ -1075,6 +1078,7 @@ export default function RoleDetail() {
     setEditedTripConfirmationDeadline("");
     setEditedTripHospedagemLink("");
     setEditedTripCusto("");
+    setEditedTripTotalEstimado("");
     setEditedTripMapsLink("");
     setEditedTripPaymentInfo("");
     setEditedTripStatus("planning");
@@ -1088,6 +1092,7 @@ export default function RoleDetail() {
       dataFim: editedTripDataFim || undefined,
       hospedagemLink: editedTripHospedagemLink.trim() || undefined,
       custoEstimadoPorPessoa: editedTripCusto.trim() || undefined,
+      totalEstimado: editedTripTotalEstimado.trim() || undefined,
       googleMapsLink: editedTripMapsLink.trim() || undefined,
       paymentInfo: editedTripPaymentInfo.trim() || undefined,
       tripStatus: editedTripStatus,
