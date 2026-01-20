@@ -287,8 +287,11 @@ export function registerCollabEventsRoutes(app: Express) {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
       
-      // Validate event date is not in the past if being updated
-      if (req.body.eventDate !== undefined) {
+      // Prepare update data
+      const updateData = { ...req.body };
+      
+      // Validate and convert event date if being updated
+      if (req.body.eventDate !== undefined && req.body.eventDate !== null) {
         // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
         let dateString = req.body.eventDate;
         if (typeof dateString === 'string' && !dateString.includes('T')) {
@@ -305,16 +308,37 @@ export function registerCollabEventsRoutes(app: Express) {
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        eventDate.setHours(0, 0, 0, 0);
+        const checkDate = new Date(eventDate);
+        checkDate.setHours(0, 0, 0, 0);
         
-        if (eventDate < today) {
+        if (checkDate < today) {
           return res.status(400).json({ 
             error: "A data do rolê deve ser hoje ou no futuro" 
           });
         }
+        
+        updateData.eventDate = eventDate;
       }
       
-      const event = await storage.updateCollaborativeEvent(id, userId, req.body);
+      // Validate and convert confirmation deadline if being updated
+      if (req.body.confirmationDeadline !== undefined && req.body.confirmationDeadline !== null) {
+        let deadlineString = req.body.confirmationDeadline;
+        if (typeof deadlineString === 'string' && !deadlineString.includes('T')) {
+          deadlineString = deadlineString + 'T15:00:00'; // Default to 3 PM for deadline
+        }
+        const confirmationDeadline = new Date(deadlineString);
+        
+        // Check if date is valid
+        if (isNaN(confirmationDeadline.getTime())) {
+          return res.status(400).json({ 
+            error: "Prazo de confirmação inválido" 
+          });
+        }
+        
+        updateData.confirmationDeadline = confirmationDeadline;
+      }
+      
+      const event = await storage.updateCollaborativeEvent(id, userId, updateData);
       
       if (!event) {
         return res.status(404).json({ error: "Event not found or access denied" });

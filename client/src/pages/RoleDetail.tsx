@@ -271,7 +271,9 @@ export default function RoleDetail() {
   // Group trip editing states
   const [isEditingTripDetails, setIsEditingTripDetails] = useState(false);
   const [editedTripDestino, setEditedTripDestino] = useState<string>("");
+  const [editedTripDataInicio, setEditedTripDataInicio] = useState<string>("");
   const [editedTripDataFim, setEditedTripDataFim] = useState<string>("");
+  const [editedTripConfirmationDeadline, setEditedTripConfirmationDeadline] = useState<string>("");
   const [editedTripHospedagemLink, setEditedTripHospedagemLink] = useState<string>("");
   const [editedTripCusto, setEditedTripCusto] = useState<string>("");
   const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
@@ -1023,9 +1025,11 @@ export default function RoleDetail() {
 
   // Mutation to save trip details
   const saveTripDetailsMutation = useMutation({
-    mutationFn: async (tripData: GroupTripData) => {
+    mutationFn: async (data: { tripData: GroupTripData; eventDate?: string; confirmationDeadline?: string }) => {
       return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
-        typeSpecificData: tripData
+        typeSpecificData: data.tripData,
+        eventDate: data.eventDate,
+        confirmationDeadline: data.confirmationDeadline,
       });
     },
     onSuccess: () => {
@@ -1048,7 +1052,13 @@ export default function RoleDetail() {
   const handleStartEditTripDetails = () => {
     const tripData = event?.typeSpecificData as GroupTripData | null;
     setEditedTripDestino(tripData?.destino || "");
+    // Extract date from eventDate (trip start date)
+    const eventDateStr = event?.eventDate ? event.eventDate.toString().split("T")[0] : "";
+    setEditedTripDataInicio(eventDateStr);
     setEditedTripDataFim(tripData?.dataFim?.split("T")[0] || "");
+    // Extract date and time from confirmationDeadline
+    const confirmationStr = event?.confirmationDeadline ? event.confirmationDeadline.toString().split("T")[0] : "";
+    setEditedTripConfirmationDeadline(confirmationStr);
     setEditedTripHospedagemLink(tripData?.hospedagemLink || "");
     setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
     setEditedTripMapsLink(tripData?.googleMapsLink || "");
@@ -1060,7 +1070,9 @@ export default function RoleDetail() {
   const handleCancelEditTripDetails = () => {
     setIsEditingTripDetails(false);
     setEditedTripDestino("");
+    setEditedTripDataInicio("");
     setEditedTripDataFim("");
+    setEditedTripConfirmationDeadline("");
     setEditedTripHospedagemLink("");
     setEditedTripCusto("");
     setEditedTripMapsLink("");
@@ -1081,7 +1093,11 @@ export default function RoleDetail() {
       tripStatus: editedTripStatus,
       definirResponsaveis: true,
     };
-    saveTripDetailsMutation.mutate(updatedTripData);
+    saveTripDetailsMutation.mutate({
+      tripData: updatedTripData,
+      eventDate: editedTripDataInicio || undefined,
+      confirmationDeadline: editedTripConfirmationDeadline || undefined,
+    });
   };
 
   const handleCancelEditName = () => {
@@ -4011,6 +4027,17 @@ export default function RoleDetail() {
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="trip-data-inicio">Data de Início</Label>
+              <Input
+                id="trip-data-inicio"
+                type="date"
+                value={editedTripDataInicio}
+                onChange={(e) => setEditedTripDataInicio(e.target.value)}
+                data-testid="input-trip-data-inicio"
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="trip-data-fim">Data de Retorno</Label>
               <Input
                 id="trip-data-fim"
@@ -4018,6 +4045,17 @@ export default function RoleDetail() {
                 value={editedTripDataFim}
                 onChange={(e) => setEditedTripDataFim(e.target.value)}
                 data-testid="input-trip-data-fim"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-confirmation-deadline">Prazo para Confirmação</Label>
+              <Input
+                id="trip-confirmation-deadline"
+                type="date"
+                value={editedTripConfirmationDeadline}
+                onChange={(e) => setEditedTripConfirmationDeadline(e.target.value)}
+                data-testid="input-trip-confirmation-deadline"
               />
             </div>
             
