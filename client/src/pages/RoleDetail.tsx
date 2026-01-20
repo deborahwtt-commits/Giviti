@@ -2397,7 +2397,7 @@ export default function RoleDetail() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base">
                         <UserCheck className="w-5 h-5" />
-                        Confirmados ({confirmedParticipants.length})
+                        Convidados ({confirmedParticipants.length})
                       </CardTitle>
                       <CardDescription>
                         Quem vai nessa viagem
