@@ -1098,7 +1098,11 @@ export default function RoleDetail() {
     switch (event.eventType) {
       case "group_trip": {
         const tripData = event.typeSpecificData as GroupTripData | null;
-        const destino = tripData?.destino || event.name;
+        const rawDestino = tripData?.destino || event.name;
+        // Capitalize first letter of each word to match display formatting
+        const destino = rawDestino.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
         // Use parseISO with neutral time to avoid timezone issues (same pattern as Período display)
         const dataFormatted = event.eventDate 
           ? format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
