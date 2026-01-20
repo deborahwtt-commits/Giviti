@@ -1086,13 +1086,36 @@ export default function RoleDetail() {
 
   const handleSaveTripDetails = () => {
     const currentData = event?.typeSpecificData as GroupTripData | null;
+    
+    // Calculate cost per person if total is provided
+    let calculatedCustoPorPessoa = editedTripCusto.trim() || undefined;
+    const totalEstimadoTrimmed = editedTripTotalEstimado.trim();
+    
+    if (totalEstimadoTrimmed) {
+      // Parse the total value (remove R$, dots, and replace comma with dot)
+      const totalNumeric = parseFloat(
+        totalEstimadoTrimmed
+          .replace(/[Rr]\$\s*/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.')
+      );
+      
+      // Get number of participants (all participants count towards the cost)
+      const numParticipants = participants?.length || 1;
+      
+      if (!isNaN(totalNumeric) && numParticipants > 0) {
+        const costPerPerson = totalNumeric / numParticipants;
+        calculatedCustoPorPessoa = formatCurrency(costPerPerson);
+      }
+    }
+    
     const updatedTripData: GroupTripData = {
       ...currentData,
       destino: editedTripDestino.trim() || undefined,
       dataFim: editedTripDataFim || undefined,
       hospedagemLink: editedTripHospedagemLink.trim() || undefined,
-      custoEstimadoPorPessoa: editedTripCusto.trim() || undefined,
-      totalEstimado: editedTripTotalEstimado.trim() || undefined,
+      custoEstimadoPorPessoa: calculatedCustoPorPessoa,
+      totalEstimado: totalEstimadoTrimmed || undefined,
       googleMapsLink: editedTripMapsLink.trim() || undefined,
       paymentInfo: editedTripPaymentInfo.trim() || undefined,
       tripStatus: editedTripStatus,
