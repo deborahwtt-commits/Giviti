@@ -1634,18 +1634,38 @@ export default function RoleDetail() {
                       </div>
                     </div>
                     
-                    {/* Cost */}
-                    {tripData?.custoEstimadoPorPessoa && (
+                    {/* Total and Cost */}
+                    {(tripData?.totalEstimado || tripData?.custoEstimadoPorPessoa) && (
                       <div className="flex items-start gap-3">
                         <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Custo estimado por pessoa</p>
-                          <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
-                            {/^\d+([.,]\d+)?$/.test(tripData.custoEstimadoPorPessoa.trim()) 
-                              ? `R$ ${parseFloat(tripData.custoEstimadoPorPessoa.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                              : tripData.custoEstimadoPorPessoa
-                            }
-                          </p>
+                        <div className="space-y-2">
+                          {tripData?.totalEstimado && (
+                            <div>
+                              <p className="text-sm font-medium">Total estimado da viagem</p>
+                              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400" data-testid="text-total-estimado">
+                                {/^\d+([.,]\d+)?$/.test(tripData.totalEstimado.trim()) 
+                                  ? `R$ ${parseFloat(tripData.totalEstimado.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : tripData.totalEstimado
+                                }
+                              </p>
+                            </div>
+                          )}
+                          {tripData?.custoEstimadoPorPessoa && (
+                            <div>
+                              <p className="text-sm font-medium">
+                                Custo estimado por pessoa
+                                {tripData?.totalEstimado && (
+                                  <span className="text-xs text-muted-foreground ml-1">(calculado)</span>
+                                )}
+                              </p>
+                              <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
+                                {/^\d+([.,]\d+)?$/.test(tripData.custoEstimadoPorPessoa.trim()) 
+                                  ? `R$ ${parseFloat(tripData.custoEstimadoPorPessoa.replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : tripData.custoEstimadoPorPessoa
+                                }
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
