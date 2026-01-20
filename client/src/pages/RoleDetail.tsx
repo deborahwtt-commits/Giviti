@@ -3988,20 +3988,22 @@ export default function RoleDetail() {
       {/* Dialog for editing trip details */}
       <AlertDialog open={isEditingTripDetails} onOpenChange={(open) => !open && handleCancelEditTripDetails()}>
         <AlertDialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="dialog-edit-trip-details">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4"
-            onClick={handleCancelEditTripDetails}
-            data-testid="button-close-trip-details"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Plane className="w-5 h-5 text-blue-500" />
-              Editar Detalhes da Viagem
-            </AlertDialogTitle>
+          <AlertDialogHeader className="pr-8">
+            <div className="flex items-start justify-between gap-2">
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Plane className="w-5 h-5 text-blue-500" />
+                Editar Detalhes da Viagem
+              </AlertDialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 -mt-1 -mr-6"
+                onClick={handleCancelEditTripDetails}
+                data-testid="button-close-trip-details"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
             <AlertDialogDescription>
               Atualize as informações da viagem. Todos os participantes verão as alterações.
             </AlertDialogDescription>
