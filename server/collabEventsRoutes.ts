@@ -24,6 +24,62 @@ async function canAccessEvent(userId: string, eventId: string): Promise<boolean>
   return !!event;
 }
 
+// Helper function to recalculate cost per person for group trips when participants change
+async function recalculateTripCostPerPerson(eventId: string): Promise<void> {
+  try {
+    // Get the event (without userId since this is an internal function)
+    const event = await storage.getCollaborativeEvent(eventId);
+    if (!event || event.eventType !== 'group_trip') {
+      return;
+    }
+
+    const typeData = event.typeSpecificData as Record<string, unknown> | null;
+    if (!typeData?.totalEstimado) {
+      return; // No total to calculate from
+    }
+
+    // Parse the total value (remove currency formatting)
+    const totalStr = String(typeData.totalEstimado).replace(/[^\d.,]/g, '').replace(',', '.');
+    const totalValue = parseFloat(totalStr);
+    if (isNaN(totalValue) || totalValue <= 0) {
+      return;
+    }
+
+    // Get participants count (exclude declined)
+    const participants = await storage.getParticipants(eventId);
+    const activeParticipants = participants.filter(p => p.status !== 'declined');
+    const participantCount = activeParticipants.length;
+    
+    if (participantCount === 0) {
+      return;
+    }
+
+    // Calculate cost per person
+    const costPerPerson = totalValue / participantCount;
+    const formattedCost = costPerPerson.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+
+    // Update typeSpecificData with new cost
+    const updatedTypeData = {
+      ...typeData,
+      custoEstimadoPorPessoa: formattedCost
+    };
+
+    // Get owner to update event
+    const owner = await storage.getUser(event.ownerId);
+    if (owner) {
+      await storage.updateCollaborativeEvent(eventId, owner.id, {
+        typeSpecificData: updatedTypeData
+      });
+      console.log(`[RecalculateTripCost] Updated cost per person for event ${eventId}: R$ ${formattedCost} (${participantCount} participants)`);
+    }
+  } catch (error) {
+    console.error('[RecalculateTripCost] Error recalculating trip cost:', error);
+  }
+}
+
 export function registerCollabEventsRoutes(app: Express) {
   // ========== INVITATION TOKEN ROUTES (PUBLIC) ==========
 
@@ -698,6 +754,10 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Fetch updated participant with emailStatus
       const updatedParticipant = await storage.getParticipant(participant.id);
+      
+      // Recalculate trip cost per person if this is a group trip
+      await recalculateTripCostPerPerson(id);
+      
       res.status(201).json({ ...updatedParticipant, emailSent });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -804,6 +864,9 @@ export function registerCollabEventsRoutes(app: Express) {
       if (!success) {
         return res.status(404).json({ error: "Participant not found" });
       }
+      
+      // Recalculate trip cost per person if this is a group trip
+      await recalculateTripCostPerPerson(eventId);
       
       res.json({ success: true });
     } catch (error) {
