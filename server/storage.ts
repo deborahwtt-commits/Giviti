@@ -342,6 +342,7 @@ export interface IStorage {
   updateParticipantStatus(id: string, status: string): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantInviteToken(id: string, inviteToken: string | null): Promise<CollaborativeEventParticipant | undefined>;
   updateParticipantEmailStatus(id: string, emailStatus: string): Promise<CollaborativeEventParticipant | undefined>;
+  updateParticipantPaymentStatus(id: string, paymentConfirmed: boolean): Promise<CollaborativeEventParticipant | undefined>;
   removeParticipant(id: string, eventId: string): Promise<boolean>;
   linkParticipantsByEmail(email: string, userId: string): Promise<number>;
   
@@ -2162,6 +2163,7 @@ export class DatabaseStorage implements IStorage {
         name: collaborativeEvents.name,
         eventType: collaborativeEvents.eventType,
         eventDate: collaborativeEvents.eventDate,
+        confirmationDeadline: collaborativeEvents.confirmationDeadline,
         location: collaborativeEvents.location,
         description: collaborativeEvents.description,
         themedNightCategoryId: collaborativeEvents.themedNightCategoryId,
@@ -2220,6 +2222,7 @@ export class DatabaseStorage implements IStorage {
         name: collaborativeEvents.name,
         eventType: collaborativeEvents.eventType,
         eventDate: collaborativeEvents.eventDate,
+        confirmationDeadline: collaborativeEvents.confirmationDeadline,
         location: collaborativeEvents.location,
         description: collaborativeEvents.description,
         themedNightCategoryId: collaborativeEvents.themedNightCategoryId,
@@ -2415,6 +2418,19 @@ export class DatabaseStorage implements IStorage {
       .update(collaborativeEventParticipants)
       .set({
         emailStatus,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(collaborativeEventParticipants.id, id))
+      .returning();
+
+    return updatedParticipant;
+  }
+
+  async updateParticipantPaymentStatus(id: string, paymentConfirmed: boolean): Promise<CollaborativeEventParticipant | undefined> {
+    const [updatedParticipant] = await db
+      .update(collaborativeEventParticipants)
+      .set({
+        paymentConfirmed,
         updatedAt: sql`now()`,
       })
       .where(eq(collaborativeEventParticipants.id, id))

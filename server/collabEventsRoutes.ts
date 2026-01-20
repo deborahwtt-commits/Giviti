@@ -24,6 +24,66 @@ async function canAccessEvent(userId: string, eventId: string): Promise<boolean>
   return !!event;
 }
 
+// Helper function to recalculate cost per person for group trips when participants change
+async function recalculateTripCostPerPerson(eventId: string): Promise<void> {
+  try {
+    // Get the event (without userId since this is an internal function)
+    const event = await storage.getCollaborativeEvent(eventId);
+    if (!event || event.eventType !== 'group_trip') {
+      return;
+    }
+
+    const typeData = event.typeSpecificData as Record<string, unknown> | null;
+    if (!typeData?.totalEstimado) {
+      return; // No total to calculate from
+    }
+
+    // Parse the total value (remove currency formatting)
+    // Brazilian format: "5.000,00" -> remove thousand separators (dots), then replace decimal comma with dot
+    const totalStr = String(typeData.totalEstimado)
+      .replace(/[^\d.,]/g, '')  // Keep only digits, dots and commas
+      .replace(/\./g, '')       // Remove all dots (thousand separators)
+      .replace(',', '.');       // Replace comma with dot (decimal separator)
+    const totalValue = parseFloat(totalStr);
+    if (isNaN(totalValue) || totalValue <= 0) {
+      return;
+    }
+
+    // Get participants count (exclude declined)
+    const participants = await storage.getParticipants(eventId);
+    const activeParticipants = participants.filter(p => p.status !== 'declined');
+    const participantCount = activeParticipants.length;
+    
+    if (participantCount === 0) {
+      return;
+    }
+
+    // Calculate cost per person
+    const costPerPerson = totalValue / participantCount;
+    const formattedCost = costPerPerson.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+
+    // Update typeSpecificData with new cost
+    const updatedTypeData = {
+      ...typeData,
+      custoEstimadoPorPessoa: formattedCost
+    };
+
+    // Get owner to update event
+    const owner = await storage.getUser(event.ownerId);
+    if (owner) {
+      await storage.updateCollaborativeEvent(eventId, owner.id, {
+        typeSpecificData: updatedTypeData
+      });
+      console.log(`[RecalculateTripCost] Updated cost per person for event ${eventId}: R$ ${formattedCost} (${participantCount} participants)`);
+    }
+  } catch (error) {
+    console.error('[RecalculateTripCost] Error recalculating trip cost:', error);
+  }
+}
+
 export function registerCollabEventsRoutes(app: Express) {
   // ========== INVITATION TOKEN ROUTES (PUBLIC) ==========
 
@@ -287,8 +347,11 @@ export function registerCollabEventsRoutes(app: Express) {
       const userId = (req as AuthenticatedRequest).user.id;
       const { id } = req.params;
       
-      // Validate event date is not in the past if being updated
-      if (req.body.eventDate !== undefined) {
+      // Prepare update data
+      const updateData = { ...req.body };
+      
+      // Validate and convert event date if being updated
+      if (req.body.eventDate !== undefined && req.body.eventDate !== null) {
         // Handle date-only strings by adding noon time to avoid UTC midnight timezone issues
         let dateString = req.body.eventDate;
         if (typeof dateString === 'string' && !dateString.includes('T')) {
@@ -305,16 +368,37 @@ export function registerCollabEventsRoutes(app: Express) {
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        eventDate.setHours(0, 0, 0, 0);
+        const checkDate = new Date(eventDate);
+        checkDate.setHours(0, 0, 0, 0);
         
-        if (eventDate < today) {
+        if (checkDate < today) {
           return res.status(400).json({ 
             error: "A data do rolê deve ser hoje ou no futuro" 
           });
         }
+        
+        updateData.eventDate = eventDate;
       }
       
-      const event = await storage.updateCollaborativeEvent(id, userId, req.body);
+      // Validate and convert confirmation deadline if being updated
+      if (req.body.confirmationDeadline !== undefined && req.body.confirmationDeadline !== null) {
+        let deadlineString = req.body.confirmationDeadline;
+        if (typeof deadlineString === 'string' && !deadlineString.includes('T')) {
+          deadlineString = deadlineString + 'T15:00:00'; // Default to 3 PM for deadline
+        }
+        const confirmationDeadline = new Date(deadlineString);
+        
+        // Check if date is valid
+        if (isNaN(confirmationDeadline.getTime())) {
+          return res.status(400).json({ 
+            error: "Prazo de confirmação inválido" 
+          });
+        }
+        
+        updateData.confirmationDeadline = confirmationDeadline;
+      }
+      
+      const event = await storage.updateCollaborativeEvent(id, userId, updateData);
       
       if (!event) {
         return res.status(404).json({ error: "Event not found or access denied" });
@@ -674,6 +758,10 @@ export function registerCollabEventsRoutes(app: Express) {
       
       // Fetch updated participant with emailStatus
       const updatedParticipant = await storage.getParticipant(participant.id);
+      
+      // Recalculate trip cost per person if this is a group trip
+      await recalculateTripCostPerPerson(id);
+      
       res.status(201).json({ ...updatedParticipant, emailSent });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -730,6 +818,40 @@ export function registerCollabEventsRoutes(app: Express) {
     }
   });
 
+  // PATCH /api/collab-events/:eventId/participants/:participantId/payment - Update participant payment status
+  app.patch("/api/collab-events/:eventId/participants/:participantId/payment", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { eventId, participantId } = req.params;
+      const { paymentConfirmed } = req.body;
+      
+      if (typeof paymentConfirmed !== 'boolean') {
+        return res.status(400).json({ error: "paymentConfirmed (boolean) is required" });
+      }
+      
+      // Check if user is the event owner
+      const event = await storage.getCollaborativeEvent(eventId, userId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      if (event.ownerId !== userId) {
+        return res.status(403).json({ error: "Only the event owner can update payment status" });
+      }
+      
+      const participant = await storage.updateParticipantPaymentStatus(participantId, paymentConfirmed);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      res.json(participant);
+    } catch (error) {
+      console.error("Error updating participant payment status:", error);
+      res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
   // DELETE /api/collab-events/:eventId/participants/:participantId - Remove a participant
   app.delete("/api/collab-events/:eventId/participants/:participantId", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -746,6 +868,9 @@ export function registerCollabEventsRoutes(app: Express) {
       if (!success) {
         return res.status(404).json({ error: "Participant not found" });
       }
+      
+      // Recalculate trip cost per person if this is a group trip
+      await recalculateTripCostPerPerson(eventId);
       
       res.json({ success: true });
     } catch (error) {

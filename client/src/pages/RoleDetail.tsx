@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,9 @@ import {
   Plus,
   Pencil,
   UserCheck,
+  Plane,
+  Hotel,
+  Map,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,6 +98,11 @@ const eventTypeInfo: Record<string, { label: string; className: string; Icon: Lu
     label: "Desafio Criativo", 
     className: "bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-700", 
     Icon: Sparkles 
+  },
+  group_trip: { 
+    label: "Viagem em Grupo", 
+    className: "bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-700", 
+    Icon: Plane 
   },
 };
 
@@ -171,6 +180,28 @@ interface CollectiveGiftData {
   recipientName?: string;
 }
 
+type TripStatus = 'idea' | 'planning' | 'confirmed' | 'cancelled' | 'completed';
+
+interface GroupTripData {
+  destino?: string;
+  googleMapsLink?: string;
+  hospedagemLink?: string;
+  custoEstimadoPorPessoa?: string;
+  totalEstimado?: string;
+  dataFim?: string;
+  definirResponsaveis?: boolean;
+  paymentInfo?: string;
+  tripStatus?: TripStatus;
+}
+
+const TRIP_STATUS_CONFIG: Record<TripStatus, { label: string; color: string; bgColor: string }> = {
+  idea: { label: 'Ideia', color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' },
+  planning: { label: 'Em Planejamento', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' },
+  confirmed: { label: 'Confirmada', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700' },
+  cancelled: { label: 'Cancelada', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700' },
+  completed: { label: 'Concluída', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700' },
+};
+
 interface ContributionWithParticipant {
   id: string;
   eventId: string;
@@ -237,6 +268,19 @@ export default function RoleDetail() {
   // Name editing states
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState<string>("");
+
+  // Group trip editing states
+  const [isEditingTripDetails, setIsEditingTripDetails] = useState(false);
+  const [editedTripDestino, setEditedTripDestino] = useState<string>("");
+  const [editedTripDataInicio, setEditedTripDataInicio] = useState<string>("");
+  const [editedTripDataFim, setEditedTripDataFim] = useState<string>("");
+  const [editedTripConfirmationDeadline, setEditedTripConfirmationDeadline] = useState<string>("");
+  const [editedTripHospedagemLink, setEditedTripHospedagemLink] = useState<string>("");
+  const [editedTripCusto, setEditedTripCusto] = useState<string>("");
+  const [editedTripTotalEstimado, setEditedTripTotalEstimado] = useState<string>("");
+  const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
+  const [editedTripPaymentInfo, setEditedTripPaymentInfo] = useState<string>("");
+  const [editedTripStatus, setEditedTripStatus] = useState<TripStatus>("planning");
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],
@@ -311,7 +355,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && event.eventType === "themed_night",
+    enabled: !!id && !!event && (event.eventType === "themed_night" || event.eventType === "group_trip"),
   });
 
   // State for adding new task items
@@ -695,8 +739,9 @@ export default function RoleDetail() {
   };
 
   // Get definirResponsaveis setting from typeSpecificData
+  // For group_trip, checklist is always enabled
   const definirResponsaveis = Boolean(
-    event?.eventType === "themed_night" && 
+    (event?.eventType === "themed_night" || event?.eventType === "group_trip") && 
     event?.typeSpecificData && 
     typeof event.typeSpecificData === "object" &&
     "definirResponsaveis" in event.typeSpecificData &&
@@ -835,6 +880,50 @@ export default function RoleDetail() {
     },
   });
 
+  // Confirm trip participation mutation
+  const confirmTripMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUserParticipant) throw new Error("Participante não encontrado");
+      const response = await apiRequest(`/api/collab-events/${id}/participants/${currentUserParticipant.id}/status`, "PATCH", { status: "accepted" });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao confirmar participação");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+      toast({
+        title: "Presença confirmada!",
+        description: "Você confirmou que vai nessa viagem.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao confirmar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update payment status mutation
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ participantId, paymentConfirmed }: { participantId: string; paymentConfirmed: boolean }) => {
+      return await apiRequest(`/api/collab-events/${id}/participants/${participantId}/payment`, "PATCH", { paymentConfirmed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id, "participants"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (event && event.eventType === "secret_santa" && event.typeSpecificData) {
       const data = event.typeSpecificData as SecretSantaRules;
@@ -936,9 +1025,164 @@ export default function RoleDetail() {
     setIsEditingName(true);
   };
 
+  // Mutation to save trip details
+  const saveTripDetailsMutation = useMutation({
+    mutationFn: async (data: { tripData: GroupTripData; eventDate?: string; confirmationDeadline?: string }) => {
+      return await apiRequest(`/api/collab-events/${id}`, "PATCH", {
+        typeSpecificData: data.tripData,
+        eventDate: data.eventDate,
+        confirmationDeadline: data.confirmationDeadline,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collab-events", id] });
+      setIsEditingTripDetails(false);
+      toast({
+        title: "Detalhes atualizados",
+        description: "As informações da viagem foram salvas.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar detalhes",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartEditTripDetails = () => {
+    const tripData = event?.typeSpecificData as GroupTripData | null;
+    setEditedTripDestino(tripData?.destino || "");
+    // Extract date from eventDate (trip start date)
+    const eventDateStr = event?.eventDate ? event.eventDate.toString().split("T")[0] : "";
+    setEditedTripDataInicio(eventDateStr);
+    setEditedTripDataFim(tripData?.dataFim?.split("T")[0] || "");
+    // Extract date and time from confirmationDeadline
+    const confirmationStr = event?.confirmationDeadline ? event.confirmationDeadline.toString().split("T")[0] : "";
+    setEditedTripConfirmationDeadline(confirmationStr);
+    setEditedTripHospedagemLink(tripData?.hospedagemLink || "");
+    setEditedTripCusto(tripData?.custoEstimadoPorPessoa || "");
+    setEditedTripTotalEstimado(tripData?.totalEstimado || "");
+    setEditedTripMapsLink(tripData?.googleMapsLink || "");
+    setEditedTripPaymentInfo(tripData?.paymentInfo || "");
+    setEditedTripStatus(tripData?.tripStatus || "planning");
+    setIsEditingTripDetails(true);
+  };
+
+  const handleCancelEditTripDetails = () => {
+    setIsEditingTripDetails(false);
+    setEditedTripDestino("");
+    setEditedTripDataInicio("");
+    setEditedTripDataFim("");
+    setEditedTripConfirmationDeadline("");
+    setEditedTripHospedagemLink("");
+    setEditedTripCusto("");
+    setEditedTripTotalEstimado("");
+    setEditedTripMapsLink("");
+    setEditedTripPaymentInfo("");
+    setEditedTripStatus("planning");
+  };
+
+  const handleSaveTripDetails = () => {
+    const currentData = event?.typeSpecificData as GroupTripData | null;
+    
+    // Calculate cost per person if total is provided
+    let calculatedCustoPorPessoa = editedTripCusto.trim() || undefined;
+    const totalEstimadoTrimmed = editedTripTotalEstimado.trim();
+    
+    if (totalEstimadoTrimmed) {
+      // Parse the total value (remove R$, dots, and replace comma with dot)
+      const totalNumeric = parseFloat(
+        totalEstimadoTrimmed
+          .replace(/[Rr]\$\s*/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.')
+      );
+      
+      // Get number of participants (all participants count towards the cost)
+      const numParticipants = participants?.length || 1;
+      
+      if (!isNaN(totalNumeric) && numParticipants > 0) {
+        const costPerPerson = totalNumeric / numParticipants;
+        calculatedCustoPorPessoa = formatCurrency(costPerPerson);
+      }
+    }
+    
+    const updatedTripData: GroupTripData = {
+      ...currentData,
+      destino: editedTripDestino.trim() || undefined,
+      dataFim: editedTripDataFim || undefined,
+      hospedagemLink: editedTripHospedagemLink.trim() || undefined,
+      custoEstimadoPorPessoa: calculatedCustoPorPessoa,
+      totalEstimado: totalEstimadoTrimmed || undefined,
+      googleMapsLink: editedTripMapsLink.trim() || undefined,
+      paymentInfo: editedTripPaymentInfo.trim() || undefined,
+      tripStatus: editedTripStatus,
+      definirResponsaveis: true,
+    };
+    saveTripDetailsMutation.mutate({
+      tripData: updatedTripData,
+      eventDate: editedTripDataInicio || undefined,
+      confirmationDeadline: editedTripConfirmationDeadline || undefined,
+    });
+  };
+
   const handleCancelEditName = () => {
     setIsEditingName(false);
     setEditedName("");
+  };
+
+  const handleShare = async () => {
+    if (!event) return;
+    
+    const eventUrl = `${window.location.origin}/roles/${event.id}`;
+    let message = "";
+    
+    switch (event.eventType) {
+      case "group_trip": {
+        const tripData = event.typeSpecificData as GroupTripData | null;
+        const rawDestino = tripData?.destino || event.name;
+        // Capitalize first letter of each word to match display formatting
+        const destino = rawDestino.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+        // Use parseISO with neutral time to avoid timezone issues (same pattern as Período display)
+        const dataFormatted = event.eventDate 
+          ? format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+          : "";
+        message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
+        break;
+      }
+      case "collective_gift": {
+        const giftData = event.typeSpecificData as { presenteado?: string } | null;
+        const presenteado = giftData?.presenteado || "alguém especial";
+        message = `🎁 Estamos juntando uma vaquinha para presentear ${presenteado}! Quer participar? Veja os detalhes e contribua: ${eventUrl}`;
+        break;
+      }
+      case "themed_night": {
+        const themeData = event.typeSpecificData as { subcategory?: string } | null;
+        const tema = themeData?.subcategory || event.name;
+        message = `🎬 Convite especial! Estou organizando uma noite temática de ${tema}. Confirme sua presença e veja o que precisa trazer: ${eventUrl}`;
+        break;
+      }
+      default:
+        message = `🎉 Você foi convidado(a) para ${event.name}! Clique no link para participar: ${eventUrl}`;
+    }
+    
+    try {
+      await navigator.clipboard.writeText(message);
+      toast({
+        title: "Mensagem copiada!",
+        description: "Cole no WhatsApp ou onde preferir para convidar seus amigos.",
+      });
+    } catch {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar a mensagem.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveEditName = () => {
@@ -1256,6 +1500,21 @@ export default function RoleDetail() {
                 <Badge variant="outline" data-testid="badge-role-status">
                   {statusLabels[event.status]}
                 </Badge>
+                {/* Trip status badge for group_trip events */}
+                {event.eventType === "group_trip" && (() => {
+                  const tripData = event.typeSpecificData as GroupTripData | null;
+                  const tripStatus = tripData?.tripStatus || "planning";
+                  const statusConfig = TRIP_STATUS_CONFIG[tripStatus];
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`${statusConfig.color} ${statusConfig.bgColor}`}
+                      data-testid="badge-trip-status"
+                    >
+                      {statusConfig.label}
+                    </Badge>
+                  );
+                })()}
                 {/* HIDDEN: Public badge - All events are private
                 {event.isPublic && (
                   <Badge variant="outline" data-testid="badge-role-public">
@@ -1282,7 +1541,7 @@ export default function RoleDetail() {
           )}
           {/* Hide share button for Secret Santa - participants are added directly by organizer */}
           {event.eventType !== "secret_santa" && (
-            <Button variant="outline" size="sm" data-testid="button-share-role">
+            <Button variant="outline" size="sm" onClick={handleShare} data-testid="button-share-role">
               <Share2 className="w-4 h-4 mr-2" />
               Compartilhar
             </Button>
@@ -1310,14 +1569,162 @@ export default function RoleDetail() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Group Trip Details Card - First in overview */}
+            {event.eventType === "group_trip" && (() => {
+              const tripData = event.typeSpecificData as GroupTripData | null;
+              return (
+                <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Plane className="w-5 h-5 text-blue-500" />
+                        Detalhes da Viagem
+                      </CardTitle>
+                      {isOwner && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStartEditTripDetails}
+                          data-testid="button-edit-trip-details"
+                          className="gap-1.5"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Destination */}
+                    {tripData?.destino && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Destino</p>
+                          <p className="text-lg font-semibold text-foreground capitalize">
+                            {tripData.destino}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Dates */}
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Período</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM", { locale: ptBR })}
+                          {tripData?.dataFim && (
+                            <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                          )}
+                        </p>
+                        {/* Duration calculation */}
+                        {tripData?.dataFim && (() => {
+                          const startDate = parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00");
+                          const endDate = parseISO(tripData.dataFim.split("T")[0] + "T12:00:00");
+                          const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                          return (
+                            <Badge variant="outline" className="mt-1.5 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700">
+                              {diffDays} {diffDays === 1 ? 'dia' : 'dias'}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    
+                    {/* Total and Cost */}
+                    {(tripData?.totalEstimado || tripData?.custoEstimadoPorPessoa) && (
+                      <div className="flex items-start gap-3">
+                        <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div className="space-y-2">
+                          {tripData?.totalEstimado && (
+                            <div>
+                              <p className="text-sm font-medium">Total estimado da viagem</p>
+                              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400" data-testid="text-total-estimado">
+                                R$ {tripData.totalEstimado.replace(/[^\d.,]/g, '')}
+                              </p>
+                            </div>
+                          )}
+                          {tripData?.custoEstimadoPorPessoa && (
+                            <div>
+                              <p className="text-sm font-medium">
+                                Custo estimado por pessoa
+                                {tripData?.totalEstimado && (
+                                  <span className="text-xs text-muted-foreground ml-1">(calculado)</span>
+                                )}
+                              </p>
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400" data-testid="text-custo-estimado">
+                                R$ {tripData.custoEstimadoPorPessoa.replace(/[^\d.,]/g, '')}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Links */}
+                    {(tripData?.googleMapsLink || tripData?.hospedagemLink) && (
+                      <div className="pt-3 border-t space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Links úteis</p>
+                        <div className="flex flex-wrap gap-2">
+                          {tripData?.googleMapsLink && (
+                            <a 
+                              href={tripData.googleMapsLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              <Button variant="outline" size="sm" className="gap-2" data-testid="button-maps-link">
+                                <Map className="w-4 h-4" />
+                                Ver no Maps
+                              </Button>
+                            </a>
+                          )}
+                          {tripData?.hospedagemLink && (
+                            <a 
+                              href={tripData.hospedagemLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              <Button variant="outline" size="sm" className="gap-2" data-testid="button-hospedagem-link">
+                                <Hotel className="w-4 h-4" />
+                                Ver Hospedagem
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Informações do Rolê</CardTitle>
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base">
+                    {event.eventType === "group_trip" ? "Informações Gerais" : "Informações do Rolê"}
+                  </CardTitle>
+                  {isOwner && !isEditingDescription && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleStartEditDescription}
+                      data-testid="button-edit-description"
+                      className="gap-1.5"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {event.eventType === "themed_night" && themedCategory && (
-                  <div className="flex items-start gap-2">
-                    <PartyPopper className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div className="flex items-start gap-3">
+                    <PartyPopper className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Qual é a boa?</p>
                       <Badge 
@@ -1334,12 +1741,13 @@ export default function RoleDetail() {
                     </div>
                   </div>
                 )}
-                {event.eventDate && (
-                  <div className="flex items-start gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                {/* Hide Date/Time for group_trip - already shown in trip details card */}
+                {event.eventType !== "group_trip" && event.eventDate && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-date">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-date">
                         {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
@@ -1351,79 +1759,89 @@ export default function RoleDetail() {
                     : event.confirmationDeadline;
                   const now = new Date();
                   const isExpired = now > deadline;
-                  const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;
+                  const diffTime = deadline.getTime() - now.getTime();
+                  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const isUrgent = !isExpired && daysRemaining <= 3;
+                  const isNear = !isExpired && !isUrgent && daysRemaining <= 7;
                   
                   return (
-                    <div className={`flex items-start gap-2 ${
-                      isExpired || isUrgent ? 'p-2 rounded-md' : ''
+                    <div className={`flex items-start gap-3 ${
+                      isExpired || isUrgent ? 'p-3 rounded-lg' : ''
                     } ${
                       isExpired 
                         ? 'bg-destructive/10' 
                         : isUrgent 
-                          ? 'bg-amber-50 dark:bg-amber-950/30'
+                          ? 'bg-rose-50 dark:bg-rose-950/30'
                           : ''
                     }`}>
-                      <Clock className={`w-4 h-4 mt-0.5 ${
+                      <Clock className={`w-5 h-5 mt-0.5 ${
                         isExpired 
                           ? 'text-destructive' 
                           : isUrgent 
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-muted-foreground'
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : isNear
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-muted-foreground'
                       }`} />
                       <div>
                         <p className={`text-sm font-medium ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
-                              ? 'text-amber-700 dark:text-amber-300'
+                              ? 'text-rose-700 dark:text-rose-300'
                               : ''
                         }`}>
                           Prazo para Confirmar
                         </p>
-                        <p className={`text-xs ${
+                        <p className={`text-sm ${
                           isExpired 
                             ? 'text-destructive' 
                             : isUrgent 
-                              ? 'text-amber-600 dark:text-amber-400'
+                              ? 'text-rose-600 dark:text-rose-400'
                               : 'text-muted-foreground'
                         }`} data-testid="text-confirmation-deadline">
-                          {isExpired 
-                            ? `Encerrado em ${format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
-                            : format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                          }
+                          {format(deadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
+                        {/* Days remaining badge */}
+                        {isExpired ? (
+                          <Badge variant="outline" className="mt-1.5 text-destructive border-destructive">
+                            Prazo encerrado
+                          </Badge>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className={`mt-1.5 ${
+                              isUrgent 
+                                ? 'text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700'
+                                : isNear
+                                  ? 'text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700'
+                                  : 'text-muted-foreground'
+                            }`}
+                          >
+                            {daysRemaining === 0 ? 'Último dia!' : daysRemaining === 1 ? 'Falta 1 dia' : `Faltam ${daysRemaining} dias`}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   );
                 })()}
-                {event.location && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                {/* Hide Location for group_trip - already shown in trip details card */}
+                {event.eventType !== "group_trip" && event.location && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Local</p>
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-location">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-location">
                         {event.location}
                       </p>
                     </div>
                   </div>
                 )}
                 {/* Editable description section */}
-                <div className="flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium">Descrição</p>
-                      {isOwner && !isEditingDescription && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleStartEditDescription}
-                          data-testid="button-edit-description"
-                        >
-                          Editar
-                        </Button>
-                      )}
-                    </div>
+                    <p className="text-sm font-medium mb-1">Descrição</p>
                     {isEditingDescription ? (
                       <div className="space-y-3">
                         <Textarea
@@ -1459,12 +1877,27 @@ export default function RoleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground" data-testid="text-event-description">
+                      <p className="text-sm text-muted-foreground" data-testid="text-event-description">
                         {event.description || (isOwner ? "Nenhuma descrição definida. Clique em Editar para adicionar." : "Nenhuma descrição definida.")}
                       </p>
                     )}
                   </div>
                 </div>
+                {/* Payment info for group_trip */}
+                {event.eventType === "group_trip" && (() => {
+                  const tripData = event.typeSpecificData as GroupTripData | null;
+                  return (
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium mb-1">Pagamento</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-payment-info">
+                          {tripData?.paymentInfo || (isOwner ? "Nenhuma instrução de pagamento definida. Edite nos Detalhes da Viagem." : "Nenhuma instrução de pagamento definida.")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -1472,7 +1905,7 @@ export default function RoleDetail() {
             {event.eventType === "secret_santa" && !isOwner && (
               <Card data-testid="card-profile-status">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <Heart className="w-5 h-5 text-pink-500" />
                     Seu Perfil de Presentes
                   </CardTitle>
@@ -1512,7 +1945,7 @@ export default function RoleDetail() {
             {event.eventType === "themed_night" && themedSuggestions && themedSuggestions.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <Lightbulb className="w-5 h-5" />
                     Sugestões para o Rolê
                   </CardTitle>
@@ -1587,8 +2020,8 @@ export default function RoleDetail() {
               </Card>
             )}
 
-            {/* Themed Night Checklist Card */}
-            {event.eventType === "themed_night" && (
+            {/* Themed Night / Group Trip Checklist Card */}
+            {(event.eventType === "themed_night" || event.eventType === "group_trip") && (
               <Card data-testid="card-themed-checklist">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -1989,6 +2422,146 @@ export default function RoleDetail() {
                       </CardContent>
                     </Card>
                   )}
+                </>
+              );
+            })()}
+
+            {/* Group Trip Section */}
+            {event.eventType === "group_trip" && (() => {
+              const tripData = event.typeSpecificData as GroupTripData | null;
+              const confirmedParticipants = participants?.filter(p => p.status === "accepted") || [];
+              const pendingParticipants = participants?.filter(p => p.status !== "accepted" && p.status !== "declined") || [];
+              
+              return (
+                <>
+                  {/* Confirmation Card - First, for participant action */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <UserCheck className="w-5 h-5" />
+                        Convidados ({confirmedParticipants.length})
+                      </CardTitle>
+                      <CardDescription>
+                        Quem vai nessa viagem
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {/* RSVP Button for participants */}
+                      {currentUserParticipant && currentUserParticipant.status !== "accepted" && (
+                        <div className="mb-4 pb-4 border-b">
+                          <Button
+                            onClick={() => confirmTripMutation.mutate()}
+                            disabled={confirmTripMutation.isPending}
+                            className="w-full bg-blue-500 hover:bg-blue-600"
+                            data-testid="button-confirm-trip"
+                          >
+                            {confirmTripMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <Check className="w-4 h-4 mr-2" />
+                            )}
+                            Vou nessa viagem!
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Confirmed list */}
+                      {confirmedParticipants.length > 0 ? (
+                        <div className="space-y-2">
+                          {confirmedParticipants.map((participant) => {
+                            const name = participant.name || participant.email || "Participante";
+                            const initials = name.substring(0, 2).toUpperCase();
+                            const isPaid = participant.paymentConfirmed === true;
+                            return (
+                              <div 
+                                key={participant.id}
+                                className="flex items-center gap-3 p-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+                                data-testid={`confirmed-participant-${participant.id}`}
+                              >
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="text-xs bg-green-100 dark:bg-green-900">{initials}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium flex-1">{name}</span>
+                                {/* Payment status - owner sees checkbox, others see icon */}
+                                {isOwner ? (
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={`payment-${participant.id}`}
+                                      checked={isPaid}
+                                      onCheckedChange={(checked) => {
+                                        updatePaymentStatusMutation.mutate({
+                                          participantId: participant.id,
+                                          paymentConfirmed: checked === true
+                                        });
+                                      }}
+                                      disabled={updatePaymentStatusMutation.isPending}
+                                      data-testid={`checkbox-payment-${participant.id}`}
+                                    />
+                                    <Label 
+                                      htmlFor={`payment-${participant.id}`}
+                                      className={`text-xs ${isPaid ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}
+                                    >
+                                      {isPaid ? 'Pago' : 'Pendente'}
+                                    </Label>
+                                  </div>
+                                ) : (
+                                  isPaid && (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-300 dark:border-green-700">
+                                          <DollarSign className="w-3 h-3 mr-1" />
+                                          Pago
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Pagamento confirmado</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )
+                                )}
+                                <Badge className="bg-green-500 hover:bg-green-600">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  Confirmado
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Nenhuma confirmação ainda</p>
+                        </div>
+                      )}
+                      
+                      {/* Pending list */}
+                      {pendingParticipants.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            Aguardando confirmação ({pendingParticipants.length})
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {pendingParticipants.map((participant) => {
+                              const name = participant.name || participant.email || "Participante";
+                              const initials = name.substring(0, 2).toUpperCase();
+                              return (
+                                <Tooltip key={participant.id}>
+                                  <TooltipTrigger>
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </>
               );
             })()}
@@ -3450,6 +4023,181 @@ export default function RoleDetail() {
           
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-close-wishlist-dialog">Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog for editing trip details */}
+      <AlertDialog open={isEditingTripDetails} onOpenChange={(open) => !open && handleCancelEditTripDetails()}>
+        <AlertDialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="dialog-edit-trip-details">
+          <AlertDialogHeader className="pr-8">
+            <div className="flex items-start justify-between gap-2">
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Plane className="w-5 h-5 text-blue-500" />
+                Editar Detalhes da Viagem
+              </AlertDialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 -mt-1 -mr-6"
+                onClick={handleCancelEditTripDetails}
+                data-testid="button-close-trip-details"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <AlertDialogDescription>
+              Atualize as informações da viagem. Todos os participantes verão as alterações.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trip-destino">Destino</Label>
+              <Input
+                id="trip-destino"
+                value={editedTripDestino}
+                onChange={(e) => setEditedTripDestino(e.target.value)}
+                placeholder="Ex: Praia do Rosa, SC"
+                data-testid="input-trip-destino"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="trip-status">Status da Viagem</Label>
+              <Select value={editedTripStatus} onValueChange={(value: TripStatus) => setEditedTripStatus(value)}>
+                <SelectTrigger data-testid="select-trip-status">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="idea">Ideia</SelectItem>
+                  <SelectItem value="planning">Em Planejamento</SelectItem>
+                  <SelectItem value="confirmed">Confirmada</SelectItem>
+                  <SelectItem value="cancelled">Cancelada</SelectItem>
+                  <SelectItem value="completed">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-data-inicio">Data de Início</Label>
+              <Input
+                id="trip-data-inicio"
+                type="date"
+                value={editedTripDataInicio}
+                onChange={(e) => setEditedTripDataInicio(e.target.value)}
+                data-testid="input-trip-data-inicio"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-data-fim">Data de Retorno</Label>
+              <Input
+                id="trip-data-fim"
+                type="date"
+                value={editedTripDataFim}
+                onChange={(e) => setEditedTripDataFim(e.target.value)}
+                data-testid="input-trip-data-fim"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-confirmation-deadline">Prazo para Confirmação</Label>
+              <Input
+                id="trip-confirmation-deadline"
+                type="date"
+                value={editedTripConfirmationDeadline}
+                onChange={(e) => setEditedTripConfirmationDeadline(e.target.value)}
+                data-testid="input-trip-confirmation-deadline"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-total-estimado">Total Estimado da Viagem</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <Input
+                  id="trip-total-estimado"
+                  value={editedTripTotalEstimado}
+                  onChange={(e) => setEditedTripTotalEstimado(formatCurrencyInput(e.target.value))}
+                  placeholder="0,00"
+                  className="pl-10"
+                  data-testid="input-trip-total-estimado"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Se preenchido, o custo por pessoa será calculado automaticamente.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-custo">Custo Estimado por Pessoa</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <Input
+                  id="trip-custo"
+                  value={editedTripCusto}
+                  onChange={(e) => setEditedTripCusto(formatCurrencyInput(e.target.value))}
+                  placeholder="0,00"
+                  className="pl-10"
+                  data-testid="input-trip-custo"
+                  disabled={!!editedTripTotalEstimado.trim()}
+                />
+              </div>
+              {editedTripTotalEstimado.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Calculado automaticamente a partir do total estimado.
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-hospedagem">Link da Hospedagem</Label>
+              <Input
+                id="trip-hospedagem"
+                value={editedTripHospedagemLink}
+                onChange={(e) => setEditedTripHospedagemLink(e.target.value)}
+                placeholder="https://airbnb.com/..."
+                data-testid="input-trip-hospedagem"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-maps">Link do Google Maps</Label>
+              <Input
+                id="trip-maps"
+                value={editedTripMapsLink}
+                onChange={(e) => setEditedTripMapsLink(e.target.value)}
+                placeholder="https://maps.google.com/..."
+                data-testid="input-trip-maps"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trip-payment-info">Instruções de Pagamento</Label>
+              <Textarea
+                id="trip-payment-info"
+                value={editedTripPaymentInfo}
+                onChange={(e) => setEditedTripPaymentInfo(e.target.value)}
+                placeholder="Ex: PIX: (11) 99999-9999 - João Silva&#10;Banco XYZ, Ag 0001, Conta 12345-6"
+                className="min-h-[80px]"
+                data-testid="input-trip-payment-info"
+              />
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-edit-trip">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSaveTripDetails}
+              disabled={saveTripDetailsMutation.isPending}
+              data-testid="button-save-trip-details"
+            >
+              {saveTripDetailsMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Salvar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
