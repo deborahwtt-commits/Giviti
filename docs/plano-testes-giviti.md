@@ -502,11 +502,120 @@
 
 ---
 
+---
+
+## 11. Módulo: Viagem em Grupo
+
+### 11.1 Criar Viagem em Grupo
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-001 | Criar | Criar viagem em grupo | Usuário logado | 1. Acessar Rolês 2. Clicar "Criar Rolê" 3. Selecionar "Viagem em Grupo" 4. Preencher nome, destino, período, descrição 5. Criar | Viagem criada. Página de gerenciamento exibida com abas Visão Geral, Participantes, Configurações | Positivo | Alta | Alta |
+| VIAG-002 | Criar | Criar viagem sem destino | Usuário logado | 1. Tentar criar viagem sem preencher destino | Validação exibe "Destino é obrigatório" | Negativo | Alta | Alta |
+| VIAG-003 | Criar | Criar viagem com data de início no passado | Usuário logado | 1. Tentar criar viagem com data de início no passado | Validação exibe "Data de início deve ser futura" | Negativo | Alta | Alta |
+| VIAG-004 | Criar | Criar viagem com data fim antes da data início | Usuário logado | 1. Selecionar data fim anterior à data início 2. Tentar criar | Validação exibe "Data de fim deve ser posterior à data de início" | Negativo | Alta | Alta |
+
+### 11.2 Detalhes da Viagem
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-005 | Detalhes | Visualizar detalhes da viagem | Viagem existente | 1. Acessar página da viagem 2. Visualizar aba Visão Geral | Exibe: destino, período, duração em dias, total estimado, custo por pessoa, links úteis, descrição, pagamento | Positivo | Alta | Alta |
+| VIAG-006 | Detalhes | Editar destino da viagem | Organizador logado | 1. Clicar "Editar" no card Detalhes 2. Alterar destino 3. Salvar | Destino atualizado | Positivo | Alta | Alta |
+| VIAG-007 | Detalhes | Editar período da viagem | Organizador logado | 1. Editar datas de início e fim 2. Salvar | Período atualizado. Duração em dias recalculada automaticamente | Positivo | Alta | Alta |
+| VIAG-008 | Detalhes | Adicionar link do Maps | Organizador logado | 1. Clicar "Editar" 2. Preencher link do Google Maps 3. Salvar | Link salvo. Botão "Ver no Maps" aparece | Positivo | Média | Média |
+| VIAG-009 | Detalhes | Adicionar link de hospedagem | Organizador logado | 1. Preencher link de hospedagem (Airbnb, Booking, etc.) 2. Salvar | Link salvo. Botão "Ver Hospedagem" aparece | Positivo | Média | Média |
+| VIAG-010 | Detalhes | Editar descrição inline | Organizador logado | 1. Clicar botão Editar na seção Descrição 2. Alterar texto 3. Salvar | Descrição atualizada | Positivo | Média | Média |
+
+### 11.3 Custos e Valores
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-011 | Custos | Definir total estimado | Organizador logado | 1. Editar "Total estimado da viagem" 2. Inserir R$ 5.000,00 3. Salvar | Valor salvo com formatação brasileira (R$ 5.000,00) | Positivo | Alta | Alta |
+| VIAG-012 | Custos | Custo por pessoa calculado automaticamente | Viagem com total e participantes | 1. Definir total R$ 3.000,00 2. Ter 3 participantes confirmados | Custo por pessoa exibe R$ 1.000,00 (calculado automaticamente) | Positivo | Alta | Alta |
+| VIAG-013 | Custos | Recalcular custo ao adicionar participante | Viagem com custo definido | 1. Adicionar novo participante | Custo por pessoa recalculado considerando novo participante | Positivo | Alta | Alta |
+| VIAG-014 | Custos | Recalcular custo ao remover participante | Viagem com participantes | 1. Remover participante da viagem | Custo por pessoa recalculado | Positivo | Alta | Alta |
+| VIAG-015 | Custos | Participante recusado não conta no cálculo | Viagem com participantes | 1. Participante recusa convite (status "declined") | Custo por pessoa calculado sem considerar participantes recusados | Positivo | Alta | Alta |
+| VIAG-016 | Custos | Formato brasileiro de moeda | Organizador edita valores | 1. Digitar "5000" no campo de valor | Sistema formata automaticamente para R$ 5.000,00 | Positivo | Média | Média |
+
+### 11.4 Instruções de Pagamento
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-017 | Pagamento | Adicionar instruções de pagamento | Organizador logado | 1. Editar detalhes da viagem 2. Preencher campo "Instruções de Pagamento" 3. Salvar | Instruções exibidas para todos os participantes | Positivo | Alta | Alta |
+| VIAG-018 | Pagamento | Instruções com múltiplas linhas | Organizador logado | 1. Inserir PIX, dados bancários em múltiplas linhas 2. Salvar | Formatação preservada com quebras de linha | Positivo | Média | Média |
+| VIAG-019 | Pagamento | Participante visualiza instruções | Participante confirmado | 1. Acessar página da viagem | Instruções de pagamento visíveis na aba Visão Geral | Positivo | Alta | Alta |
+
+### 11.5 Participantes da Viagem
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-020 | Participantes | Adicionar participante | Organizador logado | 1. Acessar aba "Participantes" 2. Clicar "Convidar" 3. Preencher nome e email 4. Adicionar | Participante adicionado. Email de convite enviado | Positivo | Alta | Alta |
+| VIAG-021 | Participantes | Status inicial "Pendente" | Participante adicionado | 1. Verificar status do participante recém-adicionado | Status exibe "Pendente" | Positivo | Média | Média |
+| VIAG-022 | Participantes | Participante confirma presença | Participante recebe convite | 1. Clicar link no email 2. Confirmar participação | Status muda para "Confirmado" | Positivo | Alta | Alta |
+| VIAG-023 | Participantes | Participante recusa convite | Participante recebe convite | 1. Clicar link no email 2. Recusar participação | Status muda para "Recusado". Não conta no cálculo de custo | Positivo | Alta | Alta |
+| VIAG-024 | Participantes | Remover participante | Organizador logado | 1. Clicar remover no participante 2. Confirmar | Participante removido. Custo por pessoa recalculado | Positivo | Alta | Alta |
+| VIAG-025 | Participantes | Adicionar email duplicado | Participante já existe | 1. Tentar adicionar mesmo email | Erro "Este participante já foi adicionado" | Negativo | Alta | Alta |
+| VIAG-026 | Participantes | Reenviar convite | Participante com status pendente | 1. Clicar "Reenviar convite" | Novo email enviado. Status de email atualizado | Positivo | Média | Média |
+
+### 11.6 Status de Pagamento
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-027 | Pagamento | Marcar como pago | Organizador vê participante | 1. Marcar checkbox "Pago" ao lado do participante | Checkbox marcado. Indicador visual "Pago" aparece | Positivo | Alta | Alta |
+| VIAG-028 | Pagamento | Desmarcar pagamento | Participante marcado como pago | 1. Desmarcar checkbox "Pago" | Status de pagamento removido | Positivo | Média | Média |
+| VIAG-029 | Pagamento | Visualizar quem pagou | Organizador na aba Participantes | 1. Visualizar lista de participantes | Indicadores visuais mostram quem pagou e quem está pendente | Positivo | Alta | Alta |
+
+### 11.7 Quem Leva o Quê (Itens)
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-030 | Itens | Adicionar item | Viagem existente | 1. Acessar seção "Quem leva o quê?" 2. Clicar "Adicionar item" 3. Digitar nome do item 4. Salvar | Item adicionado à lista | Positivo | Alta | Alta |
+| VIAG-031 | Itens | Atribuir responsável ao item | Item existente | 1. Clicar no seletor de responsável 2. Selecionar participante | Participante atribuído ao item | Positivo | Alta | Alta |
+| VIAG-032 | Itens | Remover item | Item existente | 1. Clicar ícone de lixeira no item 2. Confirmar | Item removido da lista | Positivo | Média | Média |
+| VIAG-033 | Itens | Item sem responsável | Item recém-criado | 1. Verificar item sem responsável atribuído | Exibe indicação de "sem responsável" | Positivo | Média | Média |
+| VIAG-034 | Itens | Contador de itens | Múltiplos itens | 1. Visualizar seção de itens | Exibe "X de Y itens atribuídos" | Positivo | Baixa | Baixa |
+
+### 11.8 Prazo para Confirmar
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-035 | Prazo | Definir prazo para confirmação | Organizador edita viagem | 1. Definir data limite para confirmação 2. Salvar | Prazo exibido para todos os participantes | Positivo | Alta | Alta |
+| VIAG-036 | Prazo | Exibir contagem regressiva | Prazo definido | 1. Visualizar página da viagem | Card destaca "Prazo para Confirmar" com contagem de dias restantes | Positivo | Média | Média |
+| VIAG-037 | Prazo | Prazo vencido | Data do prazo passou | 1. Visualizar página da viagem | Indicação visual de prazo expirado | Positivo | Média | Média |
+
+### 11.9 Status da Viagem
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-038 | Status | Viagem em planejamento | Viagem recém-criada | 1. Visualizar badge de status | Badge amarelo "Em Planejamento" | Positivo | Média | Média |
+| VIAG-039 | Status | Alterar status para ativo | Organizador em Configurações | 1. Acessar Configurações 2. Alterar status para "Ativo" | Status atualizado. Badge verde "Ativo" | Positivo | Média | Média |
+| VIAG-040 | Status | Viagem concluída | Organizador após viagem | 1. Alterar status para "Concluída" | Status atualizado. Viagem arquivada | Positivo | Média | Média |
+| VIAG-041 | Status | Cancelar viagem | Organizador em Configurações | 1. Alterar status para "Cancelada" | Status atualizado. Participantes podem ser notificados | Positivo | Alta | Alta |
+
+### 11.10 Configurações da Viagem
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-042 | Config | Editar nome da viagem | Organizador na aba Configurações | 1. Alterar nome 2. Salvar | Nome atualizado em todos os lugares | Positivo | Média | Média |
+| VIAG-043 | Config | Excluir viagem | Organizador na aba Configurações | 1. Clicar "Excluir Viagem" 2. Confirmar | Viagem excluída. Redirecionado para lista de Rolês | Positivo | Alta | Alta |
+| VIAG-044 | Config | Transferir organização | Organizador quer transferir | 1. Selecionar novo organizador dentre participantes 2. Confirmar | Novo organizador assume. Antigo vira participante | Positivo | Média | Média |
+
+### 11.11 Compartilhamento
+
+| ID | Funcionalidade | Caso de Teste | Pré-condições | Passos | Resultado Esperado | Tipo | Criticidade | Prioridade |
+|----|----------------|---------------|---------------|--------|-------------------|------|-------------|------------|
+| VIAG-045 | Compartilhar | Copiar link da viagem | Viagem existente | 1. Clicar botão "Compartilhar" | Link copiado para clipboard. Notificação exibida | Positivo | Média | Média |
+| VIAG-046 | Compartilhar | Acessar viagem via link (participante) | Participante confirmado | 1. Acessar link da viagem | Página da viagem exibida com permissões de participante | Positivo | Alta | Alta |
+| VIAG-047 | Compartilhar | Acessar viagem via link (não participante) | Usuário não é participante | 1. Tentar acessar link da viagem | Acesso negado ou redirecionado | Negativo | Alta | Alta |
+
+---
+
 ## Histórico de Versões
 
 | Versão | Data | Autor | Descrição |
 |--------|------|-------|-----------|
 | 1.0 | Janeiro 2026 | QA Team | Versão inicial do plano de testes |
+| 1.1 | Janeiro 2026 | QA Team | Adicionado módulo Viagem em Grupo (11) com 47 casos de teste |
 
 ---
 
