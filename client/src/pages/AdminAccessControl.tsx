@@ -24,14 +24,18 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
-  Calendar
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  UserPlus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertAccessTicketSchema, type InsertAccessTicket, type AccessTicket, type Waitlist, type User } from "@shared/schema";
+import { AdminStatsCard } from "@/components/admin/AdminStatsCard";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +52,8 @@ export default function AdminAccessControl() {
   const [editingTicket, setEditingTicket] = useState<AccessTicket | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
+  const [waitlistPage, setWaitlistPage] = useState(1);
+  const WAITLIST_PAGE_SIZE = 10;
 
   const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
@@ -64,6 +70,35 @@ export default function AdminAccessControl() {
     queryKey: ["/api/admin/waitlist"],
     enabled: hasAdminAccess,
   });
+
+  // Waitlist statistics and pagination
+  const waitlistStats = useMemo(() => {
+    if (!waitlist) return { total: 0, pending: 0, invited: 0, registered: 0 };
+    return {
+      total: waitlist.length,
+      pending: waitlist.filter(w => w.status === "pending").length,
+      invited: waitlist.filter(w => w.status === "invited").length,
+      registered: waitlist.filter(w => w.status === "registered").length,
+    };
+  }, [waitlist]);
+
+  const paginatedWaitlist = useMemo(() => {
+    if (!waitlist) return [];
+    const startIndex = (waitlistPage - 1) * WAITLIST_PAGE_SIZE;
+    return waitlist.slice(startIndex, startIndex + WAITLIST_PAGE_SIZE);
+  }, [waitlist, waitlistPage]);
+
+  const waitlistTotalPages = useMemo(() => {
+    if (!waitlist) return 0;
+    return Math.ceil(waitlist.length / WAITLIST_PAGE_SIZE);
+  }, [waitlist]);
+
+  // Reset page when waitlist changes to avoid empty table
+  useEffect(() => {
+    if (waitlistTotalPages > 0 && waitlistPage > waitlistTotalPages) {
+      setWaitlistPage(waitlistTotalPages);
+    }
+  }, [waitlistTotalPages, waitlistPage]);
 
   const { data: expandedTicketData, isLoading: ticketUsageLoading } = useQuery<AccessTicketWithUsage>({
     queryKey: ["/api/admin/access-tickets", expandedTicketId],
@@ -391,8 +426,41 @@ export default function AdminAccessControl() {
         </TabsContent>
 
         <TabsContent value="waitlist">
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <AdminStatsCard
+              title="Total na Lista"
+              value={waitlistStats.total}
+              icon={Users}
+              description="Pessoas inscritas"
+            />
+            <AdminStatsCard
+              title="Aguardando"
+              value={waitlistStats.pending}
+              icon={Clock}
+              description="Pendentes de convite"
+            />
+            <AdminStatsCard
+              title="Convidados"
+              value={waitlistStats.invited}
+              icon={Mail}
+              description="Convites enviados"
+            />
+            <AdminStatsCard
+              title="Registrados"
+              value={waitlistStats.registered}
+              icon={UserPlus}
+              description="Criaram conta"
+            />
+          </div>
+
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Lista de Espera</h2>
+            {waitlist && waitlist.length > 0 && (
+              <span className="text-sm text-muted-foreground" data-testid="waitlist-count">
+                Mostrando {((waitlistPage - 1) * WAITLIST_PAGE_SIZE) + 1} - {Math.min(waitlistPage * WAITLIST_PAGE_SIZE, waitlist.length)} de {waitlist.length}
+              </span>
+            )}
           </div>
 
           {waitlistLoading ? (
@@ -400,57 +468,90 @@ export default function AdminAccessControl() {
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           ) : waitlist && waitlist.length > 0 ? (
-            <Card className="overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left py-3 px-4 text-sm font-medium">Nome</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium">E-mail</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium">Inscrito</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {waitlist.map((entry) => (
-                    <tr 
-                      key={entry.id} 
-                      className="border-b last:border-0"
-                      data-testid={`waitlist-row-${entry.id}`}
-                    >
-                      <td className="py-3 px-4 font-medium">{entry.name}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{entry.email}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={
-                          entry.status === "pending" ? "secondary" :
-                          entry.status === "invited" ? "default" : "outline"
-                        }>
-                          {entry.status === "pending" ? "Aguardando" :
-                           entry.status === "invited" ? "Convidado" : "Registrado"}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {entry.createdAt && formatDistanceToNow(new Date(entry.createdAt), {
-                          addSuffix: true,
-                          locale: ptBR
-                        })}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteWaitlistMutation.mutate(entry.id)}
-                          disabled={deleteWaitlistMutation.isPending}
-                          data-testid={`button-delete-waitlist-${entry.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
+            <>
+              <Card className="overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left py-3 px-4 text-sm font-medium">Nome</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium">E-mail</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium">Inscrito</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+                  </thead>
+                  <tbody>
+                    {paginatedWaitlist.map((entry) => (
+                      <tr 
+                        key={entry.id} 
+                        className="border-b last:border-0"
+                        data-testid={`waitlist-row-${entry.id}`}
+                      >
+                        <td className="py-3 px-4 font-medium">{entry.name}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{entry.email}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={
+                            entry.status === "pending" ? "secondary" :
+                            entry.status === "invited" ? "default" : "outline"
+                          }>
+                            {entry.status === "pending" ? "Aguardando" :
+                             entry.status === "invited" ? "Convidado" : "Registrado"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {entry.createdAt && formatDistanceToNow(new Date(entry.createdAt), {
+                            addSuffix: true,
+                            locale: ptBR
+                          })}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteWaitlistMutation.mutate(entry.id)}
+                            disabled={deleteWaitlistMutation.isPending}
+                            data-testid={`button-delete-waitlist-${entry.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+
+              {/* Pagination */}
+              {waitlistTotalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Página {waitlistPage} de {waitlistTotalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWaitlistPage(p => Math.max(1, p - 1))}
+                      disabled={waitlistPage === 1}
+                      data-testid="button-waitlist-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWaitlistPage(p => Math.min(waitlistTotalPages, p + 1))}
+                      disabled={waitlistPage === waitlistTotalPages}
+                      data-testid="button-waitlist-next"
+                    >
+                      Próximo
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <Card className="p-12 text-center">
               <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
