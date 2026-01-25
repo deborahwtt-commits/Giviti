@@ -168,11 +168,11 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
         recipientData,
         maxBudget: budget[0],
         enableGoogleSearch: true,
-        googleLimit: 5,
+        googleLimit: 10,
         giftCategories,
         googleCategories,
         page: 1,
-        pageSize: 12,
+        pageSize: 15,
       });
       setProducts(result.products);
       setHasLoaded(true);
