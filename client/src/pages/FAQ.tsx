@@ -58,7 +58,7 @@ export default function FAQ() {
                     </p>
                     <p className="text-muted-foreground">
                       Também dá pra organizar eventos colaborativos com a galera: Amigo Secreto com 
-                      sorteio automático, Eventos Temáticos, ou Presentes Coletivos.
+                      sorteio automático, Eventos Temáticos, Presentes Coletivos ou Viagens em Grupo.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
