@@ -913,84 +913,31 @@ export default function Suggestions() {
               <div className="space-y-6">
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
-                    Presenteado
+                    Categoria
                   </Label>
                   <Select
-                    value={selectedRecipient || "none"}
+                    value={selectedGoogleCategoryId?.toString() || "all"}
                     onValueChange={(value) => {
-                      if (value === "none") {
-                        setSelectedRecipient("");
+                      if (value === "all") {
                         setSelectedGoogleCategoryId(null);
                       } else {
-                        setSelectedRecipient(value);
-                        // Clear category when recipient is selected (will use recipient interests)
-                        setSelectedGoogleCategoryId(null);
+                        setSelectedGoogleCategoryId(parseInt(value, 10));
                       }
                     }}
                   >
-                    <SelectTrigger data-testid="select-recipient">
-                      <SelectValue placeholder="Não especificado" />
+                    <SelectTrigger data-testid="select-category">
+                      <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Não especificado</SelectItem>
-                      {recipients?.map((recipient) => (
-                        <SelectItem key={recipient.id} value={recipient.id}>
-                          {recipient.name}
+                      <SelectItem value="all">Todas</SelectItem>
+                      {googleCategories?.filter(c => c.isActive).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          {cat.namePtBr}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Show category filter only when no recipient is selected */}
-                {!selectedRecipientData && (
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block">
-                      Categoria
-                    </Label>
-                    <Select
-                      value={selectedGoogleCategoryId?.toString() || "all"}
-                      onValueChange={(value) => {
-                        if (value === "all") {
-                          setSelectedGoogleCategoryId(null);
-                        } else {
-                          setSelectedGoogleCategoryId(parseInt(value, 10));
-                        }
-                      }}
-                    >
-                      <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Todas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        {googleCategories?.filter(c => c.isActive).map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.namePtBr}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Show recipient interests when a recipient is selected */}
-                {selectedRecipientData && selectedRecipientData.interests && selectedRecipientData.interests.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block">
-                      Interesses do Presenteado
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedRecipientData.interests.map((interest) => (
-                        <Badge key={interest} variant="secondary" className="text-xs">
-                          {interest}
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Buscando presentes baseados nos interesses cadastrados
-                    </p>
-                  </div>
-                )}
 
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
