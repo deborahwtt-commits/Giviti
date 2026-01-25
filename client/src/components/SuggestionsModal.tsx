@@ -110,7 +110,7 @@ function ProductCard({
             data-testid={`button-purchase-${product.id}`}
           >
             <ShoppingBag className="w-3 h-3 mr-1" />
-            {isPurchasedAnywhere ? "Comprado" : "Comprar"}
+            {isPurchasedAnywhere ? "Comprado" : "Já comprei!"}
           </Button>
         </div>
       </div>
