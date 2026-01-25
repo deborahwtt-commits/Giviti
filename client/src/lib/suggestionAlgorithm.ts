@@ -781,7 +781,7 @@ function filterGoogleProducts(
   });
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 15;
 const MAX_RESULTS = 15;
 
 export async function runSuggestionAlgorithmV1(
