@@ -635,6 +635,8 @@ function filterInternalSuggestions(
   suggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions
 ): { suggestion: GiftSuggestion; score: number }[] {
+  console.log("[filterInternalSuggestions] Options keywords:", options.keywords);
+  
   const results: { suggestion: GiftSuggestion; score: number }[] = [];
   const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
@@ -788,6 +790,14 @@ export async function runSuggestionAlgorithmV1(
   internalSuggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions = {}
 ): Promise<SuggestionAlgorithmResult> {
+  console.log("[runSuggestionAlgorithmV1] Starting with options:", {
+    keywords: options.keywords,
+    enableGoogleSearch: options.enableGoogleSearch,
+    hasRecipientData: !!options.recipientData,
+    googleCategoryId: options.googleCategoryId,
+    page: options.page,
+  });
+  
   const {
     keywords = "",
     enableGoogleSearch = true,
@@ -816,6 +826,15 @@ export async function runSuggestionAlgorithmV1(
   const shouldSearchGoogle = enableGoogleSearch && 
     googleNeeded > 0 && 
     (keywords.trim() || options.recipientData);
+  
+  console.log("[Algorithm Debug]", {
+    enableGoogleSearch,
+    internalCount,
+    googleNeeded,
+    keywords,
+    hasRecipientData: !!options.recipientData,
+    shouldSearchGoogle,
+  });
   
   if (shouldSearchGoogle) {
     const cacheKey = searchCache.generateKey({

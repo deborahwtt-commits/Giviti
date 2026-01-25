@@ -715,6 +715,8 @@ export default function Suggestions() {
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;
     
+    console.log("[executeSearch] Starting search with keywords:", keywords);
+    
     setHasSearched(true);
     setCommittedSearchKeywords(keywords);
     setCurrentPage(1);
