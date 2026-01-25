@@ -1465,9 +1465,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/serpapi/search", isAuthenticated, async (req: any, res) => {
     try {
       const { keywords, limit = 5 } = req.body;
+      const userId = req.user!.id;
       
       if (!keywords || typeof keywords !== "string") {
         return res.status(400).json({ message: "Keywords are required" });
+      }
+      
+      // Check daily search limit
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dailyLimitSetting = await storage.getSystemSetting("dailySearchLimit");
+      const dailyLimit = dailyLimitSetting ? parseInt(dailyLimitSetting.value, 10) : 5;
+      
+      const currentSearchCount = await storage.getUserDailySearchCount(userId, today);
+      
+      // If user has exceeded the daily limit, return empty results silently
+      if (currentSearchCount >= dailyLimit) {
+        return res.json({
+          sucesso: true,
+          fonte: "google",
+          keywords,
+          total: 0,
+          resultados: [],
+        });
       }
       
       const maxLimit = Math.min(Math.max(1, Number(limit) || 5), 20);
@@ -1487,6 +1506,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gl: "br",
         location: "Brazil",
       });
+
+      // Increment the search count after successful API call
+      await storage.incrementUserDailySearchCount(userId, today);
 
       const shoppingResults = response.shopping_results || [];
       

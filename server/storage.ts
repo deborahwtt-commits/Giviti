@@ -26,6 +26,7 @@ import {
   collectiveGiftContributions,
   collaborativeEventTasks,
   clicks,
+  userDailySearches,
   getZodiacSignFromDate,
   type User,
   type UpsertUser,
@@ -453,6 +454,10 @@ export interface IStorage {
   createWaitlistEntry(entry: InsertWaitlist): Promise<Waitlist>;
   updateWaitlistEntry(id: string, updates: Partial<{ status: string; invitedAt: Date; ticketId: string }>): Promise<Waitlist | undefined>;
   deleteWaitlistEntry(id: string): Promise<boolean>;
+  
+  // ========== USER DAILY SEARCH TRACKING ==========
+  getUserDailySearchCount(userId: string, date: string): Promise<number>;
+  incrementUserDailySearchCount(userId: string, date: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3313,6 +3318,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(waitlist.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  // ========== USER DAILY SEARCH TRACKING ==========
+  
+  async getUserDailySearchCount(userId: string, date: string): Promise<number> {
+    const [record] = await db
+      .select()
+      .from(userDailySearches)
+      .where(and(
+        eq(userDailySearches.userId, userId),
+        eq(userDailySearches.searchDate, date)
+      ));
+    return record?.searchCount ?? 0;
+  }
+
+  async incrementUserDailySearchCount(userId: string, date: string): Promise<number> {
+    const [existing] = await db
+      .select()
+      .from(userDailySearches)
+      .where(and(
+        eq(userDailySearches.userId, userId),
+        eq(userDailySearches.searchDate, date)
+      ));
+
+    if (existing) {
+      const newCount = existing.searchCount + 1;
+      await db
+        .update(userDailySearches)
+        .set({ searchCount: newCount, updatedAt: new Date() })
+        .where(eq(userDailySearches.id, existing.id));
+      return newCount;
+    } else {
+      const [created] = await db
+        .insert(userDailySearches)
+        .values({
+          userId,
+          searchDate: date,
+          searchCount: 1,
+        })
+        .returning();
+      return created.searchCount;
+    }
   }
 }
 
