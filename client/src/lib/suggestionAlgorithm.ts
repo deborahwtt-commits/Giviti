@@ -843,7 +843,10 @@ export async function runSuggestionAlgorithmV1(
     
     const cachedProducts = searchCache.get(cacheKey);
     
-    if (cachedProducts) {
+    // Temporarily disable cache to debug search issues
+    const useCache = false;
+    
+    if (useCache && cachedProducts) {
       allGoogleUnified = filterGoogleProducts(cachedProducts, options);
       googleFromCache = true;
       googleFiltersApplied.push("Resultados do cache");

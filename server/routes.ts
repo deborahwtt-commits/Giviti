@@ -1498,6 +1498,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { getJson } = await import("serpapi");
       
+      console.log("[SerpAPI] Searching Google Shopping with query:", keywords);
+      
       const response = await getJson({
         engine: "google_shopping",
         q: keywords,
