@@ -84,22 +84,31 @@ interface SuggestionAlgorithmResult {
   pagination: PaginationMeta;
 }
 
-function getAgeRange(age: number): string {
-  if (age < 13) return "criança";
+function getSimpleAgeCategory(age: number): string {
+  if (age < 12) return "criança";
   if (age < 18) return "adolescente";
-  if (age < 25) return "jovem adulto";
-  if (age < 35) return "adulto 25-35 anos";
-  if (age < 45) return "adulto 35-45 anos";
-  if (age < 55) return "adulto 45-55 anos";
-  if (age < 65) return "adulto 55-65 anos";
-  return "idoso 65+ anos";
+  return "adulto";
+}
+
+function getGenderTermByAge(gender: string | null | undefined, age: number | null | undefined): string {
+  if (!gender) return "";
+  const genderLower = gender.toLowerCase();
+  const isChild = age !== null && age !== undefined && age < 12;
+  
+  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") {
+    return isChild ? "menino" : "masculino";
+  }
+  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") {
+    return isChild ? "menina" : "feminino";
+  }
+  return "";
 }
 
 function getGenderTerm(gender: string | null | undefined): string {
   if (!gender) return "";
   const genderLower = gender.toLowerCase();
-  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino homem";
-  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino mulher";
+  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino";
+  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino";
   return "";
 }
 
@@ -177,39 +186,23 @@ function buildRecipientBasedQuery(
   
   const interests = recipient.interests || [];
   const gender = profile?.gender || recipient.gender;
-  const relationship = profile?.relationship || recipient.relationship;
+  const age = recipient.age;
   
   switch (level) {
     case "full":
-      if (relationship) {
-        parts.push(getRelationshipTerm(relationship));
-      }
-      if (gender) {
-        const genderTerm = getGenderTerm(gender);
-        if (genderTerm) parts.push(genderTerm);
-      }
-      if (recipient.age) {
-        parts.push(getAgeRange(recipient.age));
-      }
-      if (interests.length > 0) {
-        parts.push(...interests.slice(0, 2));
-      }
-      if (profile?.interestCategory) {
-        parts.push(profile.interestCategory);
-      }
-      break;
-      
     case "medium":
-      if (gender) {
-        const genderTerm = getGenderTerm(gender);
-        if (genderTerm) parts.push(genderTerm);
-      }
       if (interests.length > 0) {
-        parts.push(...interests.slice(0, 2));
+        parts.push(interests[0]);
       } else if (profile?.interestCategory) {
         parts.push(profile.interestCategory);
       }
-      parts.push("presente");
+      if (age) {
+        parts.push(getSimpleAgeCategory(age));
+      }
+      if (gender) {
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
+      }
       break;
       
     case "simple":
@@ -218,13 +211,17 @@ function buildRecipientBasedQuery(
       } else if (profile?.interestCategory) {
         parts.push(profile.interestCategory);
       }
-      parts.push("presente");
+      if (gender) {
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
+      }
       break;
       
     case "minimal":
       parts.push("presentes populares");
       if (gender) {
-        parts.push(gender === "feminino" ? "mulher" : gender === "masculino" ? "homem" : "");
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
       }
       break;
   }
@@ -635,6 +632,8 @@ function filterInternalSuggestions(
   suggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions
 ): { suggestion: GiftSuggestion; score: number }[] {
+  console.log("[filterInternalSuggestions] Options keywords:", options.keywords);
+  
   const results: { suggestion: GiftSuggestion; score: number }[] = [];
   const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
@@ -712,28 +711,16 @@ function filterInternalSuggestions(
     let matchesInterests = true;
     
     if (hasRecipientWithInterests) {
-      if (useGoogleCategoryFilter && suggestion.googleCategoryId) {
-        matchesInterests = googleCategoryIds.includes(suggestion.googleCategoryId);
-      } else {
-        const suggestionTags = suggestion.tags || [];
-        const suggestionCategoryLower = suggestion.category.toLowerCase();
-        
-        matchesInterests = recipientInterests.some(interest => {
-          const interestLower = interest.toLowerCase();
-          
-          const categoryMatch = suggestionCategoryLower === interestLower ||
-            suggestionCategoryLower.includes(interestLower) ||
-            interestLower.includes(suggestionCategoryLower);
-          
-          const tagMatch = suggestionTags.some(tag => {
-            const tagLower = tag.toLowerCase();
-            return tagLower === interestLower ||
-              tagLower.includes(interestLower) ||
-              interestLower.includes(tagLower);
-          });
-          
-          return categoryMatch || tagMatch;
-        });
+      if (useGoogleCategoryFilter) {
+        // When filtering by Google categories (interests), only include products
+        // that have a google_category_id AND it matches one of the recipient's interests
+        if (suggestion.googleCategoryId) {
+          matchesInterests = googleCategoryIds.includes(suggestion.googleCategoryId);
+        } else {
+          // Internal products without google_category_id are excluded when
+          // recipient has specific interests - rely on Google Shopping for these
+          matchesInterests = false;
+        }
       }
       
       if (!matchesInterests) {
@@ -756,9 +743,11 @@ function filterGoogleProducts(
   products: UnifiedProduct[],
   options: SuggestionAlgorithmOptions
 ): UnifiedProduct[] {
+  console.log("[filterGoogleProducts] Input:", products.length, "products, maxBudget:", options.maxBudget);
+  
   const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
-  return products.filter((product) => {
+  const filtered = products.filter((product) => {
     if (shouldExcludeProduct(
       product.name,
       product.description,
@@ -779,15 +768,26 @@ function filterGoogleProducts(
     
     return matchesMaxBudget && matchesMinBudget;
   });
+  
+  console.log("[filterGoogleProducts] Output:", filtered.length, "products passed filter");
+  return filtered;
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 15;
 const MAX_RESULTS = 15;
 
 export async function runSuggestionAlgorithmV1(
   internalSuggestions: GiftSuggestion[],
   options: SuggestionAlgorithmOptions = {}
 ): Promise<SuggestionAlgorithmResult> {
+  console.log("[runSuggestionAlgorithmV1] Starting with options:", {
+    keywords: options.keywords,
+    enableGoogleSearch: options.enableGoogleSearch,
+    hasRecipientData: !!options.recipientData,
+    googleCategoryId: options.googleCategoryId,
+    page: options.page,
+  });
+  
   const {
     keywords = "",
     enableGoogleSearch = true,
@@ -813,9 +813,21 @@ export async function runSuggestionAlgorithmV1(
   const itemsNeededTotal = currentPage * effectivePageSize;
   const googleNeeded = Math.max(0, itemsNeededTotal - internalCount);
   
+  // Always search Google when there are keywords, even if internal products fill the quota
+  // This ensures users get relevant Google results when explicitly searching
+  const hasExplicitSearch = keywords.trim().length > 0;
   const shouldSearchGoogle = enableGoogleSearch && 
-    googleNeeded > 0 && 
-    (keywords.trim() || options.recipientData);
+    (hasExplicitSearch || (googleNeeded > 0 && options.recipientData));
+  
+  console.log("[Algorithm Debug]", {
+    enableGoogleSearch,
+    internalCount,
+    googleNeeded,
+    keywords,
+    hasExplicitSearch,
+    hasRecipientData: !!options.recipientData,
+    shouldSearchGoogle,
+  });
   
   if (shouldSearchGoogle) {
     const cacheKey = searchCache.generateKey({
@@ -828,7 +840,10 @@ export async function runSuggestionAlgorithmV1(
     
     const cachedProducts = searchCache.get(cacheKey);
     
-    if (cachedProducts) {
+    // Temporarily disable cache to debug search issues
+    const useCache = false;
+    
+    if (useCache && cachedProducts) {
       allGoogleUnified = filterGoogleProducts(cachedProducts, options);
       googleFromCache = true;
       googleFiltersApplied.push("Resultados do cache");
@@ -860,6 +875,12 @@ export async function runSuggestionAlgorithmV1(
   }
   
   const allProductsCombined = [...allInternalUnified, ...allGoogleUnified];
+  
+  console.log("[Algorithm Result]", {
+    internalProducts: allInternalUnified.length,
+    googleProducts: allGoogleUnified.length,
+    totalCombined: allProductsCombined.length,
+  });
   
   const totalInternalCount = allInternalUnified.length;
   const totalGoogleCount = allGoogleUnified.length;

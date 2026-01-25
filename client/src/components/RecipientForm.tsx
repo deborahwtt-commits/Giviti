@@ -267,7 +267,7 @@ export default function RecipientForm({
   };
 
   const handleAddInterest = (interest: string) => {
-    if (interest && !interests.includes(interest)) {
+    if (interest && !interests.includes(interest) && interests.length < 3) {
       setInterests([...interests, interest]);
       setNewInterest("");
       console.log(`Added interest: ${interest}`);
@@ -287,6 +287,14 @@ export default function RecipientForm({
       return;
     }
     
+    // Validate required fields
+    if (!age || parseInt(age) <= 0) {
+      return;
+    }
+    if (!gender) {
+      return;
+    }
+    
     setIsLocalSubmitting(true);
     
     const data = {
@@ -294,7 +302,7 @@ export default function RecipientForm({
       email: email || null,
       linkedUserId: linkedUserId || null,
       age: parseInt(age),
-      gender: gender || null,
+      gender,
       zodiacSign: zodiacSign || null,
       relationship: relationship || null,
       interests,
@@ -381,9 +389,11 @@ export default function RecipientForm({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 items-start">
           <div className="space-y-2">
-            <Label htmlFor="age">Idade</Label>
+            <Label htmlFor="age" className="flex items-center gap-1.5">
+              Idade <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="age"
               type="number"
@@ -409,14 +419,17 @@ export default function RecipientForm({
               required
               data-testid="input-age"
             />
+            <p className="text-xs text-muted-foreground">
+              A idade pode ser aproximada
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="gender" className="flex items-center gap-1.5">
-              Sexo
+              Sexo <span className="text-destructive">*</span>
               {autoFilledFields.has('gender') && <Lock className="w-3 h-3 text-green-600" />}
             </Label>
-            <Select value={gender} onValueChange={setGender} disabled={autoFilledFields.has('gender')}>
+            <Select value={gender} onValueChange={setGender} disabled={autoFilledFields.has('gender')} required>
               <SelectTrigger 
                 id="gender" 
                 data-testid="select-gender"
@@ -473,6 +486,7 @@ export default function RecipientForm({
         <h3 className="font-semibold text-lg text-foreground flex items-center gap-1.5">
           Interesses
           {autoFilledFields.has('interests') && <Lock className="w-3.5 h-3.5 text-green-600" />}
+          <span className="text-sm font-normal text-muted-foreground">({interests.length}/3)</span>
         </h3>
 
         {!autoFilledFields.has('interests') && (
@@ -483,10 +497,16 @@ export default function RecipientForm({
               onValueChange={(value) => {
                 handleAddInterest(value);
               }}
-              disabled={categoriesLoading}
+              disabled={categoriesLoading || interests.length >= 3}
             >
               <SelectTrigger id="interests" data-testid="select-interests">
-                <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Escolha um interesse"} />
+                <SelectValue placeholder={
+                  categoriesLoading 
+                    ? "Carregando categorias..." 
+                    : interests.length >= 3 
+                      ? "Limite de 3 interesses atingido" 
+                      : "Escolha um interesse"
+                } />
               </SelectTrigger>
               <SelectContent>
                 {categoriesLoading ? (
@@ -509,6 +529,11 @@ export default function RecipientForm({
                 )}
               </SelectContent>
             </Select>
+            {interests.length >= 3 && (
+              <p className="text-xs text-muted-foreground">
+                Limite máximo de 3 interesses atingido. Remova um para adicionar outro.
+              </p>
+            )}
           </div>
         )}
 

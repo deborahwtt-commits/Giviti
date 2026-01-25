@@ -94,7 +94,7 @@ function AuthenticatedApp() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/presenteados" component={Recipients} />
         <Route path="/eventos" component={Events} />
-        <Route path="/sugestoes" component={Suggestions} />
+        <Route path="/sugestoes">{() => { window.location.href = "/dashboard"; return null; }}</Route>
         <Route path="/presentes" component={GiftManagement} />
         <Route path="/perfil" component={Profile} />
         <Route path="/role" component={CollaborativeEvents} />

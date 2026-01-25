@@ -322,7 +322,6 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
   const [purchased, setPurchased] = useState(isPurchasedAnywhere ?? false);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     setFavorite(existingGift?.isFavorite ?? false);
@@ -361,6 +360,42 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
     },
   });
+
+  const handlePurchase = async () => {
+    setPurchased(true);
+    
+    try {
+      await apiRequest("/api/gifts", "POST", {
+        recipientId: recipientId || null,
+        suggestionId: internalId,
+        name: product.name,
+        description: product.description || product.store || "",
+        imageUrl: product.imageUrl,
+        price: String(product.price),
+        purchaseUrl: product.productUrl || "",
+        externalSource: product.source === "google" ? "google_shopping" : null,
+        isFavorite: false,
+        isPurchased: true,
+        purchasedAt: new Date().toISOString(),
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      
+      toast({
+        title: "Presente registrado!",
+        description: `${product.name} foi marcado como comprado.`,
+      });
+    } catch (error) {
+      setPurchased(false);
+      console.error("Error saving purchase:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a compra.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleFavoriteToggle = async () => {
     if (!recipientId) {
@@ -478,27 +513,17 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
           </Button>
           
           <Button
-            variant="default"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setShowPurchaseModal(true)}
+            size="sm"
+            className={`flex-1 text-xs ${purchased ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/30 cursor-default opacity-80" : ""}`}
+            onClick={handlePurchase}
             disabled={purchased}
-            title={purchased ? "Já comprado" : "Marcar como comprado"}
             data-testid={`button-mark-purchased-${product.id}`}
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-3 h-3 mr-1" />
+            {purchased ? "Comprado" : "Já comprei!"}
           </Button>
         </div>
       </div>
-
-      <PurchaseModal
-        open={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
-        product={product}
-        recipients={recipients}
-        selectedRecipientId={recipientId}
-        onSuccess={() => setPurchased(true)}
-      />
     </Card>
   );
 }
@@ -517,6 +542,7 @@ export default function Suggestions() {
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
+  const [committedSearchKeywords, setCommittedSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [algorithmResult, setAlgorithmResult] = useState<{
     internalCount: number;
@@ -668,6 +694,7 @@ export default function Suggestions() {
 
   // Single effect: runs when filters change
   // Enables Google search if user has searched OR has a recipient selected OR has a category selected
+  // Note: Uses committedSearchKeywords (not searchKeywords) to only trigger on explicit search, not while typing
   useEffect(() => {
     if (!allSuggestions || allSuggestions.length === 0) return;
     if (profileLoading && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") return;
@@ -678,17 +705,20 @@ export default function Suggestions() {
     setCurrentPage(1);
     runAlgorithm({ 
       enableGoogle: shouldEnableGoogle, 
-      keywords: searchKeywords,
+      keywords: committedSearchKeywords,
       page: 1,
       isLoadMore: false,
     });
-  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
+  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, committedSearchKeywords]);
 
   // Execute explicit search (when user clicks "Buscar")
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;
     
+    console.log("[executeSearch] Starting search with keywords:", keywords);
+    
     setHasSearched(true);
+    setCommittedSearchKeywords(keywords);
     setCurrentPage(1);
     // Run immediately with Google enabled
     runAlgorithm({ 
@@ -728,6 +758,7 @@ export default function Suggestions() {
     setCurrentPage(1);
     setAllLoadedProducts([]);
     setSearchKeywords("");
+    setCommittedSearchKeywords("");
     setHasSearched(false);
     setAlgorithmResult(null);
   };
@@ -742,7 +773,7 @@ export default function Suggestions() {
     
     await runAlgorithm({
       enableGoogle: shouldEnableGoogle,
-      keywords: searchKeywords,
+      keywords: committedSearchKeywords,
       page: nextPage,
       isLoadMore: true,
     });
@@ -849,9 +880,9 @@ export default function Suggestions() {
         {/* Filter Info Badges */}
         {algorithmResult && hasSearched && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            {searchKeywords && (
+            {committedSearchKeywords && (
               <Badge variant="secondary" className="text-xs">
-                Busca: "{searchKeywords}"
+                Busca: "{committedSearchKeywords}"
               </Badge>
             )}
             {algorithmResult.appliedFilters?.recipientName && (
@@ -913,84 +944,31 @@ export default function Suggestions() {
               <div className="space-y-6">
                 <div>
                   <Label className="text-sm font-medium mb-3 block">
-                    Presenteado
+                    Categoria
                   </Label>
                   <Select
-                    value={selectedRecipient || "none"}
+                    value={selectedGoogleCategoryId?.toString() || "all"}
                     onValueChange={(value) => {
-                      if (value === "none") {
-                        setSelectedRecipient("");
+                      if (value === "all") {
                         setSelectedGoogleCategoryId(null);
                       } else {
-                        setSelectedRecipient(value);
-                        // Clear category when recipient is selected (will use recipient interests)
-                        setSelectedGoogleCategoryId(null);
+                        setSelectedGoogleCategoryId(parseInt(value, 10));
                       }
                     }}
                   >
-                    <SelectTrigger data-testid="select-recipient">
-                      <SelectValue placeholder="Não especificado" />
+                    <SelectTrigger data-testid="select-category">
+                      <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Não especificado</SelectItem>
-                      {recipients?.map((recipient) => (
-                        <SelectItem key={recipient.id} value={recipient.id}>
-                          {recipient.name}
+                      <SelectItem value="all">Todas</SelectItem>
+                      {googleCategories?.filter(c => c.isActive).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          {cat.namePtBr}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Show category filter only when no recipient is selected */}
-                {!selectedRecipientData && (
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block">
-                      Categoria
-                    </Label>
-                    <Select
-                      value={selectedGoogleCategoryId?.toString() || "all"}
-                      onValueChange={(value) => {
-                        if (value === "all") {
-                          setSelectedGoogleCategoryId(null);
-                        } else {
-                          setSelectedGoogleCategoryId(parseInt(value, 10));
-                        }
-                      }}
-                    >
-                      <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Todas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        {googleCategories?.filter(c => c.isActive).map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.namePtBr}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Show recipient interests when a recipient is selected */}
-                {selectedRecipientData && selectedRecipientData.interests && selectedRecipientData.interests.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block">
-                      Interesses do Presenteado
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedRecipientData.interests.map((interest) => (
-                        <Badge key={interest} variant="secondary" className="text-xs">
-                          {interest}
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Buscando presentes baseados nos interesses cadastrados
-                    </p>
-                  </div>
-                )}
 
                 <div>
                   <Label className="text-sm font-medium mb-3 block">

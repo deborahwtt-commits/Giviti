@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import RecipientCard from "@/components/RecipientCard";
 import RecipientForm from "@/components/RecipientForm";
 import EmptyState from "@/components/EmptyState";
+import SuggestionsModal from "@/components/SuggestionsModal";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,8 +16,8 @@ import { format } from "date-fns";
 export default function Recipients() {
   const [showForm, setShowForm] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
+  const [suggestionsRecipient, setSuggestionsRecipient] = useState<Recipient | null>(null);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   const { data: recipients, isLoading: recipientsLoading, error: recipientsError } = useQuery<Recipient[]>({
     queryKey: ["/api/recipients"],
@@ -289,7 +289,7 @@ export default function Recipients() {
                       recipient={recipient}
                       nextEventDate={nextEvent ? formatEventDate(nextEvent.eventDate) : undefined}
                       nextEventName={nextEvent ? (nextEvent.eventName || nextEvent.eventType) : undefined}
-                      onViewSuggestions={() => setLocation(`/sugestoes?recipientId=${recipient.id}`)}
+                      onViewSuggestions={() => setSuggestionsRecipient(recipient)}
                       onEdit={handleEdit}
                       onDelete={() => handleDelete(recipient.id)}
                     />
@@ -341,6 +341,14 @@ export default function Recipients() {
           </div>
         )}
       </div>
+
+      {suggestionsRecipient && (
+        <SuggestionsModal
+          open={!!suggestionsRecipient}
+          onClose={() => setSuggestionsRecipient(null)}
+          recipient={suggestionsRecipient}
+        />
+      )}
     </div>
   );
 }

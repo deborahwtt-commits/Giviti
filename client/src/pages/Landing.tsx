@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { z } from "zod";
-import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
+import heroImage from "@assets/Giviti_novo_fundo_1769372079773.jpeg";
 
 const SAVED_EMAIL_KEY = "giviti_saved_email";
 
@@ -354,7 +354,8 @@ export default function Landing() {
               </p>
               <p className="text-lg text-white/80 max-w-lg">
                 Nunca mais esqueça uma data importante ou fique sem ideias.
-                Descubra presentes personalizados para cada pessoa especial da sua vida.
+                Descubra presentes personalizados para cada pessoa especial da sua vida
+                e organize momentos inesquecíveis com a galera, sem estresse.
               </p>
             </div>
 
@@ -401,18 +402,17 @@ export default function Landing() {
                                   {...field}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
+                                  className="pr-10"
                                   data-testid="input-login-password"
                                 />
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-0 top-0 h-full px-3"
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                   onClick={() => setShowPassword(!showPassword)}
                                   data-testid="button-toggle-password"
                                 >
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
+                                </button>
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -588,18 +588,17 @@ export default function Landing() {
                                     {...field}
                                     type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
+                                    className="pr-10"
                                     data-testid="input-register-password"
                                   />
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full px-3"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowPassword(!showPassword)}
                                     data-testid="button-toggle-password-register"
                                   >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
+                                  </button>
                                 </div>
                               </FormControl>
                               <FormMessage />

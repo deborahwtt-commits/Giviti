@@ -1081,3 +1081,26 @@ export const insertWaitlistSchema = createInsertSchema(waitlist).omit({
 
 export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
 export type Waitlist = typeof waitlist.$inferSelect;
+
+// ========== User Daily Search Tracking ==========
+
+// Track daily Google Shopping API searches per user
+export const userDailySearches = pgTable("user_daily_searches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  searchDate: varchar("search_date").notNull(), // Format: YYYY-MM-DD
+  searchCount: integer("search_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserDailySearchSchema = createInsertSchema(userDailySearches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserDailySearch = z.infer<typeof insertUserDailySearchSchema>;
+export type UserDailySearch = typeof userDailySearches.$inferSelect;

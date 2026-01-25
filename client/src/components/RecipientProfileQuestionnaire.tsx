@@ -51,52 +51,10 @@ export default function RecipientProfileQuestionnaire({
 }: RecipientProfileQuestionnaireProps) {
   return (
     <div className="space-y-6">
-      {/* Question 1: Gender */}
+      {/* Question 1: Gift Preference */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          1. Como essa pessoa se identifica?
-        </Label>
-        <RadioGroup
-          value={formData.gender || ""}
-          onValueChange={(value) => onChange("gender", value)}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="mulher" id="gender-woman" />
-            <Label htmlFor="gender-woman" className="font-normal cursor-pointer">
-              Mulher
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="homem" id="gender-man" />
-            <Label htmlFor="gender-man" className="font-normal cursor-pointer">
-              Homem
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="nao-binarie" id="gender-nb" />
-            <Label htmlFor="gender-nb" className="font-normal cursor-pointer">
-              Não-binárie / Outro
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="prefiro-nao-informar" id="gender-pref-not" />
-            <Label htmlFor="gender-pref-not" className="font-normal cursor-pointer">
-              Prefiro não informar
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="nao-sei" id="gender-unknown" />
-            <Label htmlFor="gender-unknown" className="font-normal cursor-pointer">
-              Não sei
-            </Label>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Question 2: Gift Preference */}
-      <div className="space-y-3">
-        <Label className="text-base font-medium">
-          2. Que tipo de presente essa pessoa costuma gostar?
+          1. Que tipo de presente essa pessoa costuma gostar?
         </Label>
         <RadioGroup
           value={formData.giftPreference || ""}
@@ -141,10 +99,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 3: Lifestyle */}
+      {/* Question 2: Lifestyle */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          3. Como você descreveria o estilo de vida dessa pessoa?
+          2. Como você descreveria o estilo de vida dessa pessoa?
         </Label>
         <RadioGroup
           value={formData.lifestyle || ""}
@@ -183,9 +141,9 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 4: Interest Category */}
+      {/* Question 3: Interest Category */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">4. Ela curte mais:</Label>
+        <Label className="text-base font-medium">3. Ela curte mais:</Label>
         <RadioGroup
           value={formData.interestCategory || ""}
           onValueChange={(value) => onChange("interestCategory", value)}
@@ -235,10 +193,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 5: Gift Reception Style */}
+      {/* Question 4: Gift Reception Style */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          5. Essa pessoa gosta de receber presentes…
+          4. Essa pessoa gosta de receber presentes…
         </Label>
         <RadioGroup
           value={formData.giftReceptionStyle || ""}
@@ -283,10 +241,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 6: Budget Range */}
+      {/* Question 5: Budget Range */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          6. Quanto você pretende investir nesse presente?
+          5. Quanto você pretende investir nesse presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Seja honesto — até o Giviti entende os boletos)
           </span>
@@ -346,10 +304,10 @@ export default function RecipientProfileQuestionnaire({
         </RadioGroup>
       </div>
 
-      {/* Question 7: Occasion */}
+      {/* Question 6: Occasion */}
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          7. Quando é a ocasião do presente?
+          6. Quando é a ocasião do presente?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Porque cada data pede um tipo de surpresa especial)
           </span>
@@ -386,10 +344,10 @@ export default function RecipientProfileQuestionnaire({
         </Select>
       </div>
 
-      {/* Question 8: Gifts to Avoid - OPTIONAL */}
+      {/* Question 7: Gifts to Avoid - OPTIONAL */}
       <div className="space-y-3">
         <Label htmlFor="gifts-to-avoid" className="text-base font-medium">
-          8. Qual presente nunca sugerir para esta pessoa?
+          7. Qual presente nunca sugerir para esta pessoa?
           <span className="block text-sm font-normal text-muted-foreground mt-1">
             (Não queremos cometer uma gafe, não é?) — Opcional
           </span>
@@ -409,12 +367,12 @@ export default function RecipientProfileQuestionnaire({
         </p>
       </div>
 
-      {/* Question 9: Location - OPTIONAL */}
+      {/* Question 8: Location - OPTIONAL */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <MapPin className="w-5 h-5 text-primary" />
           <Label className="text-base font-medium">
-            9. Onde essa pessoa mora?
+            8. Onde essa pessoa mora?
             <span className="block text-sm font-normal text-muted-foreground mt-1">
               (Opcional — ajuda a sugerir presentes regionais ou experiências locais)
             </span>

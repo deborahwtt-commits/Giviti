@@ -5,7 +5,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 import { 
   HelpCircle, 
   Users, 
@@ -14,13 +13,11 @@ import {
   Cake, 
   PartyPopper, 
   User,
-  Lightbulb,
-  Heart,
   Sparkles,
-  Target,
   Shuffle,
   Palette,
-  Star
+  Star,
+  Plane
 } from "lucide-react";
 
 export default function FAQ() {
@@ -56,48 +53,24 @@ export default function FAQ() {
                   <AccordionTrigger>O que é o Giviti?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      O Giviti é seu novo melhor amigo na hora de dar presentes! Sabe aquele momento de pânico quando 
-                      você lembra que o aniversário é AMANHÃ e não faz ideia do que comprar? Pois é, acabou esse pesadelo. 
+                      O Giviti é seu assistente para dar presentes! Cadastre as pessoas importantes, 
+                      as datas especiais, e receba sugestões personalizadas baseadas no perfil de cada um.
                     </p>
-                    <p className="text-muted-foreground mb-3">
-                      Aqui você cadastra as pessoas que ama (ou que precisa dar presente por educação, a gente não julga), 
-                      as datas importantes, e nós te ajudamos com sugestões personalizadas baseadas no perfil de cada um.
+                    <p className="text-muted-foreground">
+                      Também dá pra organizar eventos colaborativos com a galera: Amigo Secreto com 
+                      sorteio automático, Eventos Temáticos, Presentes Coletivos ou Viagens em Grupo.
                     </p>
-                    <p className="text-muted-foreground mb-3">
-                      E tem mais! Com os <strong>Rolês</strong>, você organiza eventos colaborativos com a galera: 
-                      monte um <strong>Amigo Secreto</strong> com sorteio automático, planeje um <strong>Evento Temático</strong> épico, ou junte o pessoal pra dar um <strong>Presente Coletivo</strong> daqueles. 
-                      Tudo integrado, com convites por email e acompanhamento das confirmações!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica de ouro:</strong> Quanto mais informações você adicionar sobre a pessoa, 
-                        melhores serão as sugestões. É tipo stalking, mas do bem!
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="como-comecar">
                   <AccordionTrigger>Como começo a usar?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Moleza! Depois de criar sua conta, siga esses passinhos:
+                    <p className="text-muted-foreground">
+                      É só explorar! Cadastre as pessoas que você quer presentear, adicione as datas 
+                      importantes e deixe o Giviti te ajudar com sugestões personalizadas. A interface 
+                      é intuitiva e te guia naturalmente.
                     </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li><strong>Complete seu perfil</strong> - Assim a gente te conhece melhor</li>
-                      <li><strong>Cadastre seus presenteados</strong> - Quem são as pessoas especiais da sua vida</li>
-                      <li><strong>Adicione as datas importantes</strong> - Aniversários, Natal, Dia das Mães...</li>
-                      <li><strong>Organize um rolê</strong> - Amigo Secreto, Evento Temático ou Presente Coletivo</li>
-                      <li><strong>Explore as sugestões</strong> - E deixe a mágica acontecer!</li>
-                    </ol>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica:</strong> O Dashboard mostra um checklist de primeiros passos pra te guiar. 
-                        É como um tutorial, mas sem aquela voz chata explicando o óbvio.
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -110,58 +83,19 @@ export default function FAQ() {
                 <div className="p-2 rounded-lg bg-blue-500/10">
                   <Users className="w-5 h-5 text-blue-500" />
                 </div>
-                Presenteados
+                Pessoas
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="cadastrar-presenteado">
-                  <AccordionTrigger>Como cadastro um presenteado?</AccordionTrigger>
+                  <AccordionTrigger>O que são as Pessoas?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Vá em <Badge variant="outline">Presenteados</Badge> no menu e clique no botão 
-                      <Badge variant="secondary" className="mx-1">+ Novo Presenteado</Badge>. 
-                      Preencha as informações básicas como nome e relacionamento.
+                    <p className="text-muted-foreground">
+                      São as pessoas que você quer presentear. Adicione informações sobre interesses, 
+                      estilo de vida e preferências - quanto mais detalhes, melhores serão as sugestões 
+                      de presentes que o Giviti vai te dar.
                     </p>
-                    <p className="text-muted-foreground mb-3">
-                      Mas a mágica acontece quando você preenche o <strong>Perfil Detalhado</strong>! 
-                      Lá você pode adicionar:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-3 ml-2">
-                      <li>Interesses e hobbies</li>
-                      <li>Estilo de vida e personalidade</li>
-                      <li>Faixa de preço preferida</li>
-                      <li>Coisas que a pessoa NÃO gosta (super importante!)</li>
-                    </ul>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica esperta:</strong> Use o campo "Presentes a Evitar" para anotar coisas tipo 
-                        "NÃO gosta de perfumes" ou "Já tem 47 canecas". Seus presentes vão ficar muito mais assertivos!
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="perfil-presenteado">
-                  <AccordionTrigger>Para que serve o perfil detalhado?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      É aqui que você vira o Sherlock Holmes dos presentes! O perfil detalhado alimenta nosso 
-                      algoritmo de sugestões. Quanto mais completo, mais certeiras são as recomendações.
-                    </p>
-                    <p className="text-muted-foreground mb-3">
-                      Imagine que seu amigo gosta de <strong>tecnologia</strong>, é <strong>minimalista</strong>, 
-                      e você marcou um orçamento de <strong>R$ 100-200</strong>. O sistema vai filtrar milhares 
-                      de opções e te mostrar só as que fazem sentido!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica ninja:</strong> Pode atualizar o perfil a qualquer momento. 
-                        Descobriu que sua mãe começou a fazer yoga? Adiciona lá!
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -174,53 +108,19 @@ export default function FAQ() {
                 <div className="p-2 rounded-lg bg-orange-500/10">
                   <Calendar className="w-5 h-5 text-orange-500" />
                 </div>
-                Datas Comemorativas
+                Datas
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="criar-evento">
-                  <AccordionTrigger>Como criar uma data comemorativa?</AccordionTrigger>
+                  <AccordionTrigger>O que são as Datas?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Acesse <Badge variant="outline">Datas Comemorativas</Badge> no menu e clique em 
-                      <Badge variant="secondary" className="mx-1">+ Nova Data</Badge>. 
-                      Escolha o tipo (Aniversário, Natal, Dia dos Namorados...), a data, e vincule aos presenteados.
+                    <p className="text-muted-foreground">
+                      São os eventos importantes que você quer lembrar: aniversários, Natal, Dia dos Namorados 
+                      e qualquer ocasião especial. Vincule as pessoas envolvidas e receba sugestões 
+                      personalizadas quando a data se aproximar.
                     </p>
-                    <p className="text-muted-foreground mb-3">
-                      O Giviti vai te lembrar quando a data estiver chegando e mostrar sugestões 
-                      personalizadas para cada pessoa vinculada ao evento!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica de mestre:</strong> Você pode vincular vários presenteados ao mesmo evento! 
-                        Perfeito pro Natal da família toda.
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="evento-passou">
-                  <AccordionTrigger>O que acontece quando a data passa?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Quando uma data comemorativa passa, você tem duas opções:
-                    </p>
-                    <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-3 ml-2">
-                      <li>
-                        <strong>Avançar para o próximo ano</strong> - Perfeito para aniversários e datas que se repetem
-                      </li>
-                      <li>
-                        <strong>Arquivar</strong> - Para eventos únicos que não vão se repetir
-                      </li>
-                    </ul>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica:</strong> Use "Avançar" para aniversários - assim você nunca mais esquece!
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -241,69 +141,11 @@ export default function FAQ() {
                 <AccordionItem value="como-funciona">
                   <AccordionTrigger>Como funcionam as sugestões?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      É aqui que a mágica acontece! Na página <Badge variant="outline">Presentes</Badge>, 
-                      você pode explorar sugestões de duas formas:
+                    <p className="text-muted-foreground">
+                      O Giviti analisa o perfil de cada pessoa - interesses, idade, preferências - e sugere 
+                      presentes que fazem sentido. Você pode filtrar por categoria e orçamento, favoritar 
+                      ideias para pensar depois e marcar o que já comprou para acompanhar seus gastos.
                     </p>
-                    <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-3 ml-2">
-                      <li>
-                        <strong>Por presenteado</strong> - Selecione a pessoa e veja sugestões 
-                        baseadas no perfil dela
-                      </li>
-                      <li>
-                        <strong>Por categoria</strong> - Explore por tipo (Tecnologia, Casa, Experiências...)
-                      </li>
-                      <li>
-                        <strong>Por orçamento</strong> - Defina quanto quer gastar
-                      </li>
-                    </ul>
-                    <p className="text-muted-foreground mb-3">
-                      O sistema usa os interesses, idade, gênero e preferências do presenteado 
-                      para ranquear as melhores opções primeiro!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica profissional:</strong> Combine os filtros! 
-                        Ex: "Para a mamãe + Categoria Casa + Até R$150" = sugestões ultra-personalizadas.
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="favoritar-comprar">
-                  <AccordionTrigger>Como favorito ou marco como comprado?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Em cada sugestão você vai encontrar dois botões especiais:
-                    </p>
-                    <div className="space-y-3 mb-3">
-                      <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                        <Heart className="w-5 h-5 text-red-500" />
-                        <div>
-                          <strong>Favoritar</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Salva a ideia pra pensar melhor depois. Você pode ver todos os favoritos em um lugar só!
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                        <Target className="w-5 h-5 text-green-500" />
-                        <div>
-                          <strong>Marcar como Comprado</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Já comprou? Marca aí! Assim você acompanha seus gastos e não repete presente.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica:</strong> No Dashboard você vê estatísticas de quanto já gastou em presentes. 
-                        Ótimo pra manter o controle (ou pra justificar os excessos, depende do ponto de vista).
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -322,49 +164,13 @@ export default function FAQ() {
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="meu-aniversario">
-                  <AccordionTrigger>O que é a funcionalidade "Meu Aniversário"?</AccordionTrigger>
+                  <AccordionTrigger>O que é o Meu Aniversário?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Chegou a hora de receber presentes também! Com essa funcionalidade você pode:
+                    <p className="text-muted-foreground">
+                      É a sua vez de receber presentes! Crie uma wishlist com o que você deseja, 
+                      compartilhe com amigos e família, e evite aquele presente repetido ou que 
+                      você nunca vai usar.
                     </p>
-                    <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-3 ml-2">
-                      <li>Criar uma <strong>Wishlist</strong> com os presentes que você quer</li>
-                      <li>Convidar amigos e família por email</li>
-                      <li>Compartilhar um link público da sua lista</li>
-                    </ul>
-                    <p className="text-muted-foreground mb-3">
-                      Nada de presente repetido ou aquela blusa que você nunca vai usar!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica descarada:</strong> Mande o link da wishlist "sem querer" no grupo da família 
-                        umas semanas antes do seu aniversário. Funciona que é uma beleza!
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="como-criar-wishlist">
-                  <AccordionTrigger>Como crio minha wishlist?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Para criar sua wishlist de aniversário:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Vá em <Badge variant="outline">Datas Comemorativas</Badge></li>
-                      <li>Crie uma data do tipo <strong>"Meu Aniversário"</strong></li>
-                      <li>Clique em <Badge variant="secondary">Gerenciar Wishlist</Badge></li>
-                      <li>Adicione os itens que você deseja (com link de onde comprar, se quiser)</li>
-                      <li>Convide seus convidados por email ou compartilhe o link público</li>
-                    </ol>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica esperta:</strong> Adicione itens em diferentes faixas de preço - 
-                        assim todo mundo consegue participar, do amigo universitário ao tio ricão.
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -386,16 +192,15 @@ export default function FAQ() {
                   <AccordionTrigger>O que são os Rolês?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Rolês são eventos colaborativos onde a diversão é garantida! Temos três tipos:
+                      São eventos colaborativos para curtir com a galera:
                     </p>
-                    <div className="space-y-3 mb-3">
+                    <div className="space-y-3">
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                         <Shuffle className="w-5 h-5 text-red-500 mt-0.5" />
                         <div>
                           <strong>Amigo Secreto</strong>
                           <p className="text-sm text-muted-foreground">
-                            O clássico! Adicione participantes, defina o valor sugerido, e deixe o sistema fazer 
-                            o sorteio automaticamente. Cada um recebe só o nome de quem vai presentear!
+                            O clássico com sorteio automático e lista de desejos de cada participante.
                           </p>
                         </div>
                       </div>
@@ -404,8 +209,7 @@ export default function FAQ() {
                         <div>
                           <strong>Evento Temático</strong>
                           <p className="text-sm text-muted-foreground">
-                            Organize eventos com temas divertidos! Festa a fantasia, noite de filmes, 
-                            jantar italiano... O sistema tem várias sugestões pra te inspirar.
+                            Festas, jantares, noites de filme - organize encontros com temas divertidos.
                           </p>
                         </div>
                       </div>
@@ -414,146 +218,19 @@ export default function FAQ() {
                         <div>
                           <strong>Presente Coletivo</strong>
                           <p className="text-sm text-muted-foreground">
-                            Junte a galera pra dar um presentão! Defina o valor por pessoa, 
-                            acompanhe quem já contribuiu, e surpreenda alguém especial.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica festeira:</strong> Convide os participantes por email direto pelo sistema - 
-                        eles recebem todas as informações sem você precisar ficar mandando mensagem no grupo!
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="amigo-secreto">
-                  <AccordionTrigger>Como funciona o Amigo Secreto?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Criar um Amigo Secreto é facinho:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Vá em <Badge variant="outline">Planeje seu rolê!</Badge></li>
-                      <li>Clique em <Badge variant="secondary">+ Novo Rolê</Badge></li>
-                      <li>Escolha <strong>Amigo Secreto</strong></li>
-                      <li>Defina a data e o valor sugerido</li>
-                      <li>Adicione os participantes (por email)</li>
-                      <li>Quando todos confirmarem, clique em <strong>Realizar Sorteio</strong></li>
-                    </ol>
-                    <p className="text-muted-foreground mb-3">
-                      Cada participante recebe um email com o nome de quem vai presentear. 
-                      Super discreto, zero chance de vazamento!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica de organizador expert:</strong> Defina uma data limite para confirmação. 
-                        Assim você não fica esperando eternamente aquele amigo enrolado.
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="wishlist-amigo-secreto">
-                  <AccordionTrigger>O que é a lista de desejos do Amigo Secreto?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      A lista de desejos é uma forma de ajudar quem te tirou a escolher o presente perfeito! 
-                      Cada participante pode adicionar até 10 itens que gostaria de ganhar.
-                    </p>
-                    <div className="space-y-3 mb-3">
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <Heart className="w-5 h-5 text-rose-500 mt-0.5" />
-                        <div>
-                          <strong>Crie sua lista</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Adicione itens com nome, descrição, preço estimado e até link de onde comprar. 
-                            Marque os mais desejados como prioridade alta!
+                            Junte a galera para dar um presentão especial para alguém.
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <Gift className="w-5 h-5 text-green-500 mt-0.5" />
+                        <Plane className="w-5 h-5 text-teal-500 mt-0.5" />
                         <div>
-                          <strong>Veja a lista de quem você tirou</strong>
+                          <strong>Viagem em Grupo</strong>
                           <p className="text-sm text-muted-foreground">
-                            Após o sorteio, no card "Seu Amigo Secreto" aparece a seção "O que seu amigo quer ganhar" 
-                            com todos os itens da wishlist da pessoa.
+                            Planeje viagens com amigos, organize custos e acompanhe confirmações.
                           </p>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica esperta:</strong> Adicione itens de diferentes faixas de preço - 
-                        assim você dá opções pro seu amigo secreto sem colocar pressão!
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="organizador-indicadores">
-                  <AccordionTrigger>Como o organizador acompanha os participantes?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      O organizador tem uma visão especial com indicadores visuais ao lado de cada participante:
-                    </p>
-                    <div className="space-y-3 mb-3">
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <Users className="w-5 h-5 text-green-500 mt-0.5" />
-                        <div>
-                          <strong>Ícone de perfil</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Prancheta verde = perfil preenchido (clique para ver as preferências). 
-                            Documento cinza = perfil ainda não preenchido.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <Heart className="w-5 h-5 text-rose-500 mt-0.5" />
-                        <div>
-                          <strong>Ícone de lista de desejos</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Coração rosa preenchido = tem itens na wishlist (passe o mouse para ver quantos). 
-                            Coração cinza = wishlist vazia.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica de organização:</strong> Use esses indicadores para lembrar os participantes 
-                        de completarem o perfil e adicionarem itens à wishlist antes do sorteio!
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="noite-tematica">
-                  <AccordionTrigger>Como organizo um Evento Temático?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Eventos temáticos são perfeitos para reunir a galera com estilo:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Crie um novo rolê do tipo <strong>Evento Temático</strong></li>
-                      <li>Escolha uma categoria (Festa, Jantar, Cinema em Casa...)</li>
-                      <li>Defina a data, local e descrição</li>
-                      <li>Convide os participantes</li>
-                      <li>Acompanhe as confirmações</li>
-                    </ol>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica criativa:</strong> Use a descrição pra dar instruções especiais - 
-                        tipo "venha de pijama" ou "traga sua bebida favorita"!
-                      </span>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -573,51 +250,13 @@ export default function FAQ() {
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="perfil-importancia">
-                  <AccordionTrigger>Por que devo completar meu perfil?</AccordionTrigger>
+                  <AccordionTrigger>Para que serve meu perfil?</AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Seu perfil não é só pra enfeitar! Ele serve pra:
+                    <p className="text-muted-foreground">
+                      Seu perfil ajuda o Giviti a te conhecer e personalizar sua experiência. 
+                      Também é útil quando amigos te adicionam em eventos e precisam saber 
+                      suas preferências para te presentear.
                     </p>
-                    <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-3 ml-2">
-                      <li>
-                        <strong>Horóscopo personalizado</strong> - Se você informar sua data de nascimento, 
-                        ganha mensagens do horóscopo no Dashboard (sim, a gente sabe que você gosta!)
-                      </li>
-                      <li>
-                        <strong>Configurar sua wishlist</strong> - Quando amigos te adicionam em eventos
-                      </li>
-                      <li>
-                        <strong>Manter tudo organizado</strong> - Nome, foto, preferências...
-                      </li>
-                    </ul>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica zen:</strong> Complete o questionário de personalidade! 
-                        É divertido e ajuda o sistema a te conhecer melhor.
-                      </span>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="alterar-senha">
-                  <AccordionTrigger>Como altero minha senha?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-muted-foreground mb-3">
-                      Fácil! Vá no seu <Badge variant="outline">Perfil</Badge> (ícone de usuário no canto superior) 
-                      e procure a seção de <strong>Alterar Senha</strong>. 
-                      Digite sua senha atual e a nova senha duas vezes.
-                    </p>
-                    <p className="text-muted-foreground mb-3">
-                      Esqueceu a senha? Na tela de login tem a opção de recuperação por email!
-                    </p>
-                    <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">
-                        <strong>Dica de segurança:</strong> Use uma senha forte! 
-                        "123456" ou "senha123" são praticamente um convite pra hackers.
-                      </span>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
