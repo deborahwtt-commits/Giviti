@@ -82,20 +82,14 @@ export default function FAQ() {
                   <AccordionTrigger>Como começo a usar?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Moleza! Depois de criar sua conta, siga esses passinhos:
+                      Moleza! Depois de criar sua conta, comece completando seu perfil, cadastre as pessoas 
+                      especiais da sua vida, adicione as datas importantes e explore as sugestões de presentes. 
+                      Se quiser, organize também um rolê colaborativo com a galera!
                     </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li><strong>Complete seu perfil</strong> - Assim a gente te conhece melhor</li>
-                      <li><strong>Cadastre seus presenteados</strong> - Quem são as pessoas especiais da sua vida</li>
-                      <li><strong>Adicione as datas importantes</strong> - Aniversários, Natal, Dia das Mães...</li>
-                      <li><strong>Organize um rolê</strong> - Amigo Secreto, Evento Temático ou Presente Coletivo</li>
-                      <li><strong>Explore as sugestões</strong> - E deixe a mágica acontecer!</li>
-                    </ol>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica:</strong> O Dashboard mostra um checklist de primeiros passos pra te guiar. 
-                        É como um tutorial, mas sem aquela voz chata explicando o óbvio.
+                        <strong>Dica:</strong> A página Início mostra um checklist pra te guiar nos primeiros passos.
                       </span>
                     </div>
                   </AccordionContent>
@@ -110,34 +104,24 @@ export default function FAQ() {
                 <div className="p-2 rounded-lg bg-blue-500/10">
                   <Users className="w-5 h-5 text-blue-500" />
                 </div>
-                Presenteados
+                Pessoas
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="cadastrar-presenteado">
-                  <AccordionTrigger>Como cadastro um presenteado?</AccordionTrigger>
+                  <AccordionTrigger>Como cadastro uma pessoa?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Vá em <Badge variant="outline">Presenteados</Badge> no menu e clique no botão 
-                      <Badge variant="secondary" className="mx-1">+ Novo Presenteado</Badge>. 
-                      Preencha as informações básicas como nome e relacionamento.
+                      Na seção <Badge variant="outline">Pessoas</Badge> você pode adicionar quem você deseja presentear. 
+                      Preencha as informações básicas e, se quiser sugestões mais certeiras, complete o perfil 
+                      com interesses, estilo de vida e preferências.
                     </p>
-                    <p className="text-muted-foreground mb-3">
-                      Mas a mágica acontece quando você preenche o <strong>Perfil Detalhado</strong>! 
-                      Lá você pode adicionar:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-3 ml-2">
-                      <li>Interesses e hobbies</li>
-                      <li>Estilo de vida e personalidade</li>
-                      <li>Faixa de preço preferida</li>
-                      <li>Coisas que a pessoa NÃO gosta (super importante!)</li>
-                    </ul>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica esperta:</strong> Use o campo "Presentes a Evitar" para anotar coisas tipo 
-                        "NÃO gosta de perfumes" ou "Já tem 47 canecas". Seus presentes vão ficar muito mais assertivos!
+                        <strong>Dica esperta:</strong> Use o campo "Presentes a Evitar" para anotar o que a pessoa 
+                        não gosta. Seus presentes vão ficar muito mais assertivos!
                       </span>
                     </div>
                   </AccordionContent>
@@ -174,28 +158,23 @@ export default function FAQ() {
                 <div className="p-2 rounded-lg bg-orange-500/10">
                   <Calendar className="w-5 h-5 text-orange-500" />
                 </div>
-                Datas Comemorativas
+                Datas
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="criar-evento">
-                  <AccordionTrigger>Como criar uma data comemorativa?</AccordionTrigger>
+                  <AccordionTrigger>Como criar uma data?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Acesse <Badge variant="outline">Datas Comemorativas</Badge> no menu e clique em 
-                      <Badge variant="secondary" className="mx-1">+ Nova Data</Badge>. 
-                      Escolha o tipo (Aniversário, Natal, Dia dos Namorados...), a data, e vincule aos presenteados.
-                    </p>
-                    <p className="text-muted-foreground mb-3">
-                      O Giviti vai te lembrar quando a data estiver chegando e mostrar sugestões 
-                      personalizadas para cada pessoa vinculada ao evento!
+                      Na seção <Badge variant="outline">Datas</Badge> você pode adicionar eventos importantes como 
+                      aniversários, Natal, Dia dos Namorados e muito mais. Vincule as pessoas envolvidas e 
+                      o Giviti mostra sugestões personalizadas quando a data estiver chegando!
                     </p>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica de mestre:</strong> Você pode vincular vários presenteados ao mesmo evento! 
-                        Perfeito pro Natal da família toda.
+                        <strong>Dica:</strong> Você pode vincular várias pessoas ao mesmo evento - perfeito pro Natal da família!
                       </span>
                     </div>
                   </AccordionContent>
@@ -300,7 +279,7 @@ export default function FAQ() {
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica:</strong> No Dashboard você vê estatísticas de quanto já gastou em presentes. 
+                        <strong>Dica:</strong> Na página Início você vê estatísticas de quanto já gastou em presentes. 
                         Ótimo pra manter o controle (ou pra justificar os excessos, depende do ponto de vista).
                       </span>
                     </div>
@@ -349,20 +328,15 @@ export default function FAQ() {
                   <AccordionTrigger>Como crio minha wishlist?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Para criar sua wishlist de aniversário:
+                      Na seção <Badge variant="outline">Datas</Badge>, crie um evento do tipo "Meu Aniversário" 
+                      e acesse a opção de gerenciar wishlist. Adicione os itens que deseja, convide pessoas 
+                      por email ou compartilhe o link público da sua lista!
                     </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Vá em <Badge variant="outline">Datas Comemorativas</Badge></li>
-                      <li>Crie uma data do tipo <strong>"Meu Aniversário"</strong></li>
-                      <li>Clique em <Badge variant="secondary">Gerenciar Wishlist</Badge></li>
-                      <li>Adicione os itens que você deseja (com link de onde comprar, se quiser)</li>
-                      <li>Convide seus convidados por email ou compartilhe o link público</li>
-                    </ol>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
                         <strong>Dica esperta:</strong> Adicione itens em diferentes faixas de preço - 
-                        assim todo mundo consegue participar, do amigo universitário ao tio ricão.
+                        assim todo mundo consegue participar!
                       </span>
                     </div>
                   </AccordionContent>
@@ -434,25 +408,14 @@ export default function FAQ() {
                   <AccordionTrigger>Como funciona o Amigo Secreto?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Criar um Amigo Secreto é facinho:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Vá em <Badge variant="outline">Planeje seu rolê!</Badge></li>
-                      <li>Clique em <Badge variant="secondary">+ Novo Rolê</Badge></li>
-                      <li>Escolha <strong>Amigo Secreto</strong></li>
-                      <li>Defina a data e o valor sugerido</li>
-                      <li>Adicione os participantes (por email)</li>
-                      <li>Quando todos confirmarem, clique em <strong>Realizar Sorteio</strong></li>
-                    </ol>
-                    <p className="text-muted-foreground mb-3">
-                      Cada participante recebe um email com o nome de quem vai presentear. 
-                      Super discreto, zero chance de vazamento!
+                      Crie um rolê do tipo Amigo Secreto, defina a data e valor sugerido, e adicione os participantes. 
+                      Quando todos confirmarem, realize o sorteio - cada um recebe um email discreto com o nome 
+                      de quem vai presentear!
                     </p>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica de organizador expert:</strong> Defina uma data limite para confirmação. 
-                        Assim você não fica esperando eternamente aquele amigo enrolado.
+                        <strong>Dica:</strong> Defina uma data limite para confirmação pra não ficar esperando o amigo enrolado.
                       </span>
                     </div>
                   </AccordionContent>
@@ -539,15 +502,9 @@ export default function FAQ() {
                   <AccordionTrigger>Como organizo um Evento Temático?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Eventos temáticos são perfeitos para reunir a galera com estilo:
+                      Crie um rolê do tipo Evento Temático, escolha a categoria (Festa, Jantar, Cinema em Casa...), 
+                      defina os detalhes e convide os participantes. Acompanhe as confirmações direto no sistema!
                     </p>
-                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-3">
-                      <li>Crie um novo rolê do tipo <strong>Evento Temático</strong></li>
-                      <li>Escolha uma categoria (Festa, Jantar, Cinema em Casa...)</li>
-                      <li>Defina a data, local e descrição</li>
-                      <li>Convide os participantes</li>
-                      <li>Acompanhe as confirmações</li>
-                    </ol>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
@@ -576,25 +533,14 @@ export default function FAQ() {
                   <AccordionTrigger>Por que devo completar meu perfil?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground mb-3">
-                      Seu perfil não é só pra enfeitar! Ele serve pra:
+                      Seu perfil ajuda o Giviti a te conhecer melhor! Com a data de nascimento você recebe 
+                      mensagens do horóscopo na página Início. Também é útil quando amigos te adicionam em eventos 
+                      e precisam saber suas preferências.
                     </p>
-                    <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-3 ml-2">
-                      <li>
-                        <strong>Horóscopo personalizado</strong> - Se você informar sua data de nascimento, 
-                        ganha mensagens do horóscopo no Dashboard (sim, a gente sabe que você gosta!)
-                      </li>
-                      <li>
-                        <strong>Configurar sua wishlist</strong> - Quando amigos te adicionam em eventos
-                      </li>
-                      <li>
-                        <strong>Manter tudo organizado</strong> - Nome, foto, preferências...
-                      </li>
-                    </ul>
                     <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                       <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                       <span className="text-sm">
-                        <strong>Dica zen:</strong> Complete o questionário de personalidade! 
-                        É divertido e ajuda o sistema a te conhecer melhor.
+                        <strong>Dica zen:</strong> Complete o questionário de personalidade - é divertido!
                       </span>
                     </div>
                   </AccordionContent>
