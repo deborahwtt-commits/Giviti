@@ -714,28 +714,16 @@ function filterInternalSuggestions(
     let matchesInterests = true;
     
     if (hasRecipientWithInterests) {
-      if (useGoogleCategoryFilter && suggestion.googleCategoryId) {
-        matchesInterests = googleCategoryIds.includes(suggestion.googleCategoryId);
-      } else {
-        const suggestionTags = suggestion.tags || [];
-        const suggestionCategoryLower = suggestion.category.toLowerCase();
-        
-        matchesInterests = recipientInterests.some(interest => {
-          const interestLower = interest.toLowerCase();
-          
-          const categoryMatch = suggestionCategoryLower === interestLower ||
-            suggestionCategoryLower.includes(interestLower) ||
-            interestLower.includes(suggestionCategoryLower);
-          
-          const tagMatch = suggestionTags.some(tag => {
-            const tagLower = tag.toLowerCase();
-            return tagLower === interestLower ||
-              tagLower.includes(interestLower) ||
-              interestLower.includes(tagLower);
-          });
-          
-          return categoryMatch || tagMatch;
-        });
+      if (useGoogleCategoryFilter) {
+        // When filtering by Google categories (interests), only include products
+        // that have a google_category_id AND it matches one of the recipient's interests
+        if (suggestion.googleCategoryId) {
+          matchesInterests = googleCategoryIds.includes(suggestion.googleCategoryId);
+        } else {
+          // Internal products without google_category_id are excluded when
+          // recipient has specific interests - rely on Google Shopping for these
+          matchesInterests = false;
+        }
       }
       
       if (!matchesInterests) {
