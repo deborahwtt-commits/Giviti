@@ -90,11 +90,11 @@ function ProductCard({
           <CouponBadge cupom={product.cupom} validadeCupom={product.validadeCupom} />
         )}
         
-        <div className="flex gap-2 mt-2">
+        <div className="flex flex-col gap-1.5 mt-2">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="w-full text-xs"
             onClick={() => window.open(product.productUrl, "_blank")}
             disabled={!product.productUrl}
             data-testid={`button-view-product-${product.id}`}
@@ -104,7 +104,7 @@ function ProductCard({
           </Button>
           <Button
             size="sm"
-            className="flex-1"
+            className="w-full text-xs"
             onClick={() => onPurchase(product)}
             disabled={isPurchasedAnywhere}
             data-testid={`button-purchase-${product.id}`}
