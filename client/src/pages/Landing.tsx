@@ -354,7 +354,8 @@ export default function Landing() {
               </p>
               <p className="text-lg text-white/80 max-w-lg">
                 Nunca mais esqueça uma data importante ou fique sem ideias.
-                Descubra presentes personalizados para cada pessoa especial da sua vida.
+                Descubra presentes personalizados para cada pessoa especial da sua vida
+                e organize momentos inesquecíveis com a galera, sem estresse.
               </p>
             </div>
 
