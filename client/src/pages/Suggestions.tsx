@@ -322,7 +322,6 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
 
   const [favorite, setFavorite] = useState(existingGift?.isFavorite ?? false);
   const [purchased, setPurchased] = useState(isPurchasedAnywhere ?? false);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     setFavorite(existingGift?.isFavorite ?? false);
@@ -361,6 +360,42 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
     },
   });
+
+  const handlePurchase = async () => {
+    setPurchased(true);
+    
+    try {
+      await apiRequest("/api/gifts", "POST", {
+        recipientId: recipientId || null,
+        suggestionId: internalId,
+        name: product.name,
+        description: product.description || product.store || "",
+        imageUrl: product.imageUrl,
+        price: String(product.price),
+        purchaseUrl: product.productUrl || "",
+        externalSource: product.source === "google" ? "google_shopping" : null,
+        isFavorite: false,
+        isPurchased: true,
+        purchasedAt: new Date().toISOString(),
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      
+      toast({
+        title: "Presente registrado!",
+        description: `${product.name} foi marcado como comprado.`,
+      });
+    } catch (error) {
+      setPurchased(false);
+      console.error("Error saving purchase:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a compra.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleFavoriteToggle = async () => {
     if (!recipientId) {
@@ -478,27 +513,17 @@ function UnifiedProductCard({ product, recipientId, recipients, toast, userGifts
           </Button>
           
           <Button
-            variant="default"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setShowPurchaseModal(true)}
+            size="sm"
+            className={`flex-1 text-xs ${purchased ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/30 cursor-default opacity-80" : ""}`}
+            onClick={handlePurchase}
             disabled={purchased}
-            title={purchased ? "Já comprado" : "Marcar como comprado"}
             data-testid={`button-mark-purchased-${product.id}`}
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-3 h-3 mr-1" />
+            {purchased ? "Comprado" : "Já comprei!"}
           </Button>
         </div>
       </div>
-
-      <PurchaseModal
-        open={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
-        product={product}
-        recipients={recipients}
-        selectedRecipientId={recipientId}
-        onSuccess={() => setPurchased(true)}
-      />
     </Card>
   );
 }
