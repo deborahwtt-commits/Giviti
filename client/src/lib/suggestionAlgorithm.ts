@@ -84,22 +84,31 @@ interface SuggestionAlgorithmResult {
   pagination: PaginationMeta;
 }
 
-function getAgeRange(age: number): string {
-  if (age < 13) return "criança";
+function getSimpleAgeCategory(age: number): string {
+  if (age < 12) return "criança";
   if (age < 18) return "adolescente";
-  if (age < 25) return "jovem adulto";
-  if (age < 35) return "adulto 25-35 anos";
-  if (age < 45) return "adulto 35-45 anos";
-  if (age < 55) return "adulto 45-55 anos";
-  if (age < 65) return "adulto 55-65 anos";
-  return "idoso 65+ anos";
+  return "adulto";
+}
+
+function getGenderTermByAge(gender: string | null | undefined, age: number | null | undefined): string {
+  if (!gender) return "";
+  const genderLower = gender.toLowerCase();
+  const isChild = age !== null && age !== undefined && age < 12;
+  
+  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") {
+    return isChild ? "menino" : "masculino";
+  }
+  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") {
+    return isChild ? "menina" : "feminino";
+  }
+  return "";
 }
 
 function getGenderTerm(gender: string | null | undefined): string {
   if (!gender) return "";
   const genderLower = gender.toLowerCase();
-  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino homem";
-  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino mulher";
+  if (genderLower === "masculino" || genderLower === "male" || genderLower === "m") return "masculino";
+  if (genderLower === "feminino" || genderLower === "female" || genderLower === "f") return "feminino";
   return "";
 }
 
@@ -177,39 +186,23 @@ function buildRecipientBasedQuery(
   
   const interests = recipient.interests || [];
   const gender = profile?.gender || recipient.gender;
-  const relationship = profile?.relationship || recipient.relationship;
+  const age = recipient.age;
   
   switch (level) {
     case "full":
-      if (relationship) {
-        parts.push(getRelationshipTerm(relationship));
-      }
-      if (gender) {
-        const genderTerm = getGenderTerm(gender);
-        if (genderTerm) parts.push(genderTerm);
-      }
-      if (recipient.age) {
-        parts.push(getAgeRange(recipient.age));
-      }
-      if (interests.length > 0) {
-        parts.push(...interests.slice(0, 2));
-      }
-      if (profile?.interestCategory) {
-        parts.push(profile.interestCategory);
-      }
-      break;
-      
     case "medium":
-      if (gender) {
-        const genderTerm = getGenderTerm(gender);
-        if (genderTerm) parts.push(genderTerm);
-      }
       if (interests.length > 0) {
-        parts.push(...interests.slice(0, 2));
+        parts.push(interests[0]);
       } else if (profile?.interestCategory) {
         parts.push(profile.interestCategory);
       }
-      parts.push("presente");
+      if (age) {
+        parts.push(getSimpleAgeCategory(age));
+      }
+      if (gender) {
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
+      }
       break;
       
     case "simple":
@@ -218,13 +211,17 @@ function buildRecipientBasedQuery(
       } else if (profile?.interestCategory) {
         parts.push(profile.interestCategory);
       }
-      parts.push("presente");
+      if (gender) {
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
+      }
       break;
       
     case "minimal":
       parts.push("presentes populares");
       if (gender) {
-        parts.push(gender === "feminino" ? "mulher" : gender === "masculino" ? "homem" : "");
+        const genderTerm = getGenderTermByAge(gender, age);
+        if (genderTerm) parts.push(genderTerm);
       }
       break;
   }
