@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { z } from "zod";
-import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
+import heroImage from "@assets/Giviti_novo_fundo_1769372079773.jpeg";
 
 const SAVED_EMAIL_KEY = "giviti_saved_email";
 
