@@ -27,7 +27,9 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  UserPlus
+  UserPlus,
+  Settings,
+  Search
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -44,10 +46,116 @@ interface AccessTicketWithUsage extends AccessTicket {
   usage?: Array<{ id: string; userId: string; createdAt: string; user: User }>;
 }
 
+interface SystemSetting {
+  id: string;
+  key: string;
+  value: string;
+  dataType: string;
+  description: string | null;
+  isPublic: boolean;
+}
+
+function SettingsTab() {
+  const { toast } = useToast();
+  const [dailySearchLimit, setDailySearchLimit] = useState<string>("5");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { data: settings, isLoading } = useQuery<SystemSetting[]>({
+    queryKey: ["/api/admin/system-settings"],
+  });
+
+  useEffect(() => {
+    if (settings) {
+      const limitSetting = settings.find(s => s.key === "dailySearchLimit");
+      if (limitSetting) {
+        setDailySearchLimit(limitSetting.value);
+      }
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await apiRequest("/api/admin/system-settings", "POST", {
+        key: "dailySearchLimit",
+        value: dailySearchLimit,
+        dataType: "number",
+        description: "Limite diário de buscas no Google Shopping por usuário",
+        isPublic: false,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/system-settings"] });
+      toast({
+        title: "Configuração salva",
+        description: "O limite diário de buscas foi atualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar a configuração.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Search className="h-5 w-5" />
+          Limite de Buscas Google Shopping
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Define o número máximo de buscas no Google Shopping que cada usuário pode fazer por dia.
+          Quando o limite é atingido, a busca retorna apenas resultados da base interna.
+        </p>
+        <div className="flex items-end gap-4">
+          <div className="flex-1 max-w-xs">
+            <Label htmlFor="dailySearchLimit">Limite diário por usuário</Label>
+            <Input
+              id="dailySearchLimit"
+              type="number"
+              min="0"
+              max="100"
+              value={dailySearchLimit}
+              onChange={(e) => setDailySearchLimit(e.target.value)}
+              className="mt-1"
+              data-testid="input-daily-search-limit"
+            />
+          </div>
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving}
+            data-testid="button-save-search-limit"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              "Salvar"
+            )}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function AdminAccessControl() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"tickets" | "waitlist">("tickets");
+  const [activeTab, setActiveTab] = useState<"tickets" | "waitlist" | "settings">("tickets");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTicket, setEditingTicket] = useState<AccessTicket | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -266,6 +374,10 @@ export default function AdminAccessControl() {
             {waitlist && waitlist.length > 0 && (
               <Badge variant="secondary" className="ml-1">{waitlist.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
+            <Settings className="h-4 w-4" />
+            Configurações
           </TabsTrigger>
         </TabsList>
 
@@ -561,6 +673,10 @@ export default function AdminAccessControl() {
               </p>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <SettingsTab />
         </TabsContent>
       </Tabs>
 
