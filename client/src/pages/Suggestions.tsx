@@ -746,7 +746,7 @@ export default function Suggestions() {
     
     await runAlgorithm({
       enableGoogle: shouldEnableGoogle,
-      keywords: searchKeywords,
+      keywords: committedSearchKeywords,
       page: nextPage,
       isLoadMore: true,
     });
@@ -853,9 +853,9 @@ export default function Suggestions() {
         {/* Filter Info Badges */}
         {algorithmResult && hasSearched && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            {searchKeywords && (
+            {committedSearchKeywords && (
               <Badge variant="secondary" className="text-xs">
-                Busca: "{searchKeywords}"
+                Busca: "{committedSearchKeywords}"
               </Badge>
             )}
             {algorithmResult.appliedFilters?.recipientName && (
