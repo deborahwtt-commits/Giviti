@@ -124,6 +124,7 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
   const [isLoadingAlgorithm, setIsLoadingAlgorithm] = useState(false);
   const [products, setProducts] = useState<UnifiedProduct[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(5);
 
   const { data: allSuggestions, isLoading: suggestionsLoading } = useQuery<GiftSuggestion[]>({
     queryKey: ["/api/suggestions"],
@@ -197,6 +198,7 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
     if (!open) {
       setHasLoaded(false);
       setProducts([]);
+      setVisibleCount(5);
     }
   }, [open]);
 
@@ -305,10 +307,10 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
           ) : products.length > 0 ? (
             <>
               <p className="text-sm text-muted-foreground mb-4">
-                {products.length} {products.length === 1 ? 'sugestão encontrada' : 'sugestões encontradas'}
+                Mostrando {Math.min(visibleCount, products.length)} de {products.length} {products.length === 1 ? 'sugestão' : 'sugestões'}
               </p>
               <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                {products.map((product) => (
+                {products.slice(0, visibleCount).map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -318,6 +320,17 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
                   />
                 ))}
               </div>
+              {visibleCount < products.length && visibleCount < 15 && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setVisibleCount(prev => Math.min(prev + 5, 15, products.length))}
+                    data-testid="button-load-more"
+                  >
+                    Ver mais sugestões
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
