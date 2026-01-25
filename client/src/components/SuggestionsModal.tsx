@@ -306,7 +306,7 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
               <p className="text-sm text-muted-foreground mb-4">
                 {products.length} {products.length === 1 ? 'sugestão encontrada' : 'sugestões encontradas'}
               </p>
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}
