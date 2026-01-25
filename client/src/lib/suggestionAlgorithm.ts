@@ -885,6 +885,12 @@ export async function runSuggestionAlgorithmV1(
   
   const allProductsCombined = [...allInternalUnified, ...allGoogleUnified];
   
+  console.log("[Algorithm Result]", {
+    internalProducts: allInternalUnified.length,
+    googleProducts: allGoogleUnified.length,
+    totalCombined: allProductsCombined.length,
+  });
+  
   const totalInternalCount = allInternalUnified.length;
   const totalGoogleCount = allGoogleUnified.length;
   const totalAvailable = Math.min(allProductsCombined.length, MAX_RESULTS);
