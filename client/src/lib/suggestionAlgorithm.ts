@@ -758,9 +758,11 @@ function filterGoogleProducts(
   products: UnifiedProduct[],
   options: SuggestionAlgorithmOptions
 ): UnifiedProduct[] {
+  console.log("[filterGoogleProducts] Input:", products.length, "products, maxBudget:", options.maxBudget);
+  
   const avoidTerms = getGiftsToAvoidTerms(options.recipientData);
   
-  return products.filter((product) => {
+  const filtered = products.filter((product) => {
     if (shouldExcludeProduct(
       product.name,
       product.description,
@@ -781,6 +783,9 @@ function filterGoogleProducts(
     
     return matchesMaxBudget && matchesMinBudget;
   });
+  
+  console.log("[filterGoogleProducts] Output:", filtered.length, "products passed filter");
+  return filtered;
 }
 
 const PAGE_SIZE = 15;
