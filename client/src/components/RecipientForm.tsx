@@ -389,9 +389,11 @@ export default function RecipientForm({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 items-start">
           <div className="space-y-2">
-            <Label htmlFor="age">Idade <span className="text-destructive">*</span></Label>
+            <Label htmlFor="age" className="flex items-center gap-1.5">
+              Idade <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="age"
               type="number"
@@ -417,6 +419,9 @@ export default function RecipientForm({
               required
               data-testid="input-age"
             />
+            <p className="text-xs text-muted-foreground">
+              A idade pode ser aproximada
+            </p>
           </div>
 
           <div className="space-y-2">
