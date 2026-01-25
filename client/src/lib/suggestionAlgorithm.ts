@@ -828,15 +828,18 @@ export async function runSuggestionAlgorithmV1(
   const itemsNeededTotal = currentPage * effectivePageSize;
   const googleNeeded = Math.max(0, itemsNeededTotal - internalCount);
   
+  // Always search Google when there are keywords, even if internal products fill the quota
+  // This ensures users get relevant Google results when explicitly searching
+  const hasExplicitSearch = keywords.trim().length > 0;
   const shouldSearchGoogle = enableGoogleSearch && 
-    googleNeeded > 0 && 
-    (keywords.trim() || options.recipientData);
+    (hasExplicitSearch || (googleNeeded > 0 && options.recipientData));
   
   console.log("[Algorithm Debug]", {
     enableGoogleSearch,
     internalCount,
     googleNeeded,
     keywords,
+    hasExplicitSearch,
     hasRecipientData: !!options.recipientData,
     shouldSearchGoogle,
   });
