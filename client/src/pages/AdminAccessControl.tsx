@@ -61,7 +61,7 @@ function SettingsTab() {
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: settings, isLoading } = useQuery<SystemSetting[]>({
-    queryKey: ["/api/admin/system-settings"],
+    queryKey: ["/api/admin/settings"],
   });
 
   useEffect(() => {
@@ -76,14 +76,14 @@ function SettingsTab() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await apiRequest("/api/admin/system-settings", "POST", {
+      await apiRequest("/api/admin/settings", "POST", {
         key: "dailySearchLimit",
         value: dailySearchLimit,
         dataType: "number",
         description: "Limite diário de buscas no Google Shopping por usuário",
         isPublic: false,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/system-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       toast({
         title: "Configuração salva",
         description: "O limite diário de buscas foi atualizado.",
