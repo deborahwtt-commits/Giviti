@@ -517,6 +517,7 @@ export default function Suggestions() {
   const [algorithmLoading, setAlgorithmLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchKeywords, setSearchKeywords] = useState("");
+  const [committedSearchKeywords, setCommittedSearchKeywords] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [algorithmResult, setAlgorithmResult] = useState<{
     internalCount: number;
@@ -668,6 +669,7 @@ export default function Suggestions() {
 
   // Single effect: runs when filters change
   // Enables Google search if user has searched OR has a recipient selected OR has a category selected
+  // Note: Uses committedSearchKeywords (not searchKeywords) to only trigger on explicit search, not while typing
   useEffect(() => {
     if (!allSuggestions || allSuggestions.length === 0) return;
     if (profileLoading && selectedRecipient && selectedRecipient !== "all" && selectedRecipient !== "none") return;
@@ -678,17 +680,18 @@ export default function Suggestions() {
     setCurrentPage(1);
     runAlgorithm({ 
       enableGoogle: shouldEnableGoogle, 
-      keywords: searchKeywords,
+      keywords: committedSearchKeywords,
       page: 1,
       isLoadMore: false,
     });
-  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, searchKeywords]);
+  }, [allSuggestions, selectedGoogleCategoryId, budget, giftCategories, recipientDataForAlgorithm, profileLoading, hasSearched, committedSearchKeywords]);
 
   // Execute explicit search (when user clicks "Buscar")
   const executeSearch = useCallback(async (keywords: string) => {
     if (!allSuggestions) return;
     
     setHasSearched(true);
+    setCommittedSearchKeywords(keywords);
     setCurrentPage(1);
     // Run immediately with Google enabled
     runAlgorithm({ 
@@ -728,6 +731,7 @@ export default function Suggestions() {
     setCurrentPage(1);
     setAllLoadedProducts([]);
     setSearchKeywords("");
+    setCommittedSearchKeywords("");
     setHasSearched(false);
     setAlgorithmResult(null);
   };
