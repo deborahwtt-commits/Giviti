@@ -215,15 +215,16 @@ export default function SuggestionsModal({ open, onClose, recipient }: Suggestio
     try {
       await apiRequest("/api/gifts", "POST", {
         recipientId: recipient.id,
-        suggestionId: internalId,
+        suggestionId: internalId || undefined,
         name: product.name,
-        description: product.description,
-        imageUrl: product.imageUrl,
-        price: product.price,
-        purchaseUrl: product.productUrl || "",
+        description: product.description || undefined,
+        imageUrl: product.imageUrl || undefined,
+        price: String(product.price),
+        purchaseUrl: product.productUrl || undefined,
+        externalSource: product.source === "google" ? "google_shopping" : undefined,
         isFavorite: false,
         isPurchased: true,
-        purchaseDate: format(new Date(), "yyyy-MM-dd"),
+        purchasedAt: new Date().toISOString(),
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/gifts"] });
