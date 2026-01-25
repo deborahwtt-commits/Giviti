@@ -16,7 +16,8 @@ import {
   Sparkles,
   Shuffle,
   Palette,
-  Star
+  Star,
+  Plane
 } from "lucide-react";
 
 export default function FAQ() {
@@ -218,6 +219,15 @@ export default function FAQ() {
                           <strong>Presente Coletivo</strong>
                           <p className="text-sm text-muted-foreground">
                             Junte a galera para dar um presentão especial para alguém.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Plane className="w-5 h-5 text-teal-500 mt-0.5" />
+                        <div>
+                          <strong>Viagem em Grupo</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Planeje viagens com amigos, organize custos e acompanhe confirmações.
                           </p>
                         </div>
                       </div>
