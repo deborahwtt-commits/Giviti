@@ -57,6 +57,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const registerUserSchema = insertUserSchema
   .extend({
+    email: z.string().min(1, "E-mail é obrigatório").email("E-mail inválido"),
+    firstName: z.string().min(1, "Nome é obrigatório"),
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
     ticketCode: z.string().optional(),
