@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **User/Recipient Profiles**: Detailed profiles include personality questionnaires, "Gifts to Avoid" fields, and optional location fields.
   - **User Profiles**: Use `birthDate` field to store the user's birth date; zodiac sign is auto-calculated using `getZodiacSignFromDate()` utility function.
   - **Recipient Profiles**: Still use `ageRange` and `zodiacSign` fields (entered manually by the user creating the recipient).
+  - **Linked Recipient Synchronization**: When a recipient is linked to a Giviti user (via `linkedUserId`), their profile data is synchronized automatically at each visualization. Uses `RecipientWithSyncedData` type with LEFT JOIN to `users` and `userProfiles`. Synced fields include: name, gender, birth date, interests, gift preference, and gifts to avoid. Local fields (relationship, notes) remain editable by the user who added the recipient.
 - **Admin Panel**: Comprehensive administrative module with role-based access control for user management, categories, system settings, audit logs, and gift suggestions.
 - **Astrology Module**: Displays weekly horoscope messages on the Dashboard based on the user's zodiac sign (auto-calculated from birth date).
 - **Birthday Events ("Meu Aniversário")**: Special event type for managing personal birthday celebrations with wishlists, guest management, and automated email invitations with tracking.
