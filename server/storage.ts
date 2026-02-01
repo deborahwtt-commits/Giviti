@@ -1582,7 +1582,20 @@ export class DatabaseStorage implements IStorage {
       profile: false
     };
     
-    // Use a transaction to ensure all-or-nothing deletion
+    // Try to delete sessions BEFORE the transaction (not critical, can fail safely)
+    // Sessions table is managed by connect-pg-simple and may not exist
+    try {
+      await db.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
+    } catch (e: any) {
+      // Ignore error if session table doesn't exist (code 42P01)
+      if (e.code === '42P01') {
+        console.log(`Note: Session table does not exist, skipping session cleanup for user ${userId}`);
+      } else {
+        console.log(`Warning: Could not clean up sessions for user ${userId}:`, e.message);
+      }
+    }
+    
+    // Use a transaction to ensure all-or-nothing deletion of user data
     await db.transaction(async (tx) => {
       // 1. First, nullify linkedUserId references in OTHER users' recipients (before any deletes)
       await tx.update(recipients).set({ linkedUserId: null }).where(eq(recipients.linkedUserId, userId));
@@ -1624,20 +1637,7 @@ export class DatabaseStorage implements IStorage {
       // 10. Delete password reset tokens (also has cascade but explicit for clarity)
       await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
       
-      // 11. Delete sessions (sessions table is managed by connect-pg-simple, not Drizzle)
-      // Use a safe delete that doesn't fail if table doesn't exist
-      try {
-        await tx.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
-      } catch (e: any) {
-        // Ignore error if session table doesn't exist (code 42P01)
-        if (e.code === '42P01') {
-          console.log(`Note: Session table does not exist, skipping session cleanup for user ${userId}`);
-        } else {
-          throw e;
-        }
-      }
-      
-      // 12. Finally, delete the user (this will cascade audit_logs, userDailySearches via FK constraints)
+      // 11. Finally, delete the user (this will cascade audit_logs, userDailySearches via FK constraints)
       await tx.delete(users).where(eq(users.id, userId));
     });
     
