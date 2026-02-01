@@ -26,7 +26,11 @@ import {
   X,
   HelpCircle,
   PartyPopper,
+  ChevronDown,
+  ChevronUp,
+  User,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PublicBirthdayData {
   event: {
@@ -69,6 +73,7 @@ export default function PublicBirthday() {
   const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   const isLoggedIn = !!user?.email;
   
@@ -213,6 +218,11 @@ export default function PublicBirthday() {
 
   const { event, owner, profile, wishlist } = data;
   const fullName = [owner.firstName, owner.lastName].filter(Boolean).join(" ") || "Aniversariante";
+  
+  // Build event title - use eventName if meaningful, otherwise use "Aniversário de [nome]"
+  const eventTitle = event.eventName && event.eventName.trim().length > 3 
+    ? event.eventName 
+    : `Aniversário de ${fullName}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
@@ -223,7 +233,7 @@ export default function PublicBirthday() {
               <Cake className="h-10 w-10 text-primary" />
             </div>
             <h1 className="text-3xl font-bold mb-2">
-              {event.eventName || `Aniversário de ${fullName}`}
+              {eventTitle}
             </h1>
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
@@ -237,88 +247,7 @@ export default function PublicBirthday() {
           </div>
         </Card>
 
-        {profile && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-pink-500" />
-                Sobre {owner.firstName || "mim"}
-              </CardTitle>
-              <CardDescription>
-                Conheça um pouco mais para escolher o presente perfeito
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {profile.zodiacSign && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">{getZodiacEmoji(profile.zodiacSign)}</span>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Signo</p>
-                      <p className="font-medium">{profile.zodiacSign}</p>
-                    </div>
-                  </div>
-                )}
-                {profile.freeTimeActivity && (
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="h-5 w-5 text-amber-500 mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tempo livre</p>
-                      <p className="font-medium">{profile.freeTimeActivity}</p>
-                    </div>
-                  </div>
-                )}
-                {profile.musicalStyle && (
-                  <div className="flex items-start gap-3">
-                    <Music className="h-5 w-5 text-purple-500 mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Estilo musical</p>
-                      <p className="font-medium">{profile.musicalStyle}</p>
-                    </div>
-                  </div>
-                )}
-                {profile.specialTalent && (
-                  <div className="flex items-start gap-3">
-                    <Star className="h-5 w-5 text-yellow-500 mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Talento especial</p>
-                      <p className="font-medium">{profile.specialTalent}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {profile.interests && profile.interests.length > 0 && (
-                <div className="mt-6">
-                  <p className="text-sm text-muted-foreground mb-2">Interesses</p>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.interests.map((interest, index) => (
-                      <Badge key={index} variant="secondary">
-                        {interest}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {profile.giftPreference && (
-                <div className="mt-4 p-3 bg-primary/5 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Preferência de presente</p>
-                  <p className="font-medium">{profile.giftPreference}</p>
-                </div>
-              )}
-
-              {profile.giftsToAvoid && (
-                <div className="mt-4 p-3 bg-destructive/5 rounded-lg">
-                  <p className="text-sm text-destructive">Evitar</p>
-                  <p className="text-muted-foreground">{profile.giftsToAvoid}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-primary" />
@@ -461,7 +390,103 @@ export default function PublicBirthday() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        {profile && (
+          <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen} className="mb-6">
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover-elevate rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-pink-500" />
+                      <div>
+                        <CardTitle className="text-base">Sobre {owner.firstName || "o aniversariante"}</CardTitle>
+                        <CardDescription className="text-sm">
+                          Dicas para escolher o presente ideal
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {isProfileOpen ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {profile.zodiacSign && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl">{getZodiacEmoji(profile.zodiacSign)}</span>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Signo</p>
+                          <p className="text-sm font-medium">{profile.zodiacSign}</p>
+                        </div>
+                      </div>
+                    )}
+                    {profile.freeTimeActivity && (
+                      <div className="flex items-start gap-3">
+                        <Sparkles className="h-4 w-4 text-amber-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Tempo livre</p>
+                          <p className="text-sm font-medium">{profile.freeTimeActivity}</p>
+                        </div>
+                      </div>
+                    )}
+                    {profile.musicalStyle && (
+                      <div className="flex items-start gap-3">
+                        <Music className="h-4 w-4 text-purple-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Estilo musical</p>
+                          <p className="text-sm font-medium">{profile.musicalStyle}</p>
+                        </div>
+                      </div>
+                    )}
+                    {profile.specialTalent && (
+                      <div className="flex items-start gap-3">
+                        <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Talento especial</p>
+                          <p className="text-sm font-medium">{profile.specialTalent}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {profile.interests && profile.interests.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs text-muted-foreground mb-2">Interesses</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {profile.interests.map((interest, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {interest}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.giftPreference && (
+                    <div className="mt-4 p-2.5 bg-primary/5 rounded-md">
+                      <p className="text-xs text-muted-foreground">Preferência de presente</p>
+                      <p className="text-sm font-medium">{profile.giftPreference}</p>
+                    </div>
+                  )}
+
+                  {profile.giftsToAvoid && (
+                    <div className="mt-3 p-2.5 bg-destructive/5 rounded-md">
+                      <p className="text-xs text-destructive">Evitar</p>
+                      <p className="text-sm text-muted-foreground">{profile.giftsToAvoid}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
+
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-primary" />

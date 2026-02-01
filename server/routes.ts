@@ -1970,6 +1970,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           purchaseUrl: item.purchaseUrl,
           price: item.price,
           priority: item.priority,
+          isReserved: item.isReserved,
+          isReceived: item.isReceived,
         })),
       });
     } catch (error) {
