@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,8 +65,17 @@ interface PublicBirthdayData {
 export default function PublicBirthday() {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
+  
+  const isLoggedIn = !!user?.email;
+  
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email]);
 
   const { data, isLoading, error } = useQuery<PublicBirthdayData>({
     queryKey: ["/api/birthday", token],
@@ -74,8 +84,9 @@ export default function PublicBirthday() {
 
   const rsvpMutation = useMutation({
     mutationFn: async ({ rsvpStatus }: { rsvpStatus: string }) => {
+      const emailToUse = email.trim() || user?.email || "";
       const response = await apiRequest(`/api/birthday/${token}/rsvp`, "POST", {
-        email: email.trim().toLowerCase(),
+        email: emailToUse.toLowerCase(),
         rsvpStatus,
       });
       return response.json();
@@ -445,7 +456,10 @@ export default function PublicBirthday() {
               Confirme sua presença!
             </CardTitle>
             <CardDescription>
-              Informe seu email para confirmar se você irá ao evento
+              {isLoggedIn 
+                ? "Clique em uma opção para confirmar sua presença"
+                : "Informe seu email para confirmar se você irá ao evento"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -481,26 +495,28 @@ export default function PublicBirthday() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="guest-email">Seu email</Label>
-                  <Input
-                    id="guest-email"
-                    type="email"
-                    placeholder="Digite o email que recebeu o convite"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    data-testid="input-rsvp-email"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use o mesmo email que recebeu o convite
-                  </p>
-                </div>
+                {!isLoggedIn && (
+                  <div className="space-y-2">
+                    <Label htmlFor="guest-email">Seu email</Label>
+                    <Input
+                      id="guest-email"
+                      type="email"
+                      placeholder="Digite o email que recebeu o convite"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      data-testid="input-rsvp-email"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use o mesmo email que recebeu o convite
+                    </p>
+                  </div>
+                )}
                 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <div className={`flex flex-col sm:flex-row gap-3 ${!isLoggedIn ? 'pt-2' : ''}`}>
                   <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    className="flex-1 bg-green-600"
                     onClick={() => rsvpMutation.mutate({ rsvpStatus: "yes" })}
-                    disabled={!email.trim() || rsvpMutation.isPending}
+                    disabled={rsvpMutation.isPending || (!isLoggedIn && !email.trim())}
                     data-testid="button-rsvp-yes"
                   >
                     {rsvpMutation.isPending ? (
@@ -514,7 +530,7 @@ export default function PublicBirthday() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => rsvpMutation.mutate({ rsvpStatus: "maybe" })}
-                    disabled={!email.trim() || rsvpMutation.isPending}
+                    disabled={rsvpMutation.isPending || (!isLoggedIn && !email.trim())}
                     data-testid="button-rsvp-maybe"
                   >
                     <HelpCircle className="h-4 w-4 mr-2" />
@@ -524,7 +540,7 @@ export default function PublicBirthday() {
                     variant="outline"
                     className="flex-1 text-muted-foreground"
                     onClick={() => rsvpMutation.mutate({ rsvpStatus: "no" })}
-                    disabled={!email.trim() || rsvpMutation.isPending}
+                    disabled={rsvpMutation.isPending || (!isLoggedIn && !email.trim())}
                     data-testid="button-rsvp-no"
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -538,13 +554,15 @@ export default function PublicBirthday() {
 
         <Card className="mt-8 border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl mb-3">🎁</div>
+            <div className="flex justify-center mb-3">
+              <Gift className="h-8 w-8 text-primary" />
+            </div>
             <h3 className="font-semibold text-lg mb-2">Quer facilitar sua vida nas próximas festas?</h3>
             <p className="text-muted-foreground text-sm mb-4">
               Crie sua conta grátis no Giviti e nunca mais esqueça um aniversário importante! 
               Além de organizar seus próprios eventos, você pode criar listas de desejos, 
               receber lembretes e descobrir o presente perfeito para cada pessoa especial na sua vida. 
-              É rápido, é grátis, e seu futuro eu agradece! 😉
+              É rápido, é grátis, e seu futuro eu agradece!
             </p>
             <Link href="/">
               <Button className="gap-2" data-testid="button-create-account">
