@@ -62,6 +62,10 @@ export default function RecipientDetailsDialog({
   const displayGender = recipient.isLinked && recipient.syncedData?.syncedGender 
     ? recipient.syncedData.syncedGender 
     : recipient.gender;
+
+  const displayZodiacSign = recipient.isLinked && recipient.syncedData?.syncedZodiacSign
+    ? recipient.syncedData.syncedZodiacSign
+    : recipient.zodiacSign;
   
   const displayInterests = recipient.isLinked && recipient.syncedData?.syncedInterests?.length 
     ? recipient.syncedData.syncedInterests 
@@ -146,12 +150,20 @@ export default function RecipientDetailsDialog({
                 </div>
               )}
 
-              {recipient.zodiacSign && (
+              {displayZodiacSign && (
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="text-muted-foreground">Signo:</span>{" "}
-                    <span className="font-medium">{recipient.zodiacSign}</span>
+                    <span className="font-medium">{displayZodiacSign}</span>
+                    {recipient.isLinked && recipient.syncedData?.syncedZodiacSign && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link2 className="inline-block w-3 h-3 ml-1 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>Sincronizado do perfil original</TooltipContent>
+                      </Tooltip>
+                    )}
                   </span>
                 </div>
               )}

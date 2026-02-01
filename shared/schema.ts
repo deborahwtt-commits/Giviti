@@ -131,6 +131,7 @@ export type SyncedProfileData = {
   syncedName?: string | null;
   syncedGender?: string | null;
   syncedBirthDate?: Date | null;
+  syncedZodiacSign?: string | null;
   syncedInterests?: string[] | null;
   syncedGiftPreference?: string | null;
   syncedGiftsToAvoid?: string | null;
