@@ -126,6 +126,22 @@ export const insertRecipientSchema = createInsertSchema(recipients).omit({
 export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
 export type Recipient = typeof recipients.$inferSelect;
 
+// Type for recipient with synced data from linked user profile
+export type SyncedProfileData = {
+  syncedName?: string | null;
+  syncedGender?: string | null;
+  syncedBirthDate?: Date | null;
+  syncedInterests?: string[] | null;
+  syncedGiftPreference?: string | null;
+  syncedGiftsToAvoid?: string | null;
+  syncedProfileUpdatedAt?: Date | null;
+};
+
+export type RecipientWithSyncedData = Recipient & {
+  isLinked: boolean;
+  syncedData?: SyncedProfileData;
+};
+
 // Events table
 export const events = pgTable("events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

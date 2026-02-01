@@ -32,6 +32,7 @@ import {
   type UpsertUser,
   type Recipient,
   type InsertRecipient,
+  type RecipientWithSyncedData,
   type Event,
   type InsertEvent,
   type EventWithRecipients,
@@ -176,8 +177,8 @@ export interface IStorage {
 
   // Recipient operations
   createRecipient(userId: string, recipient: InsertRecipient): Promise<Recipient>;
-  getRecipients(userId: string): Promise<Recipient[]>;
-  getRecipient(id: string, userId: string): Promise<Recipient | undefined>;
+  getRecipients(userId: string): Promise<RecipientWithSyncedData[]>;
+  getRecipient(id: string, userId: string): Promise<RecipientWithSyncedData | undefined>;
   updateRecipient(id: string, userId: string, recipient: Partial<InsertRecipient>): Promise<Recipient | undefined>;
   deleteRecipient(id: string, userId: string): Promise<boolean>;
 
@@ -555,20 +556,67 @@ export class DatabaseStorage implements IStorage {
     return newRecipient;
   }
 
-  async getRecipients(userId: string): Promise<Recipient[]> {
-    return await db
-      .select()
+  async getRecipients(userId: string): Promise<RecipientWithSyncedData[]> {
+    const results = await db
+      .select({
+        recipient: recipients,
+        linkedUser: users,
+        linkedProfile: userProfiles,
+      })
       .from(recipients)
+      .leftJoin(users, eq(recipients.linkedUserId, users.id))
+      .leftJoin(userProfiles, eq(recipients.linkedUserId, userProfiles.userId))
       .where(eq(recipients.userId, userId))
       .orderBy(desc(recipients.createdAt));
+
+    return results.map(({ recipient, linkedUser, linkedProfile }) => ({
+      ...recipient,
+      isLinked: !!recipient.linkedUserId,
+      syncedData: linkedProfile ? {
+        syncedName: linkedUser?.firstName && linkedUser?.lastName 
+          ? `${linkedUser.firstName} ${linkedUser.lastName}` 
+          : linkedUser?.firstName || null,
+        syncedGender: linkedProfile.gender,
+        syncedBirthDate: linkedProfile.birthDate,
+        syncedInterests: linkedProfile.interests,
+        syncedGiftPreference: linkedProfile.giftPreference,
+        syncedGiftsToAvoid: linkedProfile.giftsToAvoid,
+        syncedProfileUpdatedAt: linkedProfile.updatedAt,
+      } : undefined,
+    }));
   }
 
-  async getRecipient(id: string, userId: string): Promise<Recipient | undefined> {
-    const [recipient] = await db
-      .select()
+  async getRecipient(id: string, userId: string): Promise<RecipientWithSyncedData | undefined> {
+    const results = await db
+      .select({
+        recipient: recipients,
+        linkedUser: users,
+        linkedProfile: userProfiles,
+      })
       .from(recipients)
+      .leftJoin(users, eq(recipients.linkedUserId, users.id))
+      .leftJoin(userProfiles, eq(recipients.linkedUserId, userProfiles.userId))
       .where(and(eq(recipients.id, id), eq(recipients.userId, userId)));
-    return recipient;
+
+    const result = results[0];
+    if (!result) return undefined;
+
+    const { recipient, linkedUser, linkedProfile } = result;
+    return {
+      ...recipient,
+      isLinked: !!recipient.linkedUserId,
+      syncedData: linkedProfile ? {
+        syncedName: linkedUser?.firstName && linkedUser?.lastName 
+          ? `${linkedUser.firstName} ${linkedUser.lastName}` 
+          : linkedUser?.firstName || null,
+        syncedGender: linkedProfile.gender,
+        syncedBirthDate: linkedProfile.birthDate,
+        syncedInterests: linkedProfile.interests,
+        syncedGiftPreference: linkedProfile.giftPreference,
+        syncedGiftsToAvoid: linkedProfile.giftsToAvoid,
+        syncedProfileUpdatedAt: linkedProfile.updatedAt,
+      } : undefined,
+    };
   }
 
   async updateRecipient(
