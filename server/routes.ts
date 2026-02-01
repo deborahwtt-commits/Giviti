@@ -1942,6 +1942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         event: {
           id: event.id,
+          userId: event.userId,
           eventName: event.eventName,
           eventDate: event.eventDate,
           eventLocation: event.eventLocation,

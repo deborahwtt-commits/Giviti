@@ -31,6 +31,7 @@ import {
 interface PublicBirthdayData {
   event: {
     id: string;
+    userId: string;
     eventName: string | null;
     eventDate: string | null;
     eventLocation: string | null;
@@ -337,32 +338,34 @@ export default function PublicBirthday() {
               </div>
             ) : (
               <>
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Progresso da lista</span>
-                    <span className="text-sm font-medium">
-                      {wishlist.filter(item => item.isReceived || item.isReserved).length} de {wishlist.length} itens
-                    </span>
+                {user?.id === event.userId && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Progresso da lista</span>
+                      <span className="text-sm font-medium">
+                        {wishlist.filter(item => item.isReceived || item.isReserved).length} de {wishlist.length} itens
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ 
+                          width: `${(wishlist.filter(item => item.isReceived || item.isReserved).length / wishlist.length) * 100}%` 
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                        {wishlist.filter(item => item.isReceived).length} recebido(s)
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        {wishlist.filter(item => item.isReserved && !item.isReceived).length} reservado(s)
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ 
-                        width: `${(wishlist.filter(item => item.isReceived || item.isReserved).length / wishlist.length) * 100}%` 
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      {wishlist.filter(item => item.isReceived).length} recebido(s)
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      {wishlist.filter(item => item.isReserved && !item.isReceived).length} reservado(s)
-                    </span>
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-4">
                   {wishlist
