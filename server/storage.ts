@@ -560,7 +560,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(recipients)
       .where(eq(recipients.userId, userId))
-      .orderBy(recipients.createdAt);
+      .orderBy(desc(recipients.createdAt));
   }
 
   async getRecipient(id: string, userId: string): Promise<Recipient | undefined> {
