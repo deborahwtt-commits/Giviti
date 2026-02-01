@@ -16,7 +16,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus } from "lucide-react";
+import { Plus, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -33,6 +40,7 @@ export default function Events() {
   const [eventToAdvance, setEventToAdvance] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"recent" | "eventDate" | "alphabetical">("recent");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -214,11 +222,33 @@ export default function Events() {
   const threeMonthsFromNow = new Date(today);
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
+  // Sort function based on selected order
+  const sortEvents = (events: EventWithRecipients[]) => {
+    return [...events].sort((a, b) => {
+      switch (sortOrder) {
+        case "recent":
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Most recent first
+        case "eventDate":
+          const eventDateA = a.eventDate ? new Date(a.eventDate).getTime() : Infinity;
+          const eventDateB = b.eventDate ? new Date(b.eventDate).getTime() : Infinity;
+          return eventDateA - eventDateB; // Closest event first
+        case "alphabetical":
+          const nameA = a.eventName || a.eventType || "";
+          const nameB = b.eventName || b.eventType || "";
+          return nameA.localeCompare(nameB, "pt-BR");
+        default:
+          return 0;
+      }
+    });
+  };
+
   // Filter active (non-archived) events
-  const activeEvents = (allEvents || []).filter((event) => !event.archived);
+  const activeEvents = sortEvents((allEvents || []).filter((event) => !event.archived));
   
   // Filter archived events
-  const archivedEvents = (allEvents || []).filter((event) => event.archived);
+  const archivedEvents = sortEvents((allEvents || []).filter((event) => event.archived));
 
   const thisMonthEvents = activeEvents.filter((event) => {
     if (!event.eventDate) return false;
@@ -318,26 +348,42 @@ export default function Events() {
 
         {allEvents && allEvents.length > 0 ? (
           <Tabs defaultValue="all" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="all" data-testid="tab-all-events">
-                Todos ({activeEvents.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="thisMonth"
-                data-testid="tab-this-month-events"
-              >
-                Este Mês ({thisMonthEvents.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="nextThreeMonths"
-                data-testid="tab-next-three-months-events"
-              >
-                Próximos 3 Meses ({nextThreeMonthsEvents.length})
-              </TabsTrigger>
-              <TabsTrigger value="archived" data-testid="tab-archived-events">
-                Arquivados ({archivedEvents.length})
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <TabsList>
+                <TabsTrigger value="all" data-testid="tab-all-events">
+                  Todos ({activeEvents.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="thisMonth"
+                  data-testid="tab-this-month-events"
+                >
+                  Este Mês ({thisMonthEvents.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="nextThreeMonths"
+                  data-testid="tab-next-three-months-events"
+                >
+                  Próximos 3 Meses ({nextThreeMonthsEvents.length})
+                </TabsTrigger>
+                <TabsTrigger value="archived" data-testid="tab-archived-events">
+                  Arquivados ({archivedEvents.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <Select value={sortOrder} onValueChange={(value: "recent" | "eventDate" | "alphabetical") => setSortOrder(value)}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-sort-order">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent" data-testid="sort-recent">Mais recentes</SelectItem>
+                    <SelectItem value="eventDate" data-testid="sort-event-date">Data do evento</SelectItem>
+                    <SelectItem value="alphabetical" data-testid="sort-alphabetical">Alfabético</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
