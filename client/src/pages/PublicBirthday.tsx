@@ -386,6 +386,15 @@ export default function PublicBirthday() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h4 className="font-medium">{item.title}</h4>
+                              {item.price ? (
+                                <Badge variant="outline" className="text-xs">
+                                  Presente
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                  Gratuito
+                                </Badge>
+                              )}
                               {item.isReserved && !item.isReceived && (
                                 <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                                   Reservado
