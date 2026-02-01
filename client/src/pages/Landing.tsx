@@ -105,10 +105,10 @@ export default function Landing() {
     mutationFn: async (data: ForgotPasswordForm) => {
       return await apiRequest("/api/forgot-password", "POST", data) as any;
     },
-    onSuccess: (data: any) => {
+    onSuccess: () => {
       toast({
-        title: "E-mail enviado!",
-        description: data.message || "Verifique sua caixa de entrada.",
+        title: "Solicitação enviada",
+        description: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
       });
       setShowForgotPasswordModal(false);
       forgotPasswordForm.reset();
