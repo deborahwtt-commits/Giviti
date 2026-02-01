@@ -1625,7 +1625,17 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
       
       // 11. Delete sessions (sessions table is managed by connect-pg-simple, not Drizzle)
-      await tx.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
+      // Use a safe delete that doesn't fail if table doesn't exist
+      try {
+        await tx.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
+      } catch (e: any) {
+        // Ignore error if session table doesn't exist (code 42P01)
+        if (e.code === '42P01') {
+          console.log(`Note: Session table does not exist, skipping session cleanup for user ${userId}`);
+        } else {
+          throw e;
+        }
+      }
       
       // 12. Finally, delete the user (this will cascade audit_logs, userDailySearches via FK constraints)
       await tx.delete(users).where(eq(users.id, userId));
