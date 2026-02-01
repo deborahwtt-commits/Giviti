@@ -303,6 +303,7 @@ export interface IStorage {
   getSystemSetting(key: string): Promise<SystemSetting | undefined>;
   upsertSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
   deleteSystemSetting(key: string): Promise<boolean>;
+  getDeletedAccountsCount(): Promise<number>;
   
   // Audit Logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1642,6 +1643,21 @@ export class DatabaseStorage implements IStorage {
     });
     
     // If we got here without error, the user was deleted
+    // Increment deleted accounts counter in system settings
+    try {
+      const currentSetting = await this.getSystemSetting("deleted_accounts_count");
+      const currentCount = currentSetting ? parseInt(currentSetting.value, 10) : 0;
+      await this.upsertSystemSetting({
+        key: "deleted_accounts_count",
+        value: String(currentCount + 1),
+        dataType: "number",
+        description: "Total de contas permanentemente excluídas",
+        isPublic: false,
+      });
+    } catch (e) {
+      console.log("Warning: Could not update deleted accounts counter:", e);
+    }
+    
     return { deleted: true, deletedData };
   }
   
@@ -1864,6 +1880,11 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
   
+  async getDeletedAccountsCount(): Promise<number> {
+    const setting = await this.getSystemSetting("deleted_accounts_count");
+    return setting ? parseInt(setting.value, 10) : 0;
+  }
+  
   // Audit Logs
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
     const [newLog] = await db.insert(auditLogs).values(log).returning();
@@ -2037,7 +2058,7 @@ export class DatabaseStorage implements IStorage {
       inactiveStats: {
         total: inactiveUsers[0]?.count || 0,
         byAdmin: inactiveByAdmin[0]?.count || 0,
-        bySelf: inactiveBySelf[0]?.count || 0,
+        bySelf: await this.getDeletedAccountsCount(),
       },
       registrationSourceStats: {
         vipPass: vipPassCount,
