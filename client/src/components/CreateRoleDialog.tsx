@@ -925,9 +925,25 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                       <FormControl>
                         <Input
                           type="text"
-                          placeholder="Ex: R$ 500,00"
+                          placeholder="R$ 0,00"
                           data-testid="input-custo-estimado"
-                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            // Remove tudo que não é número
+                            const rawValue = e.target.value.replace(/\D/g, "");
+                            if (!rawValue) {
+                              field.onChange("");
+                              return;
+                            }
+                            // Converte para número com centavos
+                            const numericValue = parseInt(rawValue, 10) / 100;
+                            // Formata como moeda brasileira
+                            const formatted = numericValue.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            });
+                            field.onChange(formatted);
+                          }}
                         />
                       </FormControl>
                       <FormDescription>
