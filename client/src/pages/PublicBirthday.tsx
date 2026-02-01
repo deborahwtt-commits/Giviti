@@ -163,34 +163,6 @@ export default function PublicBirthday() {
     }
   };
 
-  const getZodiacEmoji = (sign: string | null) => {
-    const signs: Record<string, string> = {
-      "Áries": "♈",
-      "Aries": "♈",
-      "Touro": "♉",
-      "Taurus": "♉",
-      "Gêmeos": "♊",
-      "Gemini": "♊",
-      "Câncer": "♋",
-      "Cancer": "♋",
-      "Leão": "♌",
-      "Leo": "♌",
-      "Virgem": "♍",
-      "Virgo": "♍",
-      "Libra": "♎",
-      "Escorpião": "♏",
-      "Scorpio": "♏",
-      "Sagitário": "♐",
-      "Sagittarius": "♐",
-      "Capricórnio": "♑",
-      "Capricorn": "♑",
-      "Aquário": "♒",
-      "Aquarius": "♒",
-      "Peixes": "♓",
-      "Pisces": "♓",
-    };
-    return sign ? signs[sign] || "" : "";
-  };
 
   if (isLoading) {
     return (
@@ -394,8 +366,8 @@ export default function PublicBirthday() {
           <Collapsible open={isProfileOpen} onOpenChange={setIsProfileOpen} className="mb-6">
             <Card>
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover-elevate rounded-md">
-                  <div className="flex items-center justify-between">
+                <CardHeader className="cursor-pointer">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <User className="h-5 w-5 text-pink-500" />
                       <div>
@@ -418,7 +390,7 @@ export default function PublicBirthday() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     {profile.zodiacSign && (
                       <div className="flex items-start gap-3">
-                        <span className="text-xl">{getZodiacEmoji(profile.zodiacSign)}</span>
+                        <Star className="h-4 w-4 text-indigo-500 mt-0.5" />
                         <div>
                           <p className="text-xs text-muted-foreground">Signo</p>
                           <p className="text-sm font-medium">{profile.zodiacSign}</p>
