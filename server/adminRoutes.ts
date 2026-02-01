@@ -180,6 +180,46 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // DELETE /api/admin/users/:id/permanent - Permanently delete user and all associated data
+  app.delete("/api/admin/users/:id/permanent", isAuthenticated, hasRole("admin"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prevent self-deletion
+      if (req.user!.id === id) {
+        return res.status(403).json({ 
+          message: "Você não pode excluir sua própria conta. Peça a outro administrador para fazer isso." 
+        });
+      }
+      
+      // Get user to check if exists
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Delete user and all associated data
+      const result = await storage.deleteUserPermanently(id);
+      
+      if (!result.deleted) {
+        return res.status(500).json({ message: "Falha ao excluir usuário" });
+      }
+      
+      await createAudit(req, "DELETE_PERMANENT", "user", id, {
+        deletedUser: { email: user.email, firstName: user.firstName, lastName: user.lastName },
+        deletedData: result.deletedData
+      });
+      
+      res.json({ 
+        message: "Usuário e todos os dados vinculados foram excluídos permanentemente",
+        deletedData: result.deletedData
+      });
+    } catch (error) {
+      console.error("Error permanently deleting user:", error);
+      res.status(500).json({ message: "Falha ao excluir usuário permanentemente" });
+    }
+  });
+
   // POST /api/admin/users/:id/reset-password - Admin triggers password reset email
   app.post("/api/admin/users/:id/reset-password", isAuthenticated, hasRole("admin"), async (req: any, res) => {
     try {

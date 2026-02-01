@@ -261,6 +261,7 @@ export interface IStorage {
   getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
   updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>): Promise<User | undefined>;
   updateUserLastLogin(userId: string): Promise<void>;
+  deleteUserPermanently(userId: string): Promise<{ deleted: boolean; deletedData: { recipients: number; events: number; collabEvents: number; participations: number; userGifts: number; profile: boolean } }>;
   
   // Occasions Management
   getOccasions(includeInactive?: boolean): Promise<Occasion[]>;
@@ -1569,6 +1570,69 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ lastLoginAt: new Date() })
       .where(eq(users.id, userId));
+  }
+  
+  async deleteUserPermanently(userId: string): Promise<{ deleted: boolean; deletedData: { recipients: number; events: number; collabEvents: number; participations: number; userGifts: number; profile: boolean } }> {
+    const deletedData = {
+      recipients: 0,
+      events: 0,
+      collabEvents: 0,
+      participations: 0,
+      userGifts: 0,
+      profile: false
+    };
+    
+    // Use a transaction to ensure all-or-nothing deletion
+    await db.transaction(async (tx) => {
+      // 1. First, nullify linkedUserId references in OTHER users' recipients (before any deletes)
+      await tx.update(recipients).set({ linkedUserId: null }).where(eq(recipients.linkedUserId, userId));
+      
+      // 2. Delete user profile
+      const deletedProfiles = await tx.delete(userProfiles).where(eq(userProfiles.userId, userId)).returning();
+      deletedData.profile = deletedProfiles.length > 0;
+      
+      // 3. Delete user gifts
+      const deletedGifts = await tx.delete(userGifts).where(eq(userGifts.userId, userId)).returning();
+      deletedData.userGifts = deletedGifts.length;
+      
+      // 4. Get all recipient IDs for this user to delete related profiles
+      const userRecipients = await tx.select({ id: recipients.id }).from(recipients).where(eq(recipients.userId, userId));
+      const recipientIds = userRecipients.map(r => r.id);
+      
+      // 5. Delete recipient profiles (before recipients to avoid FK issues)
+      if (recipientIds.length > 0) {
+        await tx.delete(recipientProfiles).where(sql`${recipientProfiles.recipientId} IN (${sql.join(recipientIds.map(id => sql`${id}`), sql`, `)})`);
+      }
+      
+      // 6. Delete recipients (cascade will delete related data like event_recipients)
+      const deletedRecipients = await tx.delete(recipients).where(eq(recipients.userId, userId)).returning();
+      deletedData.recipients = deletedRecipients.length;
+      
+      // 7. Delete events owned by user (cascade will delete event_recipients)
+      const deletedEvents = await tx.delete(events).where(eq(events.userId, userId)).returning();
+      deletedData.events = deletedEvents.length;
+      
+      // 8. Delete collaborative event participations (but not events they don't own)
+      // This needs to happen before deleting the collaborative events the user owns
+      const deletedParticipations = await tx.delete(collaborativeEventParticipants).where(eq(collaborativeEventParticipants.userId, userId)).returning();
+      deletedData.participations = deletedParticipations.length;
+      
+      // 9. Delete collaborative events owned by user (cascade will delete participants, pairs, links, etc.)
+      const deletedCollabEvents = await tx.delete(collaborativeEvents).where(eq(collaborativeEvents.ownerId, userId)).returning();
+      deletedData.collabEvents = deletedCollabEvents.length;
+      
+      // 10. Delete password reset tokens (also has cascade but explicit for clarity)
+      await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+      
+      // 11. Delete sessions (sessions table is managed by connect-pg-simple, not Drizzle)
+      await tx.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
+      
+      // 12. Finally, delete the user (this will cascade audit_logs, userDailySearches via FK constraints)
+      await tx.delete(users).where(eq(users.id, userId));
+    });
+    
+    // If we got here without error, the user was deleted
+    return { deleted: true, deletedData };
   }
   
   // Occasions Management

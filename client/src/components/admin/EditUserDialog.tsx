@@ -9,6 +9,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -25,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Edit } from "lucide-react";
+import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -64,6 +75,7 @@ const roleLabels: Record<string, string> = {
 
 export function EditUserDialog({ user }: EditUserDialogProps) {
   const [open, setOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -106,6 +118,29 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
       toast({
         title: "Erro ao atualizar usuário",
         description: error.message || "Não foi possível atualizar o usuário.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/admin/users/${user.id}/permanent`, "DELETE");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users/detailed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/advanced-stats"] });
+      toast({
+        title: "Usuário excluído permanentemente",
+        description: `O usuário e todos os dados vinculados foram excluídos. (${data.deletedData?.recipients || 0} pessoas, ${data.deletedData?.events || 0} eventos, ${data.deletedData?.collabEvents || 0} rolês)`,
+      });
+      setDeleteDialogOpen(false);
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir usuário",
+        description: error.message || "Não foi possível excluir o usuário.",
         variant: "destructive",
       });
     },
@@ -267,22 +302,83 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
                 )}
               />
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                  data-testid="button-cancel-edit"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={editUserMutation.isPending}
-                  data-testid="button-submit-edit"
-                >
-                  {editUserMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-                </Button>
+              <div className="flex justify-between pt-4">
+                {/* Delete button - only show for admins and not self */}
+                {currentUser?.role === "admin" && !isSelfEdit ? (
+                  <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        data-testid="button-delete-user"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Permanentemente
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent data-testid="dialog-confirm-delete">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                          <AlertTriangle className="h-5 w-5" />
+                          Excluir Usuário Permanentemente
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                          <p className="font-semibold text-foreground">
+                            Você está prestes a excluir permanentemente o usuário:
+                          </p>
+                          <p className="font-mono bg-muted px-2 py-1 rounded">
+                            {user.email}
+                          </p>
+                          <p className="text-destructive font-semibold">
+                            Esta ação é IRREVERSÍVEL e excluirá:
+                          </p>
+                          <ul className="list-disc list-inside text-sm space-y-1">
+                            <li>Todas as pessoas cadastradas pelo usuário</li>
+                            <li>Todos os eventos e datas comemorativas</li>
+                            <li>Todos os rolês (eventos colaborativos) criados</li>
+                            <li>Participações em eventos de outros usuários</li>
+                            <li>Presentes favoritos e comprados</li>
+                            <li>Perfil e configurações</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-cancel-delete">
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteUserMutation.mutate()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          disabled={deleteUserMutation.isPending}
+                          data-testid="button-confirm-delete"
+                        >
+                          {deleteUserMutation.isPending ? "Excluindo..." : "Sim, Excluir Permanentemente"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <div />
+                )}
+                
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOpen(false)}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={editUserMutation.isPending}
+                    data-testid="button-submit-edit"
+                  >
+                    {editUserMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
