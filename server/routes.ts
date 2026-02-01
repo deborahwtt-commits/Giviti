@@ -1938,6 +1938,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get wishlist items
       const wishlistItems = await storage.getBirthdayWishlistItems(event.id);
       
+      // Check if current user is the owner
+      const currentUserId = req.user?.id;
+      const isOwner = currentUserId && currentUserId === event.userId;
+      
+      // Get guests only for the owner
+      let guests = null;
+      if (isOwner) {
+        const guestList = await storage.getBirthdayGuests(event.id);
+        guests = guestList.map(guest => ({
+          id: guest.id,
+          name: guest.name,
+          email: guest.email,
+          rsvpStatus: guest.rsvpStatus,
+        }));
+      }
+      
       // Return public data (no sensitive info)
       res.json({
         event: {
@@ -1973,6 +1989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isReserved: item.isReserved,
           isReceived: item.isReceived,
         })),
+        guests,
       });
     } catch (error) {
       console.error("Error fetching public birthday:", error);
