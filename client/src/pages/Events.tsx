@@ -222,9 +222,15 @@ export default function Events() {
   const threeMonthsFromNow = new Date(today);
   threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
-  // Sort function based on selected order
+  // Sort function based on selected order, with birthday events always first
   const sortEvents = (events: EventWithRecipients[]) => {
     return [...events].sort((a, b) => {
+      // Birthday events always come first
+      const aIsBirthday = a.eventType === "Meu Aniversário";
+      const bIsBirthday = b.eventType === "Meu Aniversário";
+      if (aIsBirthday && !bIsBirthday) return -1;
+      if (!aIsBirthday && bIsBirthday) return 1;
+      
       switch (sortOrder) {
         case "recent":
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
