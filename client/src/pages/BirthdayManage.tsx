@@ -4,6 +4,7 @@ import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -186,6 +187,19 @@ export default function BirthdayManage() {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Item removido" });
+    },
+  });
+
+  const markReceivedMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      return apiRequest(`/api/events/${id}/wishlist/${itemId}/received`, "PATCH");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
+      toast({ title: "Item marcado como recebido!" });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível atualizar o item.", variant: "destructive" });
     },
   });
 
@@ -639,21 +653,48 @@ export default function BirthdayManage() {
                             )}
                           </div>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              data-testid={`button-delete-wishlist-${item.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover item?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Deseja remover "{item.title}" da sua lista de desejos?
+                        <div className="flex items-center gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`received-${item.id}`}
+                                  checked={item.isReceived}
+                                  disabled={item.isReceived || markReceivedMutation.isPending}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      markReceivedMutation.mutate(item.id);
+                                    }
+                                  }}
+                                  data-testid={`checkbox-received-${item.id}`}
+                                />
+                                <Label 
+                                  htmlFor={`received-${item.id}`} 
+                                  className="text-xs text-muted-foreground cursor-pointer"
+                                >
+                                  Recebido
+                                </Label>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Marcar como recebido</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-testid={`button-delete-wishlist-${item.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover item?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Deseja remover "{item.title}" da sua lista de desejos?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -666,6 +707,7 @@ export default function BirthdayManage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
