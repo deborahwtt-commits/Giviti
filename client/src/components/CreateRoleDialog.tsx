@@ -49,7 +49,7 @@ const createRoleSchema = z.object({
   eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge", "group_trip"]),
   eventDate: z.date({ required_error: "Data e hora são obrigatórios" }),
   confirmationDeadline: z.date().optional(), // Optional for secret_santa
-  location: z.string().min(1, "Local é obrigatório").max(200),
+  location: z.string().max(200).optional().or(z.literal("")), // Optional for group trips (uses destino instead)
   description: z.string().max(500).optional(),
   isPublic: z.boolean().default(false),
   budgetLimit: z.string().optional(),
@@ -111,6 +111,24 @@ const createRoleSchema = z.object({
 }, {
   message: "O valor alvo é obrigatório para presente coletivo",
   path: ["targetAmount"],
+}).refine((data) => {
+  // Require location for non-group_trip types
+  if (data.eventType !== "group_trip") {
+    return data.location && data.location.length >= 1;
+  }
+  return true;
+}, {
+  message: "Local é obrigatório",
+  path: ["location"],
+}).refine((data) => {
+  // Require destino for group_trip
+  if (data.eventType === "group_trip") {
+    return data.destino && data.destino.length >= 1;
+  }
+  return true;
+}, {
+  message: "Destino é obrigatório para viagens em grupo",
+  path: ["destino"],
 });
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>;
@@ -260,12 +278,17 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       const adjustedDeadline = new Date(effectiveDeadline);
       adjustedDeadline.setHours(12, 0, 0, 0);
 
+      // For group trips, use destino as location since they don't have a separate location field
+      const effectiveLocation = data.eventType === "group_trip" 
+        ? (data.destino || "A definir")
+        : (data.location || "");
+
       const payload = {
         name: data.name,
         eventType: data.eventType,
         eventDate: adjustedEventDate.toISOString(),
         confirmationDeadline: adjustedDeadline.toISOString(),
-        location: data.location,
+        location: effectiveLocation,
         description: data.description || null,
         isPublic: data.isPublic,
         status: "active" as const,
@@ -576,144 +599,6 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               </div>
             )}
 
-            {/* Group Trip specific fields */}
-            {selectedType === "group_trip" && (
-              <div className="space-y-4 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
-                <h4 className="font-medium text-sm flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-blue-500" />
-                  Detalhes da Viagem
-                </h4>
-                
-                <FormField
-                  control={form.control}
-                  name="destino"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Destino</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ex: Campos do Jordão, SP"
-                          data-testid="input-destino"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Cidade, estado ou país de destino
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="dataFim"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Data de Volta</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              data-testid="button-data-fim"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecione a data de volta"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => {
-                              const eventDate = form.getValues("eventDate");
-                              return eventDate ? date < eventDate : date < new Date();
-                            }}
-                            initialFocus
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormDescription>
-                        Data prevista de retorno da viagem
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="googleMapsLink"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Link do Google Maps (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://maps.google.com/..."
-                          data-testid="input-google-maps-link"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="hospedagemLink"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Link da Hospedagem (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://airbnb.com/..."
-                          data-testid="input-hospedagem-link"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Link do hotel, Airbnb ou local de hospedagem
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="custoEstimadoPorPessoa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custo estimado por pessoa (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Ex: R$ 500,00"
-                          data-testid="input-custo-estimado"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Valor aproximado que cada participante deve gastar
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
             <FormField
               control={form.control}
               name="eventDate"
@@ -873,23 +758,26 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Local *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ex: Casa do João"
-                      data-testid="input-location"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Hide location field for group trips since they have 'destino' field */}
+            {selectedType !== "group_trip" && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Local *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex: Casa do João"
+                        data-testid="input-location"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -913,6 +801,144 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
                 </FormItem>
               )}
             />
+
+            {/* Group Trip specific fields - positioned at the end of the form */}
+            {selectedType === "group_trip" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Plane className="w-4 h-4 text-blue-500" />
+                  Detalhes da Viagem
+                </h4>
+                
+                <FormField
+                  control={form.control}
+                  name="destino"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Destino</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: Campos do Jordão, SP"
+                          data-testid="input-destino"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Cidade, estado ou país de destino
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dataFim"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data de Volta</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="button-data-fim"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecione a data de volta"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => {
+                              const eventDate = form.getValues("eventDate");
+                              return eventDate ? date < eventDate : date < new Date();
+                            }}
+                            initialFocus
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Data prevista de retorno da viagem
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="googleMapsLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link do Google Maps (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://maps.google.com/..."
+                          data-testid="input-google-maps-link"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hospedagemLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link da Hospedagem (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://airbnb.com/..."
+                          data-testid="input-hospedagem-link"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Link do hotel, Airbnb ou local de hospedagem
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="custoEstimadoPorPessoa"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custo estimado por pessoa (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="Ex: R$ 500,00"
+                          data-testid="input-custo-estimado"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Valor aproximado que cada participante deve gastar
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* HIDDEN: Public event option - All events are private by default
             {selectedType !== "secret_santa" && (
