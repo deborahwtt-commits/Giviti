@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -56,6 +56,8 @@ interface PublicBirthdayData {
     purchaseUrl: string | null;
     price: string | null;
     priority: number;
+    isReserved: boolean;
+    isReceived: boolean;
   }>;
 }
 
@@ -110,6 +112,26 @@ export default function PublicBirthday() {
       toast({
         title: "Erro",
         description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reserveItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      return apiRequest(`/api/birthday/${token}/wishlist/${itemId}/reserve`, "POST");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/birthday", token] });
+      toast({
+        title: "Item reservado!",
+        description: "Você reservou este presente. Lembre-se de comprá-lo!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível reservar o item.",
         variant: "destructive",
       });
     },
@@ -303,59 +325,115 @@ export default function PublicBirthday() {
                 <p>A lista de desejos está vazia.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {wishlist
-                  .sort((a, b) => b.priority - a.priority)
-                  .map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 border rounded-lg hover-elevate"
-                    >
-                      <div className="flex items-start gap-4">
-                        {item.imageUrl && (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.title}
-                            className="w-20 h-20 object-cover rounded-md"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.title}</h4>
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {item.description}
-                            </p>
+              <>
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Progresso da lista</span>
+                    <span className="text-sm font-medium">
+                      {wishlist.filter(item => item.isReceived || item.isReserved).length} de {wishlist.length} itens
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ 
+                        width: `${(wishlist.filter(item => item.isReceived || item.isReserved).length / wishlist.length) * 100}%` 
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      {wishlist.filter(item => item.isReceived).length} recebido(s)
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      {wishlist.filter(item => item.isReserved && !item.isReceived).length} reservado(s)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {wishlist
+                    .sort((a, b) => b.priority - a.priority)
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className={`p-4 border rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex items-start gap-4">
+                          {item.imageUrl && (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.title}
+                              className="w-20 h-20 object-cover rounded-md"
+                            />
                           )}
-                          <div className="flex items-center gap-3 mt-3">
-                            {item.price && (
-                              <Badge variant="secondary">{item.price}</Badge>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-medium">{item.title}</h4>
+                              {item.isReserved && !item.isReceived && (
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                  Reservado
+                                </Badge>
+                              )}
+                              {item.isReceived && (
+                                <Badge variant="default" className="bg-green-500">
+                                  Recebido
+                                </Badge>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {item.description}
+                              </p>
                             )}
-                            {item.purchaseUrl && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                asChild
-                              >
-                                <a
-                                  href={item.purchaseUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => {
-                                    navigator.sendBeacon(`/api/wishlist-click/${item.id}`);
-                                  }}
-                                  data-testid={`link-wishlist-item-${item.id}`}
+                            <div className="flex items-center gap-3 mt-3 flex-wrap">
+                              {item.price && (
+                                <Badge variant="secondary">{item.price}</Badge>
+                              )}
+                              {item.purchaseUrl && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
                                 >
-                                  Ver produto
-                                  <ExternalLink className="h-3 w-3 ml-2" />
-                                </a>
-                              </Button>
-                            )}
+                                  <a
+                                    href={item.purchaseUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => {
+                                      navigator.sendBeacon(`/api/wishlist-click/${item.id}`);
+                                    }}
+                                    data-testid={`link-wishlist-item-${item.id}`}
+                                  >
+                                    Ver produto
+                                    <ExternalLink className="h-3 w-3 ml-2" />
+                                  </a>
+                                </Button>
+                              )}
+                              {!item.isReserved && !item.isReceived && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => reserveItemMutation.mutate(item.id)}
+                                  disabled={reserveItemMutation.isPending}
+                                  data-testid={`button-reserve-item-${item.id}`}
+                                >
+                                  {reserveItemMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  ) : (
+                                    <Gift className="h-4 w-4 mr-2" />
+                                  )}
+                                  Vou dar este presente
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -420,6 +420,7 @@ export interface IStorage {
   countBirthdayWishlistItems(eventId: string): Promise<number>;
   incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined>;
   getMostClickedWishlistItems(limit?: number): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>>;
+  reserveBirthdayWishlistItem(id: string, eventId: string): Promise<BirthdayWishlistItem | undefined>;
   
   // Free Gift Options
   getFreeGiftOptions(): Promise<FreeGiftOption[]>;
@@ -3182,6 +3183,7 @@ export class DatabaseStorage implements IStorage {
         price: birthdayWishlistItems.price,
         category: birthdayWishlistItems.category,
         priority: birthdayWishlistItems.priority,
+        isReserved: birthdayWishlistItems.isReserved,
         isReceived: birthdayWishlistItems.isReceived,
         receivedFrom: birthdayWishlistItems.receivedFrom,
         displayOrder: birthdayWishlistItems.displayOrder,
@@ -3199,6 +3201,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`${birthdayWishlistItems.clickCount} DESC`)
       .limit(limit);
     return result;
+  }
+
+  async reserveBirthdayWishlistItem(id: string, eventId: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ isReserved: true, updatedAt: new Date() })
+      .where(and(
+        eq(birthdayWishlistItems.id, id),
+        eq(birthdayWishlistItems.eventId, eventId)
+      ))
+      .returning();
+    return updated;
   }
 
   async getFreeGiftOptions(): Promise<FreeGiftOption[]> {

@@ -965,6 +965,7 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
   price: varchar("price"),
   category: varchar("category").default("paid"), // "paid" or "free"
   priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  isReserved: boolean("is_reserved").default(false).notNull(), // Reserved by a guest (not yet purchased)
   isReceived: boolean("is_received").default(false).notNull(),
   receivedFrom: varchar("received_from"),
   displayOrder: integer("display_order").default(0),
@@ -976,6 +977,7 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
 
 export const insertBirthdayWishlistItemSchema = createInsertSchema(birthdayWishlistItems).omit({
   id: true,
+  isReserved: true,
   isReceived: true,
   receivedFrom: true,
   displayOrder: true,

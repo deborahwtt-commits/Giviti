@@ -2018,6 +2018,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/birthday/:token/wishlist/:itemId/reserve - Public endpoint to reserve a wishlist item
+  app.post("/api/birthday/:token/wishlist/:itemId/reserve", async (req: any, res) => {
+    try {
+      const { token, itemId } = req.params;
+      
+      // Find event by token
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Reserve the item
+      const updated = await storage.reserveBirthdayWishlistItem(itemId, event.id);
+      if (!updated) {
+        return res.status(404).json({ message: "Item não encontrado" });
+      }
+      
+      res.json({ 
+        message: "Item reservado com sucesso!",
+        item: updated
+      });
+    } catch (error) {
+      console.error("Error reserving wishlist item:", error);
+      res.status(500).json({ message: "Erro ao reservar item" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
