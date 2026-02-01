@@ -939,6 +939,7 @@ export interface BirthdayInviteEmailOptions {
   eventDate?: string | null;
   eventLocation?: string | null;
   wishlistLink: string;
+  inviteToken?: string | null;
 }
 
 export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOptions) {
@@ -949,7 +950,8 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
     eventName,
     eventDate,
     eventLocation,
-    wishlistLink
+    wishlistLink,
+    inviteToken
   } = options;
 
   const formattedDate = formatDateBrazil(eventDate, false);
@@ -960,7 +962,9 @@ export async function sendBirthdayInviteEmail(options: BirthdayInviteEmailOption
     : process.env.REPLIT_DEV_DOMAIN 
       ? `https://${process.env.REPLIT_DEV_DOMAIN}`
       : "http://localhost:5000";
-  const signupLink = baseUrl;
+  const signupLink = inviteToken 
+    ? `${baseUrl}/criar-conta?token=${inviteToken}&email=${encodeURIComponent(to)}`
+    : baseUrl;
 
   return sendEmail({
     to,

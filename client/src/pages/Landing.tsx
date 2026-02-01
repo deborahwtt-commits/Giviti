@@ -49,13 +49,16 @@ export default function Landing() {
   // Check for pending invite token from event invitation
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
   const [pendingInviteEventName, setPendingInviteEventName] = useState<string | null>(null);
+  const [pendingInviteEmail, setPendingInviteEmail] = useState<string | null>(null);
   
   useEffect(() => {
     const token = localStorage.getItem("pendingInviteToken");
     const eventName = localStorage.getItem("pendingInviteEventName");
+    const inviteEmail = localStorage.getItem("pendingInviteEmail");
     if (token) {
       setPendingInviteToken(token);
       setPendingInviteEventName(eventName);
+      setPendingInviteEmail(inviteEmail);
       setActiveTab("register");
     }
   }, []);
@@ -74,14 +77,17 @@ export default function Landing() {
     },
   });
 
-  // Update form inviteToken when pendingInviteToken changes
+  // Update form inviteToken and email when pending invite data changes
   useEffect(() => {
     if (pendingInviteToken) {
       registerForm.setValue("inviteToken", pendingInviteToken);
     } else {
       registerForm.setValue("inviteToken", "");
     }
-  }, [pendingInviteToken, registerForm]);
+    if (pendingInviteEmail) {
+      registerForm.setValue("email", pendingInviteEmail);
+    }
+  }, [pendingInviteToken, pendingInviteEmail, registerForm]);
 
   // Waitlist form
   const waitlistForm = useForm<InsertWaitlist>({
@@ -161,9 +167,10 @@ export default function Landing() {
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
-      // Clear pending invite token and event name if any (user logged in instead of registering)
+      // Clear pending invite token, event name, and email if any (user logged in instead of registering)
       localStorage.removeItem("pendingInviteToken");
       localStorage.removeItem("pendingInviteEventName");
+      localStorage.removeItem("pendingInviteEmail");
       
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
@@ -220,9 +227,10 @@ export default function Landing() {
     },
     onSuccess: async (data: any) => {
       setRegisterError(null);
-      // Clear pending invite token and event name if any
+      // Clear pending invite token, event name, and email if any
       localStorage.removeItem("pendingInviteToken");
       localStorage.removeItem("pendingInviteEventName");
+      localStorage.removeItem("pendingInviteEmail");
       
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
@@ -485,8 +493,11 @@ export default function Landing() {
                               onClick={() => {
                                 localStorage.removeItem("pendingInviteToken");
                                 localStorage.removeItem("pendingInviteEventName");
+                                localStorage.removeItem("pendingInviteEmail");
                                 setPendingInviteToken(null);
                                 setPendingInviteEventName(null);
+                                setPendingInviteEmail(null);
+                                registerForm.setValue("email", "");
                               }}
                               data-testid="button-use-vip-pass"
                             >
@@ -568,9 +579,15 @@ export default function Landing() {
                                   {...field}
                                   type="email"
                                   placeholder="seu@email.com"
+                                  disabled={!!pendingInviteEmail}
                                   data-testid="input-register-email"
                                 />
                               </FormControl>
+                              {pendingInviteEmail && (
+                                <p className="text-xs text-muted-foreground">
+                                  Utilizando o e-mail do convite
+                                </p>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}

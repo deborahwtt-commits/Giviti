@@ -1610,6 +1610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eventDate: event.eventDate ? event.eventDate.toString() : null,
           eventLocation: event.eventLocation,
           wishlistLink,
+          inviteToken: guest.inviteToken,
         });
         
         // Update email status to sent

@@ -49,9 +49,11 @@ export async function setupAuth(app: Express): Promise<void> {
       let ticket = null;
       let registeredViaInvite = false;
       let inviteParticipant: any = null;
+      let birthdayGuest: any = null;
       
       // Check if registering via event invite token (bypass VIP pass requirement)
       if (validatedData.inviteToken) {
+        // First, check collaborative event participants
         const participant = await storage.getParticipantByInviteToken(validatedData.inviteToken);
         if (participant && participant.status !== "accepted") {
           // Validate that the registering email matches the invited participant's email
@@ -61,9 +63,26 @@ export async function setupAuth(app: Express): Promise<void> {
           if (participantEmail && participantEmail === registerEmail) {
             registeredViaInvite = true;
             inviteParticipant = participant;
-            console.log(`[Register] User ${registerEmail} registering via event invite token`);
+            console.log(`[Register] User ${registerEmail} registering via collaborative event invite token`);
           } else {
             console.log(`[Register] Invite token email mismatch: expected ${participantEmail}, got ${registerEmail}`);
+          }
+        }
+        
+        // If not found in collaborative events, check birthday guests
+        if (!registeredViaInvite) {
+          const guest = await storage.getBirthdayGuestByInviteToken(validatedData.inviteToken);
+          if (guest && guest.rsvpStatus !== "registered") {
+            const guestEmail = guest.email?.toLowerCase().trim();
+            const registerEmail = validatedData.email.toLowerCase().trim();
+            
+            if (guestEmail && guestEmail === registerEmail) {
+              registeredViaInvite = true;
+              birthdayGuest = guest;
+              console.log(`[Register] User ${registerEmail} registering via birthday event invite token`);
+            } else {
+              console.log(`[Register] Birthday invite token email mismatch: expected ${guestEmail}, got ${registerEmail}`);
+            }
           }
         }
       }
@@ -111,10 +130,16 @@ export async function setupAuth(app: Express): Promise<void> {
         await storage.useAccessTicket(ticket.id, newUser.id);
       }
       
-      // If registered via invite, mark the participant as accepted
+      // If registered via invite, mark the participant/guest as accepted
       if (registeredViaInvite && inviteParticipant) {
         await storage.updateParticipantStatus(inviteParticipant.id, "accepted");
-        console.log(`[Register] Marked participant ${inviteParticipant.id} as accepted for user ${newUser.id}`);
+        console.log(`[Register] Marked collaborative participant ${inviteParticipant.id} as accepted for user ${newUser.id}`);
+      }
+      
+      // If registered via birthday invite, mark the guest as registered
+      if (registeredViaInvite && birthdayGuest) {
+        await storage.markBirthdayGuestAsRegistered(birthdayGuest.id);
+        console.log(`[Register] Marked birthday guest ${birthdayGuest.id} as registered for user ${newUser.id}`);
       }
 
       // Link any pending participant invitations to this new user

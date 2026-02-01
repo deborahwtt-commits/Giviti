@@ -937,6 +937,7 @@ export const birthdayGuests = pgTable("birthday_guests", {
   email: varchar("email").notNull(),
   rsvpStatus: varchar("rsvp_status").default("pending"), // pending, yes, no, maybe
   emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
+  inviteToken: varchar("invite_token").unique(), // Token for registration without VIP pass
   invitedAt: timestamp("invited_at").defaultNow(),
   respondedAt: timestamp("responded_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -944,6 +945,7 @@ export const birthdayGuests = pgTable("birthday_guests", {
 
 export const insertBirthdayGuestSchema = createInsertSchema(birthdayGuests).omit({
   id: true,
+  inviteToken: true,
   invitedAt: true,
   respondedAt: true,
   createdAt: true,

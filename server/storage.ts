@@ -405,9 +405,11 @@ export interface IStorage {
   getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]>;
   getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined>;
   getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined>;
+  getBirthdayGuestByInviteToken(token: string): Promise<BirthdayGuest | undefined>;
   createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest>;
   updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined>;
   updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined>;
+  markBirthdayGuestAsRegistered(id: string): Promise<BirthdayGuest | undefined>;
   deleteBirthdayGuest(id: string): Promise<boolean>;
   
   // Birthday Wishlist Operations
@@ -3065,12 +3067,22 @@ export class DatabaseStorage implements IStorage {
     return guest;
   }
 
+  async getBirthdayGuestByInviteToken(token: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.inviteToken, token));
+    return guest;
+  }
+
   async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
+    const inviteToken = `bday_${crypto.randomUUID().replace(/-/g, '')}`;
     const [newGuest] = await db
       .insert(birthdayGuests)
       .values({
         ...guest,
         email: guest.email ? normalizeEmail(guest.email) : guest.email,
+        inviteToken,
       })
       .returning();
     return newGuest;
@@ -3089,6 +3101,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(birthdayGuests)
       .set({ emailStatus })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markBirthdayGuestAsRegistered(id: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ rsvpStatus: "registered", inviteToken: null })
       .where(eq(birthdayGuests.id, id))
       .returning();
     return updated;
