@@ -39,7 +39,7 @@ export default function EventCard({
   const isPastEvent = daysUntil < 0;
   const needsAttention = !isPastEvent && daysUntil <= 7 && !hasGiftPurchased;
   const eventColors = getEventColors('regular');
-  const isBirthdayEvent = event.eventType === "Meu Aniversário";
+  const isBirthdayEvent = event.eventType?.toLowerCase().includes("meu anivers");
 
   const eventDisplayName = event.eventName 
     ? `${event.eventType} ${event.eventName}` 

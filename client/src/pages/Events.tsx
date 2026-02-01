@@ -226,8 +226,8 @@ export default function Events() {
   const sortEvents = (events: EventWithRecipients[]) => {
     return [...events].sort((a, b) => {
       // Birthday events always come first
-      const aIsBirthday = a.eventType === "Meu Aniversário";
-      const bIsBirthday = b.eventType === "Meu Aniversário";
+      const aIsBirthday = a.eventType?.toLowerCase().includes("meu anivers");
+      const bIsBirthday = b.eventType?.toLowerCase().includes("meu anivers");
       if (aIsBirthday && !bIsBirthday) return -1;
       if (!aIsBirthday && bIsBirthday) return 1;
       
