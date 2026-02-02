@@ -266,8 +266,8 @@ export default function PublicBirthday() {
             {/* Event Details Card */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <PartyPopper className="w-5 h-5 text-pink-500" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <PartyPopper className="w-4 h-4 text-pink-500" />
                   Detalhes do Evento
                 </CardTitle>
               </CardHeader>
@@ -306,8 +306,8 @@ export default function PublicBirthday() {
             {profile && (
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <User className="w-5 h-5 text-pink-500" />
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-pink-500" />
                     Sobre {owner.firstName || "o Aniversariante"}
                   </CardTitle>
                   <CardDescription>
@@ -388,7 +388,7 @@ export default function PublicBirthday() {
           {/* Wishlist Card - Full Width */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 <Gift className="h-5 w-5 text-primary" />
                 Lista de Desejos
               </CardTitle>
@@ -435,53 +435,55 @@ export default function PublicBirthday() {
                     </div>
                   )}
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-3">
                     {wishlist
                       .sort((a, b) => b.priority - a.priority)
                       .map((item) => (
                         <div
                           key={item.id}
-                          className={`p-4 border rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
+                          className={`flex items-center justify-between p-4 border rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
                           data-testid={`wishlist-item-${item.id}`}
                         >
-                          {item.imageUrl && (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.title}
-                              className="w-full h-32 object-cover rounded-md mb-3"
-                            />
-                          )}
-                          <div className="flex items-center gap-2 flex-wrap mb-2">
-                            <h4 className="font-medium">{item.title}</h4>
-                            {item.price ? (
-                              <Badge variant="outline" className="text-xs">
-                                Presente
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                                Gratuito
-                              </Badge>
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            {item.imageUrl && (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.title}
+                                className="w-16 h-16 object-cover rounded-md flex-shrink-0"
+                              />
                             )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm" data-testid={`text-wishlist-title-${item.id}`}>{item.title}</span>
+                                {item.price ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    Presente
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                    Gratuito
+                                  </Badge>
+                                )}
+                                {item.isReserved && !item.isReceived && (
+                                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                    Reservado
+                                  </Badge>
+                                )}
+                                {item.isReceived && (
+                                  <Badge variant="default" className="bg-green-500">
+                                    Recebido
+                                  </Badge>
+                                )}
+                              </div>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground mt-1 truncate">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           
-                          {item.isReserved && !item.isReceived && (
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 mb-2">
-                              Reservado
-                            </Badge>
-                          )}
-                          {item.isReceived && (
-                            <Badge variant="default" className="bg-green-500 mb-2">
-                              Recebido
-                            </Badge>
-                          )}
-                          
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground mb-3">
-                              {item.description}
-                            </p>
-                          )}
-                          
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             {item.price && (
                               <Badge variant="secondary">{item.price}</Badge>
                             )}
@@ -533,7 +535,7 @@ export default function PublicBirthday() {
           {!isOwner && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <PartyPopper className="h-5 w-5 text-primary" />
                   Confirme sua presença!
                 </CardTitle>
@@ -635,23 +637,25 @@ export default function PublicBirthday() {
             </Card>
           )}
 
-          {/* Promo Card */}
-          <Card className="border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-            <CardContent className="pt-6 text-center">
-              <div className="flex justify-center mb-3">
-                <Gift className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Quer facilitar sua vida nas próximas festas?</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Crie sua conta no Giviti e nunca mais esqueça de um aniversário importante!
-              </p>
-              <Link href="/waitlist">
-                <Button data-testid="button-join-waitlist">
-                  Entrar na lista de espera
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          {/* Promo Card - Only for non-logged users */}
+          {!isLoggedIn && (
+            <Card className="border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardContent className="pt-6 text-center">
+                <div className="flex justify-center mb-3">
+                  <Gift className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Quer facilitar sua vida nas próximas festas?</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Crie sua conta no Giviti e nunca mais esqueça de um aniversário importante!
+                </p>
+                <Link href="/waitlist">
+                  <Button data-testid="button-join-waitlist">
+                    Entrar na lista de espera
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Guests Tab - Only for Owner */}
@@ -659,7 +663,7 @@ export default function PublicBirthday() {
           <TabsContent value="guests" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <Users className="h-5 w-5 text-primary" />
                   Convidados ({guests?.length || 0})
                 </CardTitle>
