@@ -287,6 +287,28 @@ export default function AdminAccessControl() {
     },
   });
 
+  const approveWaitlistMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/admin/waitlist/${id}/approve`, "POST");
+      return response.json() as Promise<{ message: string; vipCode: string }>;
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Convite enviado!", 
+        description: `Passe VIP ${data.vipCode} enviado por email.` 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/waitlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/access-tickets"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Erro ao aprovar", 
+        description: error.message || "Falha ao enviar convite VIP", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleCreateTicket = (data: InsertAccessTicket) => {
     createTicketMutation.mutate(data);
   };
@@ -617,15 +639,33 @@ export default function AdminAccessControl() {
                           })}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteWaitlistMutation.mutate(entry.id)}
-                            disabled={deleteWaitlistMutation.isPending}
-                            data-testid={`button-delete-waitlist-${entry.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {entry.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => approveWaitlistMutation.mutate(entry.id)}
+                                disabled={approveWaitlistMutation.isPending}
+                                title="Aprovar e enviar Passe VIP"
+                                data-testid={`button-approve-waitlist-${entry.id}`}
+                              >
+                                {approveWaitlistMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Mail className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteWaitlistMutation.mutate(entry.id)}
+                              disabled={deleteWaitlistMutation.isPending}
+                              data-testid={`button-delete-waitlist-${entry.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

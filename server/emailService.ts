@@ -1162,3 +1162,86 @@ export async function sendEventCancellationEmail(options: EventCancellationEmail
     `
   });
 }
+
+// Send VIP pass approval email to waitlist user
+export async function sendVipPassApprovalEmail(
+  to: string, 
+  vipCode: string, 
+  recipientName: string,
+  registerLink: string
+) {
+  return sendEmail({
+    to,
+    subject: 'Seu Passe VIP chegou! - Giviti',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9fafb;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #e11d48; margin: 0; font-size: 28px; font-family: Arial, sans-serif;">
+                  Parabens! Voce foi aprovado!
+                </h1>
+              </div>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+                Ola ${recipientName},
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
+                Temos otimas noticias! Sua solicitacao para entrar no <strong>Giviti</strong> foi aprovada. 
+                Agora voce faz parte de uma comunidade exclusiva que torna o ato de presentear mais especial.
+              </p>
+
+              <div style="background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border: 2px dashed #e11d48; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+                <p style="color: #be123c; font-size: 14px; font-weight: 600; margin: 0 0 8px 0; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+                  Seu Passe VIP Exclusivo
+                </p>
+                <p style="color: #e11d48; font-size: 32px; font-weight: bold; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 3px;">
+                  ${vipCode}
+                </p>
+              </div>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0; font-family: Arial, sans-serif;">
+                Use este codigo unico para criar sua conta e comecar a descobrir presentes perfeitos para quem voce ama.
+              </p>
+
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${registerLink}" 
+                   style="display: inline-block; background-color: #e11d48; color: white; padding: 16px 32px; 
+                          text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; font-family: Arial, sans-serif;">
+                  Criar Minha Conta
+                </a>
+              </div>
+
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+                <p style="color: #92400e; margin: 0; font-size: 14px; font-family: Arial, sans-serif;">
+                  <strong>Importante:</strong> Este Passe VIP e pessoal e intransferivel. 
+                  Ele permite a criacao de apenas uma conta.
+                </p>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; margin: 24px 0 0 0; font-family: Arial, sans-serif; text-align: center;">
+                Bem-vindo ao Giviti!<br>
+                Juntos, presenteamos melhor.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `
+  });
+}
