@@ -87,6 +87,23 @@ export async function setupAuth(app: Express): Promise<void> {
         }
       }
       
+      // Check if registering via collabEventId (direct event access - bypass VIP pass)
+      if (!registeredViaInvite && validatedData.collabEventId) {
+        const participants = await storage.getParticipants(validatedData.collabEventId);
+        const registerEmail = validatedData.email.toLowerCase().trim();
+        const participant = participants.find(
+          p => p.email?.toLowerCase().trim() === registerEmail && p.status !== "accepted"
+        );
+        
+        if (participant) {
+          registeredViaInvite = true;
+          inviteParticipant = participant;
+          console.log(`[Register] User ${registerEmail} registering via collabEventId ${validatedData.collabEventId}`);
+        } else {
+          console.log(`[Register] Email ${registerEmail} not found in event ${validatedData.collabEventId} participants`);
+        }
+      }
+      
       // If not registering via invite, validate access ticket (soft launch requirement)
       if (!registeredViaInvite) {
         if (!validatedData.ticketCode) {

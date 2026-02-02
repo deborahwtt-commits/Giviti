@@ -63,13 +63,14 @@ export const registerUserSchema = insertUserSchema
     confirmPassword: z.string(),
     ticketCode: z.string().optional(),
     inviteToken: z.string().optional(),
+    collabEventId: z.string().optional(), // For VIP bypass when accessing event directly
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
   })
-  .refine((data) => data.ticketCode || data.inviteToken, {
+  .refine((data) => data.ticketCode || data.inviteToken || data.collabEventId, {
     message: "Passe VIP ou convite de evento é obrigatório",
     path: ["ticketCode"],
   });
