@@ -441,7 +441,7 @@ export default function PublicBirthday() {
                       .map((item) => (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between p-4 border rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
+                          className={`flex items-center justify-between p-4 rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
                           data-testid={`wishlist-item-${item.id}`}
                         >
                           <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -456,7 +456,7 @@ export default function PublicBirthday() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-medium text-sm" data-testid={`text-wishlist-title-${item.id}`}>{item.title}</span>
                                 {item.price ? (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                                     Presente
                                   </Badge>
                                 ) : (
