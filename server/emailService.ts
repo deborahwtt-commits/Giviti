@@ -1189,17 +1189,17 @@ export async function sendVipPassApprovalEmail(
             <td style="padding: 40px;">
               <div style="text-align: center; margin-bottom: 30px;">
                 <h1 style="color: #e11d48; margin: 0; font-size: 28px; font-family: Arial, sans-serif;">
-                  Parabens! Voce foi aprovado!
+                  Parabéns! Você foi aprovado!
                 </h1>
               </div>
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
-                Ola ${recipientName},
+                Olá ${recipientName},
               </p>
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; font-family: Arial, sans-serif;">
-                Temos otimas noticias! Sua solicitacao para entrar no <strong>Giviti</strong> foi aprovada. 
-                Agora voce faz parte de uma comunidade exclusiva que torna o ato de presentear mais especial.
+                Temos ótimas notícias! Sua solicitação para entrar no <strong>Giviti</strong> foi aprovada. 
+                Agora você faz parte de uma comunidade exclusiva que torna o ato de presentear mais especial.
               </p>
 
               <div style="background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border: 2px dashed #e11d48; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
@@ -1212,7 +1212,7 @@ export async function sendVipPassApprovalEmail(
               </div>
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0; font-family: Arial, sans-serif;">
-                Use este codigo unico para criar sua conta e comecar a descobrir presentes perfeitos para quem voce ama.
+                Use este código único para criar sua conta e começar a descobrir presentes perfeitos para quem você ama.
               </p>
 
               <div style="text-align: center; margin: 32px 0;">
@@ -1225,8 +1225,8 @@ export async function sendVipPassApprovalEmail(
 
               <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
                 <p style="color: #92400e; margin: 0; font-size: 14px; font-family: Arial, sans-serif;">
-                  <strong>Importante:</strong> Este Passe VIP e pessoal e intransferivel. 
-                  Ele permite a criacao de apenas uma conta.
+                  <strong>Importante:</strong> Este Passe VIP é pessoal e intransferível. 
+                  Ele permite a criação de apenas uma conta.
                 </p>
               </div>
 
