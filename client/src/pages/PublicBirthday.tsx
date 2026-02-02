@@ -435,13 +435,13 @@ export default function PublicBirthday() {
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                  <div className="divide-y">
                     {wishlist
                       .sort((a, b) => b.priority - a.priority)
                       .map((item) => (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between p-4 rounded-lg hover-elevate ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
+                          className={`flex items-center justify-between py-4 first:pt-0 last:pb-0 ${item.isReceived || item.isReserved ? "opacity-60" : ""}`}
                           data-testid={`wishlist-item-${item.id}`}
                         >
                           <div className="flex items-center gap-4 flex-1 min-w-0">
