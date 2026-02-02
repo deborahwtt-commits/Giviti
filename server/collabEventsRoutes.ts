@@ -1216,9 +1216,7 @@ export function registerCollabEventsRoutes(app: Express) {
         assignment = tryBacktrackingDraw(shuffleArray(participantIds));
       }
       
-      const success = assignment !== null;
-      
-      if (!success) {
+      if (!assignment) {
         return res.status(422).json({ 
           error: "Não foi possível realizar o sorteio com as restrições definidas. Por favor, revise as restrições e tente novamente.",
           code: "IMPOSSIBLE_DRAW"
@@ -2080,7 +2078,7 @@ export function registerCollabEventsRoutes(app: Express) {
   app.get("/api/collab-events/:id/receiver-wishlist", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as AuthenticatedRequest).user.id;
       
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
