@@ -15,7 +15,7 @@ import {
 import { z, ZodError } from "zod";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
-import { sendPasswordResetEmail } from "./emailService";
+import { sendPasswordResetEmail, sendVipPassApprovalEmail } from "./emailService";
 
 export function registerAdminRoutes(app: Express) {
   // Helper function to create audit log
@@ -177,6 +177,46 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // DELETE /api/admin/users/:id/permanent - Permanently delete user and all associated data
+  app.delete("/api/admin/users/:id/permanent", isAuthenticated, hasRole("admin"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prevent self-deletion
+      if (req.user!.id === id) {
+        return res.status(403).json({ 
+          message: "Você não pode excluir sua própria conta. Peça a outro administrador para fazer isso." 
+        });
+      }
+      
+      // Get user to check if exists
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Delete user and all associated data
+      const result = await storage.deleteUserPermanently(id);
+      
+      if (!result.deleted) {
+        return res.status(500).json({ message: "Falha ao excluir usuário" });
+      }
+      
+      await createAudit(req, "DELETE_PERMANENT", "user", id, {
+        deletedUser: { email: user.email, firstName: user.firstName, lastName: user.lastName },
+        deletedData: result.deletedData
+      });
+      
+      res.json({ 
+        message: "Usuário e todos os dados vinculados foram excluídos permanentemente",
+        deletedData: result.deletedData
+      });
+    } catch (error) {
+      console.error("Error permanently deleting user:", error);
+      res.status(500).json({ message: "Falha ao excluir usuário permanentemente" });
     }
   });
 
@@ -778,6 +818,94 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting waitlist entry:", error);
       res.status(500).json({ message: "Failed to delete waitlist entry" });
+    }
+  });
+
+  // POST /api/admin/waitlist/:id/approve - Approve waitlist entry and send VIP pass
+  app.post("/api/admin/waitlist/:id/approve", isAuthenticated, hasRole("admin", "manager"), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get waitlist entry
+      const entry = await storage.getWaitlistEntry(id);
+      if (!entry) {
+        return res.status(404).json({ message: "Entrada não encontrada" });
+      }
+      
+      // Check if already approved
+      if (entry.status === "invited" || entry.status === "registered") {
+        return res.status(400).json({ message: "Esta pessoa já foi convidada ou já criou uma conta" });
+      }
+      
+      // Generate unique VIP code (format: VIP-XXXX-XXXX)
+      const generateVipCode = () => {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed confusing chars: I, O, 0, 1
+        const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        return `VIP-${part1}-${part2}`;
+      };
+      
+      // Generate code and ensure uniqueness
+      let vipCode = generateVipCode();
+      let attempts = 0;
+      while (attempts < 10) {
+        const existingTicket = await storage.getAccessTicketByCode(vipCode);
+        if (!existingTicket) break;
+        vipCode = generateVipCode();
+        attempts++;
+      }
+      
+      if (attempts >= 10) {
+        return res.status(500).json({ message: "Falha ao gerar código único. Tente novamente." });
+      }
+      
+      // Create access ticket (VIP pass)
+      const ticket = await storage.createAccessTicket({
+        code: vipCode,
+        recipientName: entry.name,
+        recipientEmail: entry.email,
+        maxAccounts: 1,
+        isActive: true,
+        notes: `Gerado automaticamente para aprovação da lista de espera (ID: ${entry.id})`,
+      }, req.user!.id);
+      
+      // Update waitlist entry
+      await storage.updateWaitlistEntry(id, {
+        status: "invited",
+        invitedAt: new Date(),
+        ticketId: ticket.id,
+      });
+      
+      // Send email with VIP pass
+      const baseUrl = process.env.BASE_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const registerLink = `${baseUrl}/entrar?tab=register`;
+      
+      try {
+        await sendVipPassApprovalEmail(
+          entry.email,
+          vipCode,
+          entry.name,
+          registerLink
+        );
+      } catch (emailError) {
+        console.error("Error sending VIP pass email:", emailError);
+        // Continue even if email fails - the ticket was created
+      }
+      
+      await createAudit(req, "APPROVE_WAITLIST", "waitlist", id, { 
+        ticketId: ticket.id, 
+        vipCode,
+        email: entry.email 
+      });
+      
+      res.json({ 
+        message: "Convite enviado com sucesso!",
+        ticket,
+        vipCode 
+      });
+    } catch (error) {
+      console.error("Error approving waitlist entry:", error);
+      res.status(500).json({ message: "Falha ao aprovar entrada da lista de espera" });
     }
   });
 

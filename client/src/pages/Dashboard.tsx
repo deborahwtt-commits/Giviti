@@ -14,7 +14,7 @@ import BirthdayBanner from "@/components/BirthdayBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Gift, Palette, MapPin, Calendar } from "lucide-react";
+import { Plus, Users, Gift, Palette, MapPin, Calendar, UserCheck, Cake } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import type { EventWithRecipients, Recipient, CollaborativeEvent, UserProfile } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
@@ -48,6 +48,26 @@ export default function Dashboard() {
 
   const { data: invitationsData } = useQuery<{ count: number }>({
     queryKey: ["/api/user/invitations-count"],
+  });
+
+  type ReceivedInvitation = {
+    id: string;
+    type: 'birthday' | 'collaborative';
+    eventName: string;
+    eventType: string;
+    rawEventType?: string;
+    eventDate: Date | string | null;
+    confirmationDeadline: Date | string | null;
+    ownerName: string;
+    status: string;
+    invitedAt: Date | string | null;
+    eventId: string;
+    shareToken?: string | null;
+    isDrawPerformed?: boolean;
+  };
+
+  const { data: invitations = [] } = useQuery<ReceivedInvitation[]>({
+    queryKey: ["/api/user/invitations"],
   });
 
   const { data: userProfile } = useQuery<UserProfile>({
@@ -478,6 +498,88 @@ export default function Dashboard() {
                     </Card>
                   );
                 }
+              })}
+            </div>
+          </section>
+        )}
+
+        {invitations.length > 0 && (
+          <section id="invitations-section">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-heading font-semibold text-3xl text-foreground">
+                  Eventos que Fui Convidado
+                </h2>
+                <p className="text-muted-foreground mt-1">Eventos organizados por outras pessoas</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setLocation("/convites")}
+                data-testid="button-view-all-invitations"
+              >
+                Ver todos
+              </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {invitations.slice(0, 6).map((invitation) => {
+                const isBirthday = invitation.type === 'birthday';
+                const eventTypeInfo = isBirthday 
+                  ? { icon: Cake, label: "Aniversário", color: "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-950 dark:text-pink-300 dark:border-pink-800" }
+                  : getRoleTypeInfo(invitation.rawEventType || invitation.eventType);
+                const TypeIcon = eventTypeInfo.icon;
+                
+                const handleClick = () => {
+                  if (isBirthday) {
+                    if (invitation.shareToken) {
+                      setLocation(`/aniversario/${invitation.shareToken}`);
+                    } else {
+                      setLocation("/convites");
+                    }
+                  } else {
+                    setLocation(`/role/${invitation.eventId}`);
+                  }
+                };
+
+                return (
+                  <Card
+                    key={`invitation-${invitation.id}`}
+                    className="cursor-pointer hover-elevate transition-all"
+                    onClick={handleClick}
+                    data-testid={`card-invitation-${invitation.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-foreground truncate">
+                            {invitation.eventName}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge className={`text-xs ${eventTypeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3 mr-1" />
+                              {eventTypeInfo.label}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              Convidado
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{invitation.eventDate ? formatRoleDate(invitation.eventDate) : "Sem data definida"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Organizado por {invitation.ownerName}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
               })}
             </div>
           </section>

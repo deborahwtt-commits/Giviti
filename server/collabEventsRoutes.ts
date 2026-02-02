@@ -85,6 +85,79 @@ async function recalculateTripCostPerPerson(eventId: string): Promise<void> {
 }
 
 export function registerCollabEventsRoutes(app: Express) {
+  // ========== PUBLIC EVENT ROUTES ==========
+
+  // GET /api/collab-events/:id/public - Get basic event info (public, no auth required)
+  app.get("/api/collab-events/:id/public", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the event without access check (public lookup)
+      const event = await storage.getCollaborativeEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado" });
+      }
+      
+      // Return basic event info (no sensitive data)
+      res.json({
+        id: event.id,
+        name: event.name,
+        eventType: event.eventType,
+        eventDate: event.eventDate,
+        location: event.location,
+        description: event.description,
+        status: event.status,
+      });
+    } catch (error) {
+      console.error("Error fetching public event:", error);
+      res.status(500).json({ error: "Failed to fetch event" });
+    }
+  });
+
+  // GET /api/collab-events/:id/check-participant - Check if email is a participant (for VIP bypass)
+  // NOTE: Does NOT return inviteToken for security - server-side registration validates via collabEventId
+  app.get("/api/collab-events/:id/check-participant", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const email = req.query.email as string;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email é obrigatório" });
+      }
+      
+      // Verify event exists
+      const event = await storage.getCollaborativeEvent(id);
+      if (!event) {
+        return res.status(404).json({ error: "Evento não encontrado" });
+      }
+      
+      // Get all participants and check if email matches
+      const participants = await storage.getParticipants(id);
+      const normalizedEmail = email.toLowerCase().trim();
+      const participant = participants.find(
+        p => p.email?.toLowerCase().trim() === normalizedEmail
+      );
+      
+      if (participant) {
+        // Do NOT return inviteToken - registration will validate via collabEventId + email match
+        res.json({
+          isParticipant: true,
+          participantStatus: participant.status,
+          eventName: event.name,
+        });
+      } else {
+        res.json({
+          isParticipant: false,
+          eventName: event.name,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking participant:", error);
+      res.status(500).json({ error: "Failed to check participant" });
+    }
+  });
+
   // ========== INVITATION TOKEN ROUTES (PUBLIC) ==========
 
   // GET /api/invitations/by-token/:token - Get invitation details by token (public)
@@ -1216,9 +1289,7 @@ export function registerCollabEventsRoutes(app: Express) {
         assignment = tryBacktrackingDraw(shuffleArray(participantIds));
       }
       
-      const success = assignment !== null;
-      
-      if (!success) {
+      if (!assignment) {
         return res.status(422).json({ 
           error: "Não foi possível realizar o sorteio com as restrições definidas. Por favor, revise as restrições e tente novamente.",
           code: "IMPOSSIBLE_DRAW"
@@ -2080,7 +2151,7 @@ export function registerCollabEventsRoutes(app: Express) {
   app.get("/api/collab-events/:id/receiver-wishlist", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as AuthenticatedRequest).user.id;
       
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });

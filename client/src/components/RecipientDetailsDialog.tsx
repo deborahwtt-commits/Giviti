@@ -9,15 +9,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Edit, User, Cake, Users, Star, Heart, MapPin, Mail } from "lucide-react";
-import type { Recipient, RecipientProfile } from "@shared/schema";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Edit, User, Cake, Users, Star, Heart, MapPin, Mail, Link2, RefreshCw } from "lucide-react";
+import type { RecipientWithSyncedData, RecipientProfile } from "@shared/schema";
 import AutoSuggestions from "./AutoSuggestions";
 
 interface RecipientDetailsDialogProps {
-  recipient: Recipient | null;
+  recipient: RecipientWithSyncedData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit: (recipient: Recipient) => void;
+  onEdit: (recipient: RecipientWithSyncedData) => void;
 }
 
 const PROFILE_LABELS: Record<string, string> = {
@@ -57,6 +58,27 @@ export default function RecipientDetailsDialog({
 
   if (!recipient) return null;
 
+  // Use synced data when available, otherwise fall back to recipient data
+  const displayGender = recipient.isLinked && recipient.syncedData?.syncedGender 
+    ? recipient.syncedData.syncedGender 
+    : recipient.gender;
+
+  const displayZodiacSign = recipient.isLinked && recipient.syncedData?.syncedZodiacSign
+    ? recipient.syncedData.syncedZodiacSign
+    : recipient.zodiacSign;
+  
+  const displayInterests = recipient.isLinked && recipient.syncedData?.syncedInterests?.length 
+    ? recipient.syncedData.syncedInterests 
+    : recipient.interests;
+
+  const displayGiftPreference = recipient.isLinked && recipient.syncedData?.syncedGiftPreference
+    ? recipient.syncedData.syncedGiftPreference
+    : null;
+
+  const displayGiftsToAvoid = recipient.isLinked && recipient.syncedData?.syncedGiftsToAvoid
+    ? recipient.syncedData.syncedGiftsToAvoid
+    : null;
+
   const handleEdit = () => {
     onOpenChange(false);
     onEdit(recipient);
@@ -69,7 +91,30 @@ export default function RecipientDetailsDialog({
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <User className="h-6 w-6" />
             {recipient.name}
+            {recipient.isLinked && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10">
+                    <Link2 className="w-4 h-4 text-primary" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Perfil conectado - dados atualizados automaticamente</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </DialogTitle>
+          {recipient.isLinked && recipient.syncedData && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-accent/30 rounded-md p-2 mt-2">
+              <RefreshCw className="h-3 w-3" />
+              <span>
+                Dados sincronizados do perfil original
+                {recipient.syncedData.syncedProfileUpdatedAt && (
+                  <> • Atualizado em {new Date(recipient.syncedData.syncedProfileUpdatedAt).toLocaleDateString('pt-BR')}</>
+                )}
+              </span>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
@@ -87,22 +132,38 @@ export default function RecipientDetailsDialog({
                 </div>
               )}
               
-              {recipient.gender && (
+              {displayGender && (
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="text-muted-foreground">Sexo:</span>{" "}
-                    <span className="font-medium">{recipient.gender}</span>
+                    <span className="font-medium">{displayGender}</span>
+                    {recipient.isLinked && recipient.syncedData?.syncedGender && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link2 className="inline-block w-3 h-3 ml-1 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>Sincronizado do perfil original</TooltipContent>
+                      </Tooltip>
+                    )}
                   </span>
                 </div>
               )}
 
-              {recipient.zodiacSign && (
+              {displayZodiacSign && (
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="text-muted-foreground">Signo:</span>{" "}
-                    <span className="font-medium">{recipient.zodiacSign}</span>
+                    <span className="font-medium">{displayZodiacSign}</span>
+                    {recipient.isLinked && recipient.syncedData?.syncedZodiacSign && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link2 className="inline-block w-3 h-3 ml-1 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>Sincronizado do perfil original</TooltipContent>
+                      </Tooltip>
+                    )}
                   </span>
                 </div>
               )}
@@ -128,14 +189,22 @@ export default function RecipientDetailsDialog({
               )}
             </div>
 
-            {recipient.interests && recipient.interests.length > 0 && (
+            {displayInterests && displayInterests.length > 0 && (
               <div className="mt-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Heart className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Interesses:</span>
+                  {recipient.isLinked && recipient.syncedData?.syncedInterests?.length && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link2 className="w-3 h-3 text-primary" />
+                      </TooltipTrigger>
+                      <TooltipContent>Sincronizado do perfil original</TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {recipient.interests.map((interest: string) => (
+                  {displayInterests.map((interest: string) => (
                     <Badge key={interest} variant="secondary" className="capitalize">
                       {interest}
                     </Badge>
@@ -165,6 +234,37 @@ export default function RecipientDetailsDialog({
           {/* Detailed Profile */}
           <div>
             <h3 className="text-lg font-semibold mb-3">Perfil Detalhado</h3>
+            
+            {/* Synced data from linked profile */}
+            {recipient.isLinked && (displayGiftPreference || displayGiftsToAvoid) && (
+              <div className="space-y-3 mb-4 p-3 bg-primary/5 rounded-md border border-primary/10">
+                <div className="flex items-center gap-2 text-xs text-primary font-medium">
+                  <Link2 className="w-3 h-3" />
+                  <span>Dados sincronizados do perfil original</span>
+                </div>
+                {displayGiftPreference && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Tipo de presente preferido
+                    </span>
+                    <span className="text-sm" data-testid="text-synced-gift-preference">
+                      {displayGiftPreference}
+                    </span>
+                  </div>
+                )}
+                {displayGiftsToAvoid && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Presentes a evitar
+                    </span>
+                    <span className="text-sm" data-testid="text-synced-gifts-to-avoid">
+                      {displayGiftsToAvoid}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {profileLoading ? (
               <p className="text-sm text-muted-foreground">Carregando perfil...</p>
             ) : profile ? (

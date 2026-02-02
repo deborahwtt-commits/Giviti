@@ -10,16 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyRecipientsImage from "@assets/generated_images/Empty_state_no_recipients_cc3b64a6.png";
-import type { Recipient, Event } from "@shared/schema";
+import type { RecipientWithSyncedData, Event } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function Recipients() {
   const [showForm, setShowForm] = useState(false);
-  const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
-  const [suggestionsRecipient, setSuggestionsRecipient] = useState<Recipient | null>(null);
+  const [editingRecipient, setEditingRecipient] = useState<RecipientWithSyncedData | null>(null);
+  const [suggestionsRecipient, setSuggestionsRecipient] = useState<RecipientWithSyncedData | null>(null);
   const { toast } = useToast();
 
-  const { data: recipients, isLoading: recipientsLoading, error: recipientsError } = useQuery<Recipient[]>({
+  const { data: recipients, isLoading: recipientsLoading, error: recipientsError } = useQuery<RecipientWithSyncedData[]>({
     queryKey: ["/api/recipients"],
   });
 
@@ -155,7 +155,7 @@ export default function Recipients() {
     }
   };
 
-  const handleEdit = (recipient: Recipient) => {
+  const handleEdit = (recipient: RecipientWithSyncedData) => {
     setEditingRecipient(recipient);
     setShowForm(true);
   };
@@ -186,7 +186,7 @@ export default function Recipients() {
       } else {
         // Create recipient first
         const response = await apiRequest("/api/recipients", "POST", data);
-        const newRecipient = await response.json() as Recipient;
+        const newRecipient = await response.json() as RecipientWithSyncedData;
         
         // Then create profile if provided
         if (profile && newRecipient?.id) {

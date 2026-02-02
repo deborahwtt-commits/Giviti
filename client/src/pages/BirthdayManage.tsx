@@ -4,6 +4,7 @@ import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,7 @@ interface WishlistItem {
   price: string | null;
   category: string | null;
   priority: number;
+  isReserved: boolean;
   isReceived: boolean;
   receivedFrom: string | null;
 }
@@ -185,6 +187,19 @@ export default function BirthdayManage() {
       queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Item removido" });
+    },
+  });
+
+  const markReceivedMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      return apiRequest(`/api/events/${id}/wishlist/${itemId}/received`, "PATCH");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", id, "wishlist"] });
+      toast({ title: "Item marcado como recebido!" });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível atualizar o item.", variant: "destructive" });
     },
   });
 
@@ -539,6 +554,35 @@ export default function BirthdayManage() {
               Não esquece de incluir uns presentes grátis: tipo carinho, bolo caseiro e aquela playlist caprichada. O orçamento do convidado agradece e o coração também! 💝
             </p>
 
+            {wishlistItems.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">Progresso da lista</span>
+                  <span className="text-sm font-medium">
+                    {wishlistItems.filter(item => item.isReceived || item.isReserved).length} de {wishlistItems.length} itens
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ 
+                      width: `${(wishlistItems.filter(item => item.isReceived || item.isReserved).length / wishlistItems.length) * 100}%` 
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    {wishlistItems.filter(item => item.isReceived).length} recebido(s)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    {wishlistItems.filter(item => item.isReserved && !item.isReceived).length} reservado(s)
+                  </span>
+                </div>
+              </div>
+            )}
+
             {isLoadingWishlist ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
@@ -570,6 +614,11 @@ export default function BirthdayManage() {
                               </Badge>
                             ) : (
                               <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">Pago</Badge>
+                            )}
+                            {item.isReserved && !item.isReceived && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                Reservado
+                              </Badge>
                             )}
                             {item.isReceived && (
                               <Badge variant="default" className="bg-green-500">
@@ -604,21 +653,48 @@ export default function BirthdayManage() {
                             )}
                           </div>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              data-testid={`button-delete-wishlist-${item.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover item?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Deseja remover "{item.title}" da sua lista de desejos?
+                        <div className="flex items-center gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`received-${item.id}`}
+                                  checked={item.isReceived}
+                                  disabled={item.isReceived || markReceivedMutation.isPending}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      markReceivedMutation.mutate(item.id);
+                                    }
+                                  }}
+                                  data-testid={`checkbox-received-${item.id}`}
+                                />
+                                <Label 
+                                  htmlFor={`received-${item.id}`} 
+                                  className="text-xs text-muted-foreground cursor-pointer"
+                                >
+                                  Recebido
+                                </Label>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Marcar como recebido</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-testid={`button-delete-wishlist-${item.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover item?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Deseja remover "{item.title}" da sua lista de desejos?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -631,6 +707,7 @@ export default function BirthdayManage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

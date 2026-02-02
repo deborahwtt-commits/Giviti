@@ -49,13 +49,28 @@ export default function Landing() {
   // Check for pending invite token from event invitation
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
   const [pendingInviteEventName, setPendingInviteEventName] = useState<string | null>(null);
+  const [pendingInviteEmail, setPendingInviteEmail] = useState<string | null>(null);
+  // Check for pending collab event access (for VIP bypass)
+  const [pendingCollabEventId, setPendingCollabEventId] = useState<string | null>(null);
+  const [pendingCollabEventName, setPendingCollabEventName] = useState<string | null>(null);
   
   useEffect(() => {
     const token = localStorage.getItem("pendingInviteToken");
     const eventName = localStorage.getItem("pendingInviteEventName");
+    const inviteEmail = localStorage.getItem("pendingInviteEmail");
     if (token) {
       setPendingInviteToken(token);
       setPendingInviteEventName(eventName);
+      setPendingInviteEmail(inviteEmail);
+      setActiveTab("register");
+    }
+    
+    // Check for pending collab event access
+    const collabEventId = localStorage.getItem("pendingCollabEventId");
+    const collabEventName = localStorage.getItem("pendingCollabEventName");
+    if (collabEventId) {
+      setPendingCollabEventId(collabEventId);
+      setPendingCollabEventName(collabEventName);
       setActiveTab("register");
     }
   }, []);
@@ -71,17 +86,26 @@ export default function Landing() {
       lastName: "",
       ticketCode: "",
       inviteToken: "",
+      collabEventId: "",
     },
   });
 
-  // Update form inviteToken when pendingInviteToken changes
+  // Update form inviteToken/collabEventId and email when pending invite data changes
   useEffect(() => {
     if (pendingInviteToken) {
       registerForm.setValue("inviteToken", pendingInviteToken);
     } else {
       registerForm.setValue("inviteToken", "");
     }
-  }, [pendingInviteToken, registerForm]);
+    if (pendingCollabEventId) {
+      registerForm.setValue("collabEventId", pendingCollabEventId);
+    } else {
+      registerForm.setValue("collabEventId", "");
+    }
+    if (pendingInviteEmail) {
+      registerForm.setValue("email", pendingInviteEmail);
+    }
+  }, [pendingInviteToken, pendingInviteEmail, pendingCollabEventId, registerForm]);
 
   // Waitlist form
   const waitlistForm = useForm<InsertWaitlist>({
@@ -105,10 +129,10 @@ export default function Landing() {
     mutationFn: async (data: ForgotPasswordForm) => {
       return await apiRequest("/api/forgot-password", "POST", data) as any;
     },
-    onSuccess: (data: any) => {
+    onSuccess: () => {
       toast({
-        title: "E-mail enviado!",
-        description: data.message || "Verifique sua caixa de entrada.",
+        title: "Solicitação enviada",
+        description: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
       });
       setShowForgotPasswordModal(false);
       forgotPasswordForm.reset();
@@ -161,9 +185,12 @@ export default function Landing() {
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
-      // Clear pending invite token and event name if any (user logged in instead of registering)
+      // Clear pending invite token, event name, and email if any (user logged in instead of registering)
       localStorage.removeItem("pendingInviteToken");
       localStorage.removeItem("pendingInviteEventName");
+      localStorage.removeItem("pendingInviteEmail");
+      localStorage.removeItem("pendingCollabEventId");
+      localStorage.removeItem("pendingCollabEventName");
       
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
@@ -220,9 +247,12 @@ export default function Landing() {
     },
     onSuccess: async (data: any) => {
       setRegisterError(null);
-      // Clear pending invite token and event name if any
+      // Clear pending invite token, event name, and email if any
       localStorage.removeItem("pendingInviteToken");
       localStorage.removeItem("pendingInviteEventName");
+      localStorage.removeItem("pendingInviteEmail");
+      localStorage.removeItem("pendingCollabEventId");
+      localStorage.removeItem("pendingCollabEventName");
       
       // Save email if "keep logged in" is checked
       // Note: Password is NEVER saved - only the session cookie persists
@@ -485,12 +515,44 @@ export default function Landing() {
                               onClick={() => {
                                 localStorage.removeItem("pendingInviteToken");
                                 localStorage.removeItem("pendingInviteEventName");
+                                localStorage.removeItem("pendingInviteEmail");
                                 setPendingInviteToken(null);
                                 setPendingInviteEventName(null);
+                                setPendingInviteEmail(null);
+                                registerForm.setValue("email", "");
                               }}
                               data-testid="button-use-vip-pass"
                             >
                               Prefiro usar um Passe VIP
+                            </Button>
+                          </div>
+                        ) : pendingCollabEventId ? (
+                          <div className="space-y-2">
+                            <div className="rounded-md bg-primary/10 p-3 border border-primary/20">
+                              <p className="text-sm text-primary flex items-center gap-2">
+                                <Gift className="h-4 w-4" />
+                                <span>
+                                  {pendingCollabEventName 
+                                    ? `Você está acessando "${pendingCollabEventName}". Se for convidado, use o e-mail do convite.`
+                                    : "Você está acessando um evento. Se for convidado, use o e-mail do convite."
+                                  }
+                                </span>
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-muted-foreground"
+                              onClick={() => {
+                                localStorage.removeItem("pendingCollabEventId");
+                                localStorage.removeItem("pendingCollabEventName");
+                                setPendingCollabEventId(null);
+                                setPendingCollabEventName(null);
+                              }}
+                              data-testid="button-cancel-event-access"
+                            >
+                              Cancelar
                             </Button>
                           </div>
                         ) : (
@@ -568,9 +630,44 @@ export default function Landing() {
                                   {...field}
                                   type="email"
                                   placeholder="seu@email.com"
+                                  disabled={!!pendingInviteEmail}
                                   data-testid="input-register-email"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    // Clear collabEventId if email changes (defense-in-depth)
+                                    if (pendingCollabEventId && registerForm.getValues("collabEventId")) {
+                                      registerForm.setValue("collabEventId", "");
+                                    }
+                                  }}
+                                  onBlur={async (e) => {
+                                    field.onBlur();
+                                    // Check if email is a participant of the pending collab event
+                                    if (pendingCollabEventId && e.target.value && !pendingInviteToken) {
+                                      try {
+                                        const response = await fetch(
+                                          `/api/collab-events/${pendingCollabEventId}/check-participant?email=${encodeURIComponent(e.target.value)}`
+                                        );
+                                        const data = await response.json();
+                                        if (data.isParticipant) {
+                                          // Set the collabEventId for VIP bypass (server validates email + eventId)
+                                          registerForm.setValue("collabEventId", pendingCollabEventId);
+                                          toast({
+                                            title: "Convite encontrado!",
+                                            description: "Seu e-mail foi encontrado na lista de convidados.",
+                                          });
+                                        }
+                                      } catch (error) {
+                                        // Silently fail - user can still register with VIP pass
+                                      }
+                                    }
+                                  }}
                                 />
                               </FormControl>
+                              {pendingInviteEmail && (
+                                <p className="text-xs text-muted-foreground">
+                                  Utilizando o e-mail do convite
+                                </p>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}

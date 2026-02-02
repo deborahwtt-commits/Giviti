@@ -251,7 +251,7 @@ export default function RoleDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<string | null>(null);
   const [confirmDrawOpen, setConfirmDrawOpen] = useState(false);
@@ -281,6 +281,28 @@ export default function RoleDetail() {
   const [editedTripMapsLink, setEditedTripMapsLink] = useState<string>("");
   const [editedTripPaymentInfo, setEditedTripPaymentInfo] = useState<string>("");
   const [editedTripStatus, setEditedTripStatus] = useState<TripStatus>("planning");
+
+  // Redirect non-authenticated users to login, saving event info for VIP bypass
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user && id) {
+      // Fetch public event info to save for login page
+      fetch(`/api/collab-events/${id}/public`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            localStorage.setItem("pendingCollabEventId", id);
+            localStorage.setItem("pendingCollabEventName", data.name || "");
+          }
+          setLocation("/entrar");
+        })
+        .catch(() => {
+          // Event not found or error, just redirect to login
+          setLocation("/entrar");
+        });
+    }
+  }, [authLoading, user, id, setLocation]);
 
   const { data: event, isLoading: eventLoading, error: eventError } = useQuery<CollaborativeEvent>({
     queryKey: ["/api/collab-events", id],

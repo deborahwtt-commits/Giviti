@@ -29,6 +29,7 @@ import BirthdayManage from "@/pages/BirthdayManage";
 import PublicBirthday from "@/pages/PublicBirthday";
 import ReceivedInvitations from "@/pages/ReceivedInvitations";
 import AcceptInvitation from "@/pages/AcceptInvitation";
+import CreateAccountRedirect from "@/pages/CreateAccountRedirect";
 import FAQ from "@/pages/FAQ";
 
 function AuthenticatedApp() {
@@ -75,6 +76,15 @@ function AuthenticatedApp() {
     return (
       <Switch>
         <Route path="/convite/:token" component={AcceptInvitation} />
+      </Switch>
+    );
+  }
+
+  // Allow create account redirect page (for birthday invite links)
+  if (location.startsWith("/criar-conta")) {
+    return (
+      <Switch>
+        <Route path="/criar-conta" component={CreateAccountRedirect} />
       </Switch>
     );
   }

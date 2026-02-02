@@ -1610,6 +1610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eventDate: event.eventDate ? event.eventDate.toString() : null,
           eventLocation: event.eventLocation,
           wishlistLink,
+          inviteToken: guest.inviteToken,
         });
         
         // Update email status to sent
@@ -1937,10 +1938,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get wishlist items
       const wishlistItems = await storage.getBirthdayWishlistItems(event.id);
       
+      // Check if current user is the owner
+      const currentUserId = req.user?.id;
+      const isOwner = currentUserId && currentUserId === event.userId;
+      
+      // Get guests only for the owner
+      let guests = null;
+      if (isOwner) {
+        const guestList = await storage.getBirthdayGuests(event.id);
+        guests = guestList.map(guest => ({
+          id: guest.id,
+          name: guest.name,
+          email: guest.email,
+          rsvpStatus: guest.rsvpStatus,
+        }));
+      }
+      
       // Return public data (no sensitive info)
       res.json({
         event: {
           id: event.id,
+          userId: event.userId,
           eventName: event.eventName,
           eventDate: event.eventDate,
           eventLocation: event.eventLocation,
@@ -1968,7 +1986,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           purchaseUrl: item.purchaseUrl,
           price: item.price,
           priority: item.priority,
+          isReserved: item.isReserved,
+          isReceived: item.isReceived,
         })),
+        guests,
       });
     } catch (error) {
       console.error("Error fetching public birthday:", error);
@@ -2015,6 +2036,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating public RSVP:", error);
       res.status(500).json({ message: "Erro ao atualizar presença" });
+    }
+  });
+
+  // POST /api/birthday/:token/wishlist/:itemId/reserve - Public endpoint to reserve a wishlist item
+  app.post("/api/birthday/:token/wishlist/:itemId/reserve", async (req: any, res) => {
+    try {
+      const { token, itemId } = req.params;
+      
+      // Find event by token
+      const event = await storage.getEventByShareToken(token);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Reserve the item
+      const updated = await storage.reserveBirthdayWishlistItem(itemId, event.id);
+      if (!updated) {
+        return res.status(404).json({ message: "Item não encontrado" });
+      }
+      
+      res.json({ 
+        message: "Item reservado com sucesso!",
+        item: updated
+      });
+    } catch (error) {
+      console.error("Error reserving wishlist item:", error);
+      res.status(500).json({ message: "Erro ao reservar item" });
     }
   });
 

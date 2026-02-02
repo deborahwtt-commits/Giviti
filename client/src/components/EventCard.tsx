@@ -39,7 +39,7 @@ export default function EventCard({
   const isPastEvent = daysUntil < 0;
   const needsAttention = !isPastEvent && daysUntil <= 7 && !hasGiftPurchased;
   const eventColors = getEventColors('regular');
-  const isBirthdayEvent = event.eventType === "Meu Aniversário";
+  const isBirthdayEvent = event.eventType?.toLowerCase().includes("meu anivers");
 
   const eventDisplayName = event.eventName 
     ? `${event.eventType} ${event.eventName}` 
@@ -75,13 +75,15 @@ export default function EventCard({
 
   return (
     <Card 
-      className={`p-6 hover-elevate ${onClick ? 'cursor-pointer' : ''} ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''}`}
+      className={`p-6 hover-elevate ${onClick ? 'cursor-pointer' : ''} ${needsAttention ? 'border-amber-400 dark:border-amber-600 border-2' : ''} ${isBirthdayEvent ? 'bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 dark:from-pink-950/30 dark:via-purple-950/30 dark:to-pink-950/30 border-pink-200 dark:border-pink-800' : ''}`}
       onClick={onClick ? handleCardClick : undefined}
       data-testid={`card-event-${event.id}`}
     >
       <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${needsAttention ? 'bg-amber-100 dark:bg-amber-950' : eventColors.bg}`}>
-          {needsAttention ? (
+        <div className={`flex-shrink-0 w-12 h-12 rounded-md flex items-center justify-center ${isBirthdayEvent ? 'bg-gradient-to-br from-pink-400 to-purple-500' : needsAttention ? 'bg-amber-100 dark:bg-amber-950' : eventColors.bg}`}>
+          {isBirthdayEvent ? (
+            <Cake className="w-6 h-6 text-white" />
+          ) : needsAttention ? (
             <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
           ) : (
             <Calendar className={`w-6 h-6 ${eventColors.icon}`} />

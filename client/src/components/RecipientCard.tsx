@@ -3,16 +3,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Gift, Pencil, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, Gift, Pencil, Trash2, Link2 } from "lucide-react";
 import RecipientDetailsDialog from "./RecipientDetailsDialog";
-import type { Recipient } from "@shared/schema";
+import type { RecipientWithSyncedData } from "@shared/schema";
 
 interface RecipientCardProps {
-  recipient: Recipient;
+  recipient: RecipientWithSyncedData;
   nextEventDate?: string;
   nextEventName?: string;
   onViewSuggestions: () => void;
-  onEdit: (recipient: Recipient) => void;
+  onEdit: (recipient: RecipientWithSyncedData) => void;
   onDelete: () => void;
 }
 
@@ -46,13 +47,27 @@ export default function RecipientCard({
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <button
-            onClick={() => setShowDetails(true)}
-            className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left w-full"
-            data-testid={`button-view-details-${recipient.id}`}
-          >
-            {recipient.name}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDetails(true)}
+              className="font-semibold text-lg text-foreground truncate hover:text-primary transition-colors text-left"
+              data-testid={`button-view-details-${recipient.id}`}
+            >
+              {recipient.name}
+            </button>
+            {recipient.isLinked && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10" data-testid={`badge-linked-${recipient.id}`}>
+                    <Link2 className="w-3 h-3 text-primary" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Perfil conectado - dados atualizados automaticamente</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
             {recipient.age} anos{recipient.relationship ? ` • ${recipient.relationship}` : ""}
           </p>

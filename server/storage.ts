@@ -32,6 +32,7 @@ import {
   type UpsertUser,
   type Recipient,
   type InsertRecipient,
+  type RecipientWithSyncedData,
   type Event,
   type InsertEvent,
   type EventWithRecipients,
@@ -176,8 +177,8 @@ export interface IStorage {
 
   // Recipient operations
   createRecipient(userId: string, recipient: InsertRecipient): Promise<Recipient>;
-  getRecipients(userId: string): Promise<Recipient[]>;
-  getRecipient(id: string, userId: string): Promise<Recipient | undefined>;
+  getRecipients(userId: string): Promise<RecipientWithSyncedData[]>;
+  getRecipient(id: string, userId: string): Promise<RecipientWithSyncedData | undefined>;
   updateRecipient(id: string, userId: string, recipient: Partial<InsertRecipient>): Promise<Recipient | undefined>;
   deleteRecipient(id: string, userId: string): Promise<boolean>;
 
@@ -261,6 +262,7 @@ export interface IStorage {
   getAllUsers(filters?: { role?: string; isActive?: boolean }): Promise<User[]>;
   updateUser(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'role' | 'isActive' | 'deactivatedBy' | 'deactivatedAt'>>): Promise<User | undefined>;
   updateUserLastLogin(userId: string): Promise<void>;
+  deleteUserPermanently(userId: string): Promise<{ deleted: boolean; deletedData: { recipients: number; events: number; collabEvents: number; participations: number; userGifts: number; profile: boolean } }>;
   
   // Occasions Management
   getOccasions(includeInactive?: boolean): Promise<Occasion[]>;
@@ -302,6 +304,7 @@ export interface IStorage {
   getSystemSetting(key: string): Promise<SystemSetting | undefined>;
   upsertSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
   deleteSystemSetting(key: string): Promise<boolean>;
+  getDeletedAccountsCount(): Promise<number>;
   
   // Audit Logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -402,9 +405,11 @@ export interface IStorage {
   getBirthdayGuests(eventId: string): Promise<BirthdayGuest[]>;
   getBirthdayGuest(id: string): Promise<BirthdayGuest | undefined>;
   getBirthdayGuestByEmail(eventId: string, email: string): Promise<BirthdayGuest | undefined>;
+  getBirthdayGuestByInviteToken(token: string): Promise<BirthdayGuest | undefined>;
   createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest>;
   updateBirthdayGuestRsvp(id: string, rsvpStatus: string): Promise<BirthdayGuest | undefined>;
   updateBirthdayGuestEmailStatus(id: string, emailStatus: string): Promise<BirthdayGuest | undefined>;
+  markBirthdayGuestAsRegistered(id: string): Promise<BirthdayGuest | undefined>;
   deleteBirthdayGuest(id: string): Promise<boolean>;
   
   // Birthday Wishlist Operations
@@ -417,6 +422,7 @@ export interface IStorage {
   countBirthdayWishlistItems(eventId: string): Promise<number>;
   incrementWishlistItemClick(id: string): Promise<BirthdayWishlistItem | undefined>;
   getMostClickedWishlistItems(limit?: number): Promise<Array<BirthdayWishlistItem & { eventTitle: string; ownerName: string }>>;
+  reserveBirthdayWishlistItem(id: string, eventId: string): Promise<BirthdayWishlistItem | undefined>;
   
   // Free Gift Options
   getFreeGiftOptions(): Promise<FreeGiftOption[]>;
@@ -553,20 +559,69 @@ export class DatabaseStorage implements IStorage {
     return newRecipient;
   }
 
-  async getRecipients(userId: string): Promise<Recipient[]> {
-    return await db
-      .select()
+  async getRecipients(userId: string): Promise<RecipientWithSyncedData[]> {
+    const results = await db
+      .select({
+        recipient: recipients,
+        linkedUser: users,
+        linkedProfile: userProfiles,
+      })
       .from(recipients)
+      .leftJoin(users, eq(recipients.linkedUserId, users.id))
+      .leftJoin(userProfiles, eq(recipients.linkedUserId, userProfiles.userId))
       .where(eq(recipients.userId, userId))
-      .orderBy(recipients.createdAt);
+      .orderBy(desc(recipients.createdAt));
+
+    return results.map(({ recipient, linkedUser, linkedProfile }) => ({
+      ...recipient,
+      isLinked: !!recipient.linkedUserId,
+      syncedData: linkedProfile ? {
+        syncedName: linkedUser?.firstName && linkedUser?.lastName 
+          ? `${linkedUser.firstName} ${linkedUser.lastName}` 
+          : linkedUser?.firstName || null,
+        syncedGender: linkedProfile.gender,
+        syncedBirthDate: linkedProfile.birthDate,
+        syncedZodiacSign: linkedProfile.birthDate ? getZodiacSignFromDate(linkedProfile.birthDate) : null,
+        syncedInterests: linkedProfile.interests,
+        syncedGiftPreference: linkedProfile.giftPreference,
+        syncedGiftsToAvoid: linkedProfile.giftsToAvoid,
+        syncedProfileUpdatedAt: linkedProfile.updatedAt,
+      } : undefined,
+    }));
   }
 
-  async getRecipient(id: string, userId: string): Promise<Recipient | undefined> {
-    const [recipient] = await db
-      .select()
+  async getRecipient(id: string, userId: string): Promise<RecipientWithSyncedData | undefined> {
+    const results = await db
+      .select({
+        recipient: recipients,
+        linkedUser: users,
+        linkedProfile: userProfiles,
+      })
       .from(recipients)
+      .leftJoin(users, eq(recipients.linkedUserId, users.id))
+      .leftJoin(userProfiles, eq(recipients.linkedUserId, userProfiles.userId))
       .where(and(eq(recipients.id, id), eq(recipients.userId, userId)));
-    return recipient;
+
+    const result = results[0];
+    if (!result) return undefined;
+
+    const { recipient, linkedUser, linkedProfile } = result;
+    return {
+      ...recipient,
+      isLinked: !!recipient.linkedUserId,
+      syncedData: linkedProfile ? {
+        syncedName: linkedUser?.firstName && linkedUser?.lastName 
+          ? `${linkedUser.firstName} ${linkedUser.lastName}` 
+          : linkedUser?.firstName || null,
+        syncedGender: linkedProfile.gender,
+        syncedBirthDate: linkedProfile.birthDate,
+        syncedZodiacSign: linkedProfile.birthDate ? getZodiacSignFromDate(linkedProfile.birthDate) : null,
+        syncedInterests: linkedProfile.interests,
+        syncedGiftPreference: linkedProfile.giftPreference,
+        syncedGiftsToAvoid: linkedProfile.giftsToAvoid,
+        syncedProfileUpdatedAt: linkedProfile.updatedAt,
+      } : undefined,
+    };
   }
 
   async updateRecipient(
@@ -1571,6 +1626,94 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
   
+  async deleteUserPermanently(userId: string): Promise<{ deleted: boolean; deletedData: { recipients: number; events: number; collabEvents: number; participations: number; userGifts: number; profile: boolean } }> {
+    const deletedData = {
+      recipients: 0,
+      events: 0,
+      collabEvents: 0,
+      participations: 0,
+      userGifts: 0,
+      profile: false
+    };
+    
+    // Try to delete sessions BEFORE the transaction (not critical, can fail safely)
+    // Sessions table is managed by connect-pg-simple and may not exist
+    try {
+      await db.execute(sql`DELETE FROM session WHERE sess::jsonb->>'userId' = ${userId}`);
+    } catch (e: any) {
+      // Ignore error if session table doesn't exist (code 42P01)
+      if (e.code === '42P01') {
+        console.log(`Note: Session table does not exist, skipping session cleanup for user ${userId}`);
+      } else {
+        console.log(`Warning: Could not clean up sessions for user ${userId}:`, e.message);
+      }
+    }
+    
+    // Use a transaction to ensure all-or-nothing deletion of user data
+    await db.transaction(async (tx) => {
+      // 1. First, nullify linkedUserId references in OTHER users' recipients (before any deletes)
+      await tx.update(recipients).set({ linkedUserId: null }).where(eq(recipients.linkedUserId, userId));
+      
+      // 2. Delete user profile
+      const deletedProfiles = await tx.delete(userProfiles).where(eq(userProfiles.userId, userId)).returning();
+      deletedData.profile = deletedProfiles.length > 0;
+      
+      // 3. Delete user gifts
+      const deletedGifts = await tx.delete(userGifts).where(eq(userGifts.userId, userId)).returning();
+      deletedData.userGifts = deletedGifts.length;
+      
+      // 4. Get all recipient IDs for this user to delete related profiles
+      const userRecipients = await tx.select({ id: recipients.id }).from(recipients).where(eq(recipients.userId, userId));
+      const recipientIds = userRecipients.map(r => r.id);
+      
+      // 5. Delete recipient profiles (before recipients to avoid FK issues)
+      if (recipientIds.length > 0) {
+        await tx.delete(recipientProfiles).where(sql`${recipientProfiles.recipientId} IN (${sql.join(recipientIds.map(id => sql`${id}`), sql`, `)})`);
+      }
+      
+      // 6. Delete recipients (cascade will delete related data like event_recipients)
+      const deletedRecipients = await tx.delete(recipients).where(eq(recipients.userId, userId)).returning();
+      deletedData.recipients = deletedRecipients.length;
+      
+      // 7. Delete events owned by user (cascade will delete event_recipients)
+      const deletedEvents = await tx.delete(events).where(eq(events.userId, userId)).returning();
+      deletedData.events = deletedEvents.length;
+      
+      // 8. Delete collaborative event participations (but not events they don't own)
+      // This needs to happen before deleting the collaborative events the user owns
+      const deletedParticipations = await tx.delete(collaborativeEventParticipants).where(eq(collaborativeEventParticipants.userId, userId)).returning();
+      deletedData.participations = deletedParticipations.length;
+      
+      // 9. Delete collaborative events owned by user (cascade will delete participants, pairs, links, etc.)
+      const deletedCollabEvents = await tx.delete(collaborativeEvents).where(eq(collaborativeEvents.ownerId, userId)).returning();
+      deletedData.collabEvents = deletedCollabEvents.length;
+      
+      // 10. Delete password reset tokens (also has cascade but explicit for clarity)
+      await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+      
+      // 11. Finally, delete the user (this will cascade audit_logs, userDailySearches via FK constraints)
+      await tx.delete(users).where(eq(users.id, userId));
+    });
+    
+    // If we got here without error, the user was deleted
+    // Increment deleted accounts counter in system settings
+    try {
+      const currentSetting = await this.getSystemSetting("deleted_accounts_count");
+      const currentCount = currentSetting ? parseInt(currentSetting.value, 10) : 0;
+      await this.upsertSystemSetting({
+        key: "deleted_accounts_count",
+        value: String(currentCount + 1),
+        dataType: "number",
+        description: "Total de contas permanentemente excluídas",
+        isPublic: false,
+      });
+    } catch (e) {
+      console.log("Warning: Could not update deleted accounts counter:", e);
+    }
+    
+    return { deleted: true, deletedData };
+  }
+  
   // Occasions Management
   async getOccasions(includeInactive = false): Promise<Occasion[]> {
     let query = db.select().from(occasions);
@@ -1790,6 +1933,11 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
   
+  async getDeletedAccountsCount(): Promise<number> {
+    const setting = await this.getSystemSetting("deleted_accounts_count");
+    return setting ? parseInt(setting.value, 10) : 0;
+  }
+  
   // Audit Logs
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
     const [newLog] = await db.insert(auditLogs).values(log).returning();
@@ -1963,7 +2111,7 @@ export class DatabaseStorage implements IStorage {
       inactiveStats: {
         total: inactiveUsers[0]?.count || 0,
         byAdmin: inactiveByAdmin[0]?.count || 0,
-        bySelf: inactiveBySelf[0]?.count || 0,
+        bySelf: await this.getDeletedAccountsCount(),
       },
       registrationSourceStats: {
         vipPass: vipPassCount,
@@ -2919,12 +3067,22 @@ export class DatabaseStorage implements IStorage {
     return guest;
   }
 
+  async getBirthdayGuestByInviteToken(token: string): Promise<BirthdayGuest | undefined> {
+    const [guest] = await db
+      .select()
+      .from(birthdayGuests)
+      .where(eq(birthdayGuests.inviteToken, token));
+    return guest;
+  }
+
   async createBirthdayGuest(guest: InsertBirthdayGuest): Promise<BirthdayGuest> {
+    const inviteToken = `bday_${crypto.randomUUID().replace(/-/g, '')}`;
     const [newGuest] = await db
       .insert(birthdayGuests)
       .values({
         ...guest,
         email: guest.email ? normalizeEmail(guest.email) : guest.email,
+        inviteToken,
       })
       .returning();
     return newGuest;
@@ -2943,6 +3101,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(birthdayGuests)
       .set({ emailStatus })
+      .where(eq(birthdayGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markBirthdayGuestAsRegistered(id: string): Promise<BirthdayGuest | undefined> {
+    const [updated] = await db
+      .update(birthdayGuests)
+      .set({ rsvpStatus: "registered", inviteToken: null })
       .where(eq(birthdayGuests.id, id))
       .returning();
     return updated;
@@ -3037,6 +3204,7 @@ export class DatabaseStorage implements IStorage {
         price: birthdayWishlistItems.price,
         category: birthdayWishlistItems.category,
         priority: birthdayWishlistItems.priority,
+        isReserved: birthdayWishlistItems.isReserved,
         isReceived: birthdayWishlistItems.isReceived,
         receivedFrom: birthdayWishlistItems.receivedFrom,
         displayOrder: birthdayWishlistItems.displayOrder,
@@ -3054,6 +3222,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`${birthdayWishlistItems.clickCount} DESC`)
       .limit(limit);
     return result;
+  }
+
+  async reserveBirthdayWishlistItem(id: string, eventId: string): Promise<BirthdayWishlistItem | undefined> {
+    const [updated] = await db
+      .update(birthdayWishlistItems)
+      .set({ isReserved: true, updatedAt: new Date() })
+      .where(and(
+        eq(birthdayWishlistItems.id, id),
+        eq(birthdayWishlistItems.eventId, eventId)
+      ))
+      .returning();
+    return updated;
   }
 
   async getFreeGiftOptions(): Promise<FreeGiftOption[]> {

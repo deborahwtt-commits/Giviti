@@ -57,17 +57,20 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const registerUserSchema = insertUserSchema
   .extend({
+    email: z.string().min(1, "E-mail é obrigatório").email("E-mail inválido"),
+    firstName: z.string().min(1, "Nome é obrigatório"),
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
     confirmPassword: z.string(),
     ticketCode: z.string().optional(),
     inviteToken: z.string().optional(),
+    collabEventId: z.string().optional(), // For VIP bypass when accessing event directly
   })
   .omit({ passwordHash: true })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
   })
-  .refine((data) => data.ticketCode || data.inviteToken, {
+  .refine((data) => data.ticketCode || data.inviteToken || data.collabEventId, {
     message: "Passe VIP ou convite de evento é obrigatório",
     path: ["ticketCode"],
   });
@@ -123,6 +126,23 @@ export const insertRecipientSchema = createInsertSchema(recipients).omit({
 
 export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
 export type Recipient = typeof recipients.$inferSelect;
+
+// Type for recipient with synced data from linked user profile
+export type SyncedProfileData = {
+  syncedName?: string | null;
+  syncedGender?: string | null;
+  syncedBirthDate?: Date | null;
+  syncedZodiacSign?: string | null;
+  syncedInterests?: string[] | null;
+  syncedGiftPreference?: string | null;
+  syncedGiftsToAvoid?: string | null;
+  syncedProfileUpdatedAt?: Date | null;
+};
+
+export type RecipientWithSyncedData = Recipient & {
+  isLinked: boolean;
+  syncedData?: SyncedProfileData;
+};
 
 // Events table
 export const events = pgTable("events", {
@@ -918,6 +938,7 @@ export const birthdayGuests = pgTable("birthday_guests", {
   email: varchar("email").notNull(),
   rsvpStatus: varchar("rsvp_status").default("pending"), // pending, yes, no, maybe
   emailStatus: varchar("email_status").default("not_sent"), // not_sent, pending, sent, failed
+  inviteToken: varchar("invite_token").unique(), // Token for registration without VIP pass
   invitedAt: timestamp("invited_at").defaultNow(),
   respondedAt: timestamp("responded_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -925,6 +946,7 @@ export const birthdayGuests = pgTable("birthday_guests", {
 
 export const insertBirthdayGuestSchema = createInsertSchema(birthdayGuests).omit({
   id: true,
+  inviteToken: true,
   invitedAt: true,
   respondedAt: true,
   createdAt: true,
@@ -946,6 +968,7 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
   price: varchar("price"),
   category: varchar("category").default("paid"), // "paid" or "free"
   priority: integer("priority").default(0), // 0 = normal, 1 = high priority
+  isReserved: boolean("is_reserved").default(false).notNull(), // Reserved by a guest (not yet purchased)
   isReceived: boolean("is_received").default(false).notNull(),
   receivedFrom: varchar("received_from"),
   displayOrder: integer("display_order").default(0),
@@ -957,6 +980,7 @@ export const birthdayWishlistItems = pgTable("birthday_wishlist_items", {
 
 export const insertBirthdayWishlistItemSchema = createInsertSchema(birthdayWishlistItems).omit({
   id: true,
+  isReserved: true,
   isReceived: true,
   receivedFrom: true,
   displayOrder: true,
