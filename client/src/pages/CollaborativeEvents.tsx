@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban, Plane } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban, Plane, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -224,7 +224,23 @@ export default function CollaborativeEvents() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
                       <span data-testid="text-event-date">
-                        {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy 'às' HH:mm")}
+                        {event.eventType === 'group_trip' && event.typeSpecificData && (event.typeSpecificData as { dataFim?: string }).dataFim ? (
+                          <>
+                            {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy")}
+                            {" - "}
+                            {format(parseISO((event.typeSpecificData as { dataFim: string }).dataFim), "dd/MM/yyyy")}
+                          </>
+                        ) : (
+                          format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy 'às' HH:mm")
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {event.confirmationDeadline && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span data-testid="text-confirmation-deadline">
+                        Confirmar até {format(typeof event.confirmationDeadline === 'string' ? parseISO(event.confirmationDeadline) : event.confirmationDeadline, "dd/MM/yyyy")}
                       </span>
                     </div>
                   )}
