@@ -109,6 +109,7 @@ function AuthenticatedApp() {
         <Route path="/perfil" component={Profile} />
         <Route path="/role" component={CollaborativeEvents} />
         <Route path="/role/:id" component={RoleDetail} />
+        <Route path="/roles/:id" component={RoleDetail} />
         <Route path="/eventos/:id/aniversario" component={BirthdayManage} />
         <Route path="/convites" component={ReceivedInvitations} />
         <Route path="/faq" component={FAQ} />

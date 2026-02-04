@@ -321,7 +321,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
   });
 
   const { data: participants, isLoading: participantsLoading, error: participantsError } = useQuery<ParticipantWithProfile[]>({
@@ -341,7 +341,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event,
+    enabled: !!id && !!user && !!event,
   });
 
   // Fetch themed night category if applicable

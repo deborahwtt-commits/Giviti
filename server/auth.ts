@@ -124,7 +124,10 @@ export async function setupAuth(app: Express): Promise<void> {
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
-        return res.status(400).json({ message: "E-mail já está em uso" });
+        return res.status(400).json({ 
+          message: "Este e-mail já possui uma conta cadastrada. Faça login para continuar ou use a opção 'Esqueci minha senha' se não lembrar sua senha.",
+          code: "EMAIL_ALREADY_EXISTS"
+        });
       }
 
       // Hash password
