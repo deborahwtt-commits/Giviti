@@ -185,6 +185,9 @@ export default function Landing() {
       return await apiRequest(`/api/login?${params.toString()}`, "POST", data) as any;
     },
     onSuccess: async (data: any) => {
+      // Save pending event info before clearing (needed for redirect check)
+      const savedCollabEventId = localStorage.getItem("pendingCollabEventId");
+      
       // Clear pending invite token, event name, and email if any (user logged in instead of registering)
       localStorage.removeItem("pendingInviteToken");
       localStorage.removeItem("pendingInviteEventName");
@@ -207,6 +210,25 @@ export default function Landing() {
         title: "Login realizado com sucesso!",
         description: `Bem-vindo${data.firstName ? `, ${data.firstName}` : ''}!`,
       });
+      
+      // Check if there was a pending collab event and verify participation
+      if (savedCollabEventId) {
+        try {
+          // Try to access the event - backend will verify if user is participant
+          const response = await fetch(`/api/collab-events/${savedCollabEventId}`, {
+            credentials: "include",
+          });
+          if (response.ok) {
+            // User has access to the event - redirect to it
+            setLocation(`/roles/${savedCollabEventId}`);
+            return;
+          }
+          // User doesn't have access (not a participant) - redirect to dashboard
+        } catch {
+          // Error checking access - redirect to dashboard
+        }
+      }
+      
       setLocation("/dashboard");
     },
     onError: (error: any) => {
