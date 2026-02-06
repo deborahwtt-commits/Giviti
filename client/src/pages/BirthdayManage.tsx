@@ -125,6 +125,7 @@ export default function BirthdayManage() {
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const [newItem, setNewItem] = useState({
     title: "",
@@ -232,6 +233,13 @@ export default function BirthdayManage() {
     },
   });
 
+  const buildShareMessage = (url: string) => {
+    const name = event?.eventName || "Meu";
+    const dateStr = event?.eventDate ? formatEventDate(event.eventDate) : null;
+    const datePart = dateStr ? ` no dia ${dateStr}` : "";
+    return `Oi! O anivers\u00e1rio de ${name} est\u00e1 chegando${datePart} e criei uma lista de desejos no Giviti. D\u00e1 uma olhada e veja se algo te inspira: ${url}`;
+  };
+
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest(`/api/events/${id}/share-link`, "POST");
@@ -240,11 +248,13 @@ export default function BirthdayManage() {
     onSuccess: (data) => {
       const fullUrl = `${window.location.origin}${data.shareUrl}`;
       setShareUrl(fullUrl);
-      navigator.clipboard.writeText(fullUrl);
-      toast({ title: "Link copiado!", description: "O link foi copiado para a área de transferência." });
+      const message = buildShareMessage(fullUrl);
+      setShareMessage(message);
+      navigator.clipboard.writeText(message);
+      toast({ title: "Mensagem copiada!", description: "A mensagem com o link foi copiada para a \u00e1rea de transfer\u00eancia." });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Não foi possível gerar o link.", variant: "destructive" });
+      toast({ title: "Erro", description: "N\u00e3o foi poss\u00edvel gerar o link.", variant: "destructive" });
     },
   });
 
@@ -391,7 +401,7 @@ export default function BirthdayManage() {
                 variant="outline"
                 size="sm"
                 onClick={() => generateShareLinkMutation.mutate()}
-                disabled={generateShareLinkMutation.isPending}
+                disabled={generateShareLinkMutation.isPending || !event}
                 data-testid="button-share-birthday"
               >
                 {generateShareLinkMutation.isPending ? (
@@ -402,19 +412,35 @@ export default function BirthdayManage() {
                 Compartilhar
               </Button>
             </div>
-            {shareUrl && (
-              <div className="mt-4 p-3 bg-muted rounded-md flex items-center gap-2">
-                <span className="text-sm flex-1 truncate">{shareUrl}</span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl);
-                    toast({ title: "Link copiado!" });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+            {shareMessage && shareUrl && (
+              <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-share-message">{shareMessage}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareMessage);
+                      toast({ title: "Mensagem copiada!" });
+                    }}
+                    data-testid="button-copy-share-message"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar mensagem
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareUrl);
+                      toast({ title: "Link copiado!" });
+                    }}
+                    data-testid="button-copy-share-link"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar somente o link
+                  </Button>
+                </div>
               </div>
             )}
           </CardHeader>
