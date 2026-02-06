@@ -73,9 +73,9 @@ export default function Events() {
       }
       return await apiRequest("/api/events", "POST", data);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: variables.id ? "Evento atualizado com sucesso." : "Evento criado com sucesso.",
@@ -107,9 +107,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}`, "DELETE");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento deletado com sucesso.",
@@ -139,9 +139,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}/archive`, "PATCH");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento arquivado com sucesso.",
@@ -171,9 +171,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}/advance-year`, "PATCH");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento atualizado para o próximo ano.",
