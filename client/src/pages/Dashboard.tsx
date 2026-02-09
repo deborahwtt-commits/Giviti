@@ -88,16 +88,23 @@ export default function Dashboard() {
     }
   }, [statsError, recipientsError, eventsError, rolesError, toast]);
 
+  const parseDateSafe = (d: string | Date): Date => {
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return new Date(`${d}T12:00:00`);
+    }
+    return typeof d === "string" ? new Date(d) : d;
+  };
+
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 999;
     const today = new Date();
-    const event = typeof eventDate === "string" ? new Date(eventDate) : eventDate;
+    const event = parseDateSafe(eventDate);
     return differenceInDays(event, today);
   };
 
   const formatEventDate = (dateString: string | Date | null) => {
     if (!dateString) return "Sem data definida";
-    const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+    const date = parseDateSafe(dateString);
     return format(date, "d 'de' MMM, yyyy");
   };
 
@@ -122,7 +129,7 @@ export default function Dashboard() {
             id: event.id,
             type: 'event',
             name: event.eventName ? `${event.eventType} - ${event.eventName}` : event.eventType,
-            date: event.eventDate ? new Date(event.eventDate) : null,
+            date: event.eventDate ? parseDateSafe(event.eventDate) : null,
             daysUntil,
             data: event,
           });
@@ -140,7 +147,7 @@ export default function Dashboard() {
               id: role.id,
               type: 'role',
               name: role.name,
-              date: role.eventDate ? new Date(role.eventDate) : null,
+              date: role.eventDate ? parseDateSafe(role.eventDate) : null,
               daysUntil,
               eventType: role.eventType,
               data: role as CollaborativeEvent,
@@ -182,7 +189,7 @@ export default function Dashboard() {
             id: event.id,
             type: 'event',
             name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
-            date: event.eventDate ? new Date(event.eventDate) : null,
+            date: event.eventDate ? parseDateSafe(event.eventDate) : null,
             data: event,
           });
         });
@@ -194,7 +201,7 @@ export default function Dashboard() {
         .filter(role => !displayedItemIds.has(role.id))
         .filter(role => {
           if (!role.eventDate) return true;
-          const eventDate = new Date(role.eventDate);
+          const eventDate = parseDateSafe(role.eventDate);
           return eventDate >= new Date();
         })
         .forEach(role => {
@@ -202,7 +209,7 @@ export default function Dashboard() {
             id: role.id,
             type: 'role',
             name: role.name,
-            date: role.eventDate ? new Date(role.eventDate) : null,
+            date: role.eventDate ? parseDateSafe(role.eventDate) : null,
             eventType: role.eventType,
             data: role as CollaborativeEvent,
           });
@@ -233,7 +240,7 @@ export default function Dashboard() {
 
   const formatRoleDate = (date: Date | string | null) => {
     if (!date) return "Sem data definida";
-    const dateObj = typeof date === "string" ? new Date(date) : date;
+    const dateObj = parseDateSafe(date);
     return format(dateObj, "d 'de' MMM, yyyy", { locale: ptBR });
   };
 
@@ -244,13 +251,13 @@ export default function Dashboard() {
       .filter(role => role.status === "active" || role.status === "draft")
       .filter(role => {
         if (!role.eventDate) return true;
-        const eventDate = new Date(role.eventDate);
+        const eventDate = parseDateSafe(role.eventDate);
         return eventDate >= now;
       })
       .sort((a, b) => {
         if (!a.eventDate) return 1;
         if (!b.eventDate) return -1;
-        return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+        return parseDateSafe(a.eventDate).getTime() - parseDateSafe(b.eventDate).getTime();
       });
   };
 

@@ -133,6 +133,13 @@ export default function Recipients() {
     },
   });
 
+  const parseDateSafe = (d: string | Date): Date => {
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return new Date(`${d}T12:00:00`);
+    }
+    return typeof d === "string" ? new Date(d) : d;
+  };
+
   const getNextEvent = (recipientId: string) => {
     if (!events) return null;
     const recipientEvents = events.filter(e => e.recipientId === recipientId);
@@ -140,15 +147,16 @@ export default function Recipients() {
 
     const today = new Date();
     const futureEvents = recipientEvents
-      .filter(e => new Date(e.eventDate) >= today)
-      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+      .filter(e => parseDateSafe(e.eventDate) >= today)
+      .sort((a, b) => parseDateSafe(a.eventDate).getTime() - parseDateSafe(b.eventDate).getTime());
 
     return futureEvents[0] || null;
   };
 
   const formatEventDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      const safeStr = /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? `${dateString}T12:00:00` : dateString;
+      const date = new Date(safeStr);
       return format(date, "d 'de' MMM");
     } catch {
       return "";

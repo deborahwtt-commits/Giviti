@@ -73,7 +73,11 @@ async function getUncachableResendClient() {
 function formatDateBrazil(dateStr: string | Date | null | undefined, includeTime: boolean = true): string | null {
   if (!dateStr) return null;
   try {
-    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    let parsedStr = dateStr;
+    if (typeof parsedStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsedStr)) {
+      parsedStr = `${parsedStr}T12:00:00`;
+    }
+    const date = typeof parsedStr === 'string' ? new Date(parsedStr) : parsedStr;
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
       day: 'numeric',

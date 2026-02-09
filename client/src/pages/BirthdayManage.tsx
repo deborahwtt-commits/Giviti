@@ -271,7 +271,11 @@ export default function BirthdayManage() {
   const formatEventDate = (date: string | Date | null) => {
     if (!date) return "Sem data definida";
     try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
+      let dateInput = date;
+      if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        dateInput = `${dateInput}T12:00:00`;
+      }
+      const dateObj = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
       return format(dateObj, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
     } catch {
       return "Data inválida";
