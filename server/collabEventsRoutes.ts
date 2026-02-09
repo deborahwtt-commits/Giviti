@@ -673,6 +673,17 @@ export function registerCollabEventsRoutes(app: Express) {
         eventId: id,
       });
       
+      // Check for duplicate participant by email
+      if (validatedData.email) {
+        const existingParticipants = await storage.getParticipants(id);
+        const duplicate = existingParticipants.find(
+          p => p.email?.toLowerCase().trim() === validatedData.email!.toLowerCase().trim()
+        );
+        if (duplicate) {
+          return res.status(409).json({ error: "Este email já foi convidado para este evento" });
+        }
+      }
+      
       // Check if a user with this email already exists and link them
       if (validatedData.email) {
         const existingUser = await storage.getUserByEmail(validatedData.email);
@@ -689,153 +700,117 @@ export function registerCollabEventsRoutes(app: Express) {
       
       const participant = await storage.addParticipant(id, validatedData);
       
-      // Send invite email if participant has an email and invite token
-      // Note: secret_santa events skip email invites - participants are added directly without invitation flow
-      let emailSent = false;
-      console.log('[AddParticipant] Checking email conditions:', {
-        email: validatedData.email,
-        hasInviteToken: !!validatedData.inviteToken,
-        status: validatedData.status,
-        eventType: event.eventType
-      });
-      
-      // Skip email invites for secret_santa events (simplified flow - logic preserved for future use)
-      if (validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa') {
-        try {
-          // Build invite link with token - use custom domain in production
-          console.log('[AddParticipant] Building invite link...');
-          console.log('[AddParticipant] REPLIT_DEPLOYMENT:', process.env.REPLIT_DEPLOYMENT);
-          console.log('[AddParticipant] REPLIT_DEV_DOMAIN:', process.env.REPLIT_DEV_DOMAIN);
-          
-          const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
-            ? "https://giviti.com.br"
-            : process.env.REPLIT_DEV_DOMAIN 
-              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-              : "http://localhost:5000";
-          
-          const inviteLink = `${baseUrl}/convite/${validatedData.inviteToken}`;
-          console.log('[AddParticipant] Invite link:', inviteLink);
-          
-          console.log('[AddParticipant] Attempting to send invite email...');
-          
-          // Use specialized email for themed_night events
-          if (event.eventType === 'themed_night') {
-            // Fetch category details for themed night email
-            let categoryName: string | null = null;
-            let categoryDescription: string | null = null;
-            let categorySuggestions: string[] | null = null;
-            
-            if (event.themedNightCategoryId) {
-              try {
-                const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
-                if (category) {
-                  categoryName = category.name;
-                  categoryDescription = category.description || null;
-                  
-                  // First try to get personalized suggestions from themedNightSuggestions table
-                  const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
-                  if (detailedSuggestions && detailedSuggestions.length > 0) {
-                    // Convert structured suggestions to displayable strings
-                    categorySuggestions = detailedSuggestions.slice(0, 5).map(s => s.title);
-                  } else if (category.suggestions && category.suggestions.length > 0) {
-                    // Fall back to simple category suggestions
-                    categorySuggestions = category.suggestions;
-                  }
-                }
-              } catch (catError) {
-                console.log('[AddParticipant] Could not fetch category details:', catError);
-              }
-            }
-            
-            await sendThemedNightInviteEmail({
-              to: validatedData.email,
-              inviterName,
-              eventName: event.name,
-              categoryName,
-              categoryDescription,
-              eventDate: event.eventDate ? event.eventDate.toString() : null,
-              eventLocation: event.location || null,
-              eventDescription: event.description || null,
-              categorySuggestions,
-              signupLink: inviteLink,
-              confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
-            });
-          } else if (event.eventType === 'collective_gift') {
-            // Use specialized email for collective gift events
-            const giftData = event.typeSpecificData as {
-              targetAmount?: number;
-              giftName?: string;
-              giftDescription?: string;
-              purchaseLink?: string;
-              recipientName?: string;
-            } | null;
-            
-            // Calculate amount per person based on all participants (including new one)
-            // Include all status except 'declined' - owner/accepted/confirmed/pending all contribute
-            let amountPerPerson: number | null = null;
-            if (giftData?.targetAmount) {
-              const existingParticipants = await storage.getParticipants(id);
-              // Count all participants except declined ones - they all contribute
-              const contributingCount = existingParticipants.filter(
-                p => p.status !== 'declined'
-              ).length;
-              // Use contributing count (which now includes the just-added participant)
-              if (contributingCount > 0) {
-                amountPerPerson = Math.ceil(giftData.targetAmount / contributingCount);
-              }
-            }
-            
-            await sendCollectiveGiftInviteEmail({
-              to: validatedData.email,
-              inviterName,
-              eventName: event.name,
-              recipientName: giftData?.recipientName || null,
-              giftName: giftData?.giftName || null,
-              giftDescription: giftData?.giftDescription || null,
-              targetAmount: giftData?.targetAmount || null,
-              amountPerPerson,
-              eventDate: event.eventDate ? event.eventDate.toString() : null,
-              eventDescription: event.description || null,
-              purchaseLink: giftData?.purchaseLink || null,
-              signupLink: inviteLink,
-              confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
-            });
-          } else {
-            await sendCollaborativeEventInviteEmail(
-              validatedData.email,
-              inviterName,
-              event.name,
-              event.eventType,
-              inviteLink,
-              event.confirmationDeadline ? event.confirmationDeadline.toString() : null
-            );
-          }
-          
-          emailSent = true;
-          console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email} for event ${event.name} (type: ${event.eventType})`);
-          
-          // Update email status to sent
-          await storage.updateParticipantEmailStatus(participant.id, 'sent');
-        } catch (emailError) {
-          // Log error but don't fail the request - participant was added successfully
-          console.error("[AddParticipant] FAILED to send invite email:", emailError);
-          
-          // Update email status to failed
-          await storage.updateParticipantEmailStatus(participant.id, 'failed');
-        }
-      } else if (validatedData.email && !validatedData.inviteToken) {
-        console.log(`[AddParticipant] No invite email sent to ${validatedData.email} - participant already accepted`);
-      } else if (!validatedData.email) {
-        console.log(`[AddParticipant] No invite email sent - participant has no email address`);
-      }
-      
-      // Fetch updated participant with emailStatus
-      const updatedParticipant = await storage.getParticipant(participant.id);
-      
       // Recalculate trip cost per person if this is a group trip
       await recalculateTripCostPerPerson(id);
       
-      res.status(201).json({ ...updatedParticipant, emailSent });
+      // Respond immediately — email will be sent in background
+      const updatedParticipant = await storage.getParticipant(participant.id);
+      const shouldSendEmail = !!(validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa');
+      res.status(201).json({ ...updatedParticipant, emailSent: false });
+      
+      // Send invite email in background (fire-and-forget)
+      if (shouldSendEmail) {
+        (async () => {
+          try {
+            const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+              ? "https://giviti.com.br"
+              : process.env.REPLIT_DEV_DOMAIN 
+                ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+                : "http://localhost:5000";
+            
+            const inviteLink = `${baseUrl}/convite/${validatedData.inviteToken}`;
+            
+            if (event.eventType === 'themed_night') {
+              let categoryName: string | null = null;
+              let categoryDescription: string | null = null;
+              let categorySuggestions: string[] | null = null;
+              
+              if (event.themedNightCategoryId) {
+                try {
+                  const category = await storage.getThemedNightCategory(event.themedNightCategoryId);
+                  if (category) {
+                    categoryName = category.name;
+                    categoryDescription = category.description || null;
+                    
+                    const detailedSuggestions = await storage.getThemedNightSuggestions(event.themedNightCategoryId, false);
+                    if (detailedSuggestions && detailedSuggestions.length > 0) {
+                      categorySuggestions = detailedSuggestions.slice(0, 5).map(s => s.title);
+                    } else if (category.suggestions && category.suggestions.length > 0) {
+                      categorySuggestions = category.suggestions;
+                    }
+                  }
+                } catch (catError) {
+                  console.log('[AddParticipant] Could not fetch category details:', catError);
+                }
+              }
+              
+              await sendThemedNightInviteEmail({
+                to: validatedData.email!,
+                inviterName,
+                eventName: event.name,
+                categoryName,
+                categoryDescription,
+                eventDate: event.eventDate ? event.eventDate.toString() : null,
+                eventLocation: event.location || null,
+                eventDescription: event.description || null,
+                categorySuggestions,
+                signupLink: inviteLink,
+                confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
+              });
+            } else if (event.eventType === 'collective_gift') {
+              const giftData = event.typeSpecificData as {
+                targetAmount?: number;
+                giftName?: string;
+                giftDescription?: string;
+                purchaseLink?: string;
+                recipientName?: string;
+              } | null;
+              
+              let amountPerPerson: number | null = null;
+              if (giftData?.targetAmount) {
+                const existingParticipants = await storage.getParticipants(id);
+                const contributingCount = existingParticipants.filter(
+                  p => p.status !== 'declined'
+                ).length;
+                if (contributingCount > 0) {
+                  amountPerPerson = Math.ceil(giftData.targetAmount / contributingCount);
+                }
+              }
+              
+              await sendCollectiveGiftInviteEmail({
+                to: validatedData.email!,
+                inviterName,
+                eventName: event.name,
+                recipientName: giftData?.recipientName || null,
+                giftName: giftData?.giftName || null,
+                giftDescription: giftData?.giftDescription || null,
+                targetAmount: giftData?.targetAmount || null,
+                amountPerPerson,
+                eventDate: event.eventDate ? event.eventDate.toString() : null,
+                eventDescription: event.description || null,
+                purchaseLink: giftData?.purchaseLink || null,
+                signupLink: inviteLink,
+                confirmationDeadline: event.confirmationDeadline ? event.confirmationDeadline.toString() : null
+              });
+            } else {
+              await sendCollaborativeEventInviteEmail(
+                validatedData.email!,
+                inviterName,
+                event.name,
+                event.eventType,
+                inviteLink,
+                event.confirmationDeadline ? event.confirmationDeadline.toString() : null
+              );
+            }
+            
+            console.log(`[AddParticipant] SUCCESS: Invite email sent to ${validatedData.email}`);
+            await storage.updateParticipantEmailStatus(participant.id, 'sent');
+          } catch (emailError) {
+            console.error("[AddParticipant] FAILED to send invite email:", emailError);
+            await storage.updateParticipantEmailStatus(participant.id, 'failed');
+          }
+        })();
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid data", details: error.errors });

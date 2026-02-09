@@ -1580,48 +1580,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name and email are required" });
       }
       
+      const existingGuest = await storage.getBirthdayGuestByEmail(eventId, email.toLowerCase());
+      if (existingGuest) {
+        return res.status(409).json({ message: "Este email já foi convidado para este evento" });
+      }
+      
       const guest = await storage.createBirthdayGuest({
         eventId,
         name,
         email: email.toLowerCase(),
       });
       
-      // Send invite email
-      try {
-        const user = await storage.getUser(userId);
-        const ownerName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Um amigo' : 'Um amigo';
-        
-        // Generate or get existing share token
-        const token = await storage.generateBirthdayShareToken(eventId);
-        // Use custom domain in production, dev domain in development
-        const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
-          ? "https://giviti.com.br"
-          : process.env.REPLIT_DEV_DOMAIN 
-            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-            : "http://localhost:5000";
-        const wishlistLink = `${baseUrl}/aniversario/${token}`;
-        
-        const { sendBirthdayInviteEmail } = await import("./emailService");
-        await sendBirthdayInviteEmail({
-          to: email.toLowerCase(),
-          guestName: name,
-          ownerName,
-          eventName: event.eventName || event.eventType,
-          eventDate: event.eventDate ? event.eventDate.toString() : null,
-          eventLocation: event.eventLocation,
-          wishlistLink,
-          inviteToken: guest.inviteToken,
-        });
-        
-        // Update email status to sent
-        await storage.updateBirthdayGuestEmailStatus(guest.id, "sent");
-      } catch (emailError) {
-        console.error("Error sending birthday invite email:", emailError);
-        // Update email status to failed
-        await storage.updateBirthdayGuestEmailStatus(guest.id, "failed");
-      }
-      
       res.status(201).json(guest);
+      
+      // Send invite email in background (fire-and-forget)
+      (async () => {
+        try {
+          const user = await storage.getUser(userId);
+          const ownerName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Um amigo' : 'Um amigo';
+          
+          const token = await storage.generateBirthdayShareToken(eventId);
+          const baseUrl = process.env.REPLIT_DEPLOYMENT === "1"
+            ? "https://giviti.com.br"
+            : process.env.REPLIT_DEV_DOMAIN 
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : "http://localhost:5000";
+          const wishlistLink = `${baseUrl}/aniversario/${token}`;
+          
+          const { sendBirthdayInviteEmail } = await import("./emailService");
+          await sendBirthdayInviteEmail({
+            to: email.toLowerCase(),
+            guestName: name,
+            ownerName,
+            eventName: event.eventName || event.eventType,
+            eventDate: event.eventDate ? event.eventDate.toString() : null,
+            eventLocation: event.eventLocation,
+            wishlistLink,
+            inviteToken: guest.inviteToken,
+          });
+          
+          await storage.updateBirthdayGuestEmailStatus(guest.id, "sent");
+        } catch (emailError) {
+          console.error("Error sending birthday invite email:", emailError);
+          await storage.updateBirthdayGuestEmailStatus(guest.id, "failed");
+        }
+      })();
     } catch (error) {
       console.error("Error creating birthday guest:", error);
       res.status(500).json({ message: "Failed to add guest" });
