@@ -72,9 +72,15 @@ export function AddParticipantDialog({
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      let description = error.message;
+      try {
+        const jsonPart = error.message.substring(error.message.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        description = parsed.error || parsed.message || description;
+      } catch {}
       toast({
         title: "Erro ao adicionar participante",
-        description: error.message,
+        description,
         variant: "destructive",
       });
     },

@@ -216,9 +216,15 @@ export default function BirthdayManage() {
       toast({ title: "Convidado adicionado!", description: "Um convite será enviado por email." });
     },
     onError: (error: any) => {
+      let description = error.message || "Não foi possível adicionar o convidado.";
+      try {
+        const jsonPart = error.message.substring(error.message.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        description = parsed.error || parsed.message || description;
+      } catch {}
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível adicionar o convidado.",
+        description,
         variant: "destructive",
       });
     },
