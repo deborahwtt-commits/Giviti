@@ -32,8 +32,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Pencil, Trash2, Package, Tag, Layers, Ticket, Calendar, AlertTriangle, Users } from "lucide-react";
-import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
+import { format, isAfter, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -914,11 +915,11 @@ interface CouponBadgeProps {
 
 function CouponBadge({ cupom, validadeCupom, compact = false }: CouponBadgeProps) {
   const today = startOfDay(new Date());
-  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  const isExpired = validadeCupom ? isBefore(parseDateSafe(validadeCupom), today) : false;
   
   const formatDate = (dateStr: string) => {
     try {
-      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+      return format(parseDateSafe(dateStr), "dd/MM/yyyy", { locale: ptBR });
     } catch {
       return dateStr;
     }

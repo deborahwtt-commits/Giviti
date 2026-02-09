@@ -17,8 +17,8 @@ import {
   Calendar,
   AlertTriangle
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
-import { format, parseISO, isBefore, startOfDay } from "date-fns";
+import { formatCurrency, parseDateSafe } from "@/lib/utils";
+import { format, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface AutoSuggestion {
@@ -296,11 +296,11 @@ interface CouponBadgeCompactProps {
 
 function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
   const today = startOfDay(new Date());
-  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  const isExpired = validadeCupom ? isBefore(parseDateSafe(validadeCupom), today) : false;
   
   const formatDate = (dateStr: string) => {
     try {
-      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+      return format(parseDateSafe(dateStr), "dd/MM/yyyy", { locale: ptBR });
     } catch {
       return dateStr;
     }

@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyRecipientsImage from "@assets/generated_images/Empty_state_no_recipients_cc3b64a6.png";
 import type { RecipientWithSyncedData, Event } from "@shared/schema";
 import { format } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 
 export default function Recipients() {
   const [showForm, setShowForm] = useState(false);
@@ -133,13 +134,6 @@ export default function Recipients() {
     },
   });
 
-  const parseDateSafe = (d: string | Date): Date => {
-    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      return new Date(`${d}T12:00:00`);
-    }
-    return typeof d === "string" ? new Date(d) : d;
-  };
-
   const getNextEvent = (recipientId: string) => {
     if (!events) return null;
     const recipientEvents = events.filter(e => e.recipientId === recipientId);
@@ -155,9 +149,7 @@ export default function Recipients() {
 
   const formatEventDate = (dateString: string) => {
     try {
-      const safeStr = /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? `${dateString}T12:00:00` : dateString;
-      const date = new Date(safeStr);
-      return format(date, "d 'de' MMM");
+      return format(parseDateSafe(dateString), "d 'de' MMM");
     } catch {
       return "";
     }

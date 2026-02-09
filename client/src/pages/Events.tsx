@@ -29,7 +29,8 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import type { EventWithRecipients, Recipient } from "@shared/schema";
-import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
+import { format, differenceInDays, startOfDay } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -202,15 +203,13 @@ export default function Events() {
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 0;
     const today = startOfDay(new Date());
-    const event = startOfDay(typeof eventDate === 'string' ? parseISO(eventDate) : eventDate);
-    return differenceInDays(event, today);
+    return differenceInDays(startOfDay(parseDateSafe(eventDate)), today);
   };
 
   const formatEventDate = (dateString: string | Date | null) => {
     if (!dateString) return 'Sem data definida';
     try {
-      const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-      return format(date, "d 'de' MMM, yyyy");
+      return format(parseDateSafe(dateString), "d 'de' MMM, yyyy");
     } catch {
       return 'Data inválida';
     }
@@ -237,8 +236,8 @@ export default function Events() {
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA; // Most recent first
         case "eventDate":
-          const eventDateA = a.eventDate ? new Date(a.eventDate).getTime() : Infinity;
-          const eventDateB = b.eventDate ? new Date(b.eventDate).getTime() : Infinity;
+          const eventDateA = a.eventDate ? parseDateSafe(a.eventDate).getTime() : Infinity;
+          const eventDateB = b.eventDate ? parseDateSafe(b.eventDate).getTime() : Infinity;
           return eventDateA - eventDateB; // Closest event first
         case "alphabetical":
           const nameA = a.eventName || a.eventType || "";
@@ -258,13 +257,13 @@ export default function Events() {
 
   const thisMonthEvents = activeEvents.filter((event) => {
     if (!event.eventDate) return false;
-    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
     return eventDate >= today && eventDate <= oneMonthFromNow;
   });
 
   const nextThreeMonthsEvents = activeEvents.filter((event) => {
     if (!event.eventDate) return false;
-    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
     return eventDate >= today && eventDate <= threeMonthsFromNow;
   });
 

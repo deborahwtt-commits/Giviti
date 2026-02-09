@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import {
   ArrowLeft,
   Gift,
@@ -271,12 +272,7 @@ export default function BirthdayManage() {
   const formatEventDate = (date: string | Date | null) => {
     if (!date) return "Sem data definida";
     try {
-      let dateInput = date;
-      if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-        dateInput = `${dateInput}T12:00:00`;
-      }
-      const dateObj = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-      return format(dateObj, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+      return format(parseDateSafe(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
     } catch {
       return "Data inválida";
     }

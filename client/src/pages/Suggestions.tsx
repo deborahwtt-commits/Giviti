@@ -23,7 +23,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal, X, Gift, Heart, ExternalLink, Ticket, AlertTriangle, Loader2, Search, Info, AlertCircle, Sparkles, ShoppingBag, Calendar } from "lucide-react";
-import { parseISO, isBefore, startOfDay, format } from "date-fns";
+import { isBefore, startOfDay, format } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -269,7 +270,7 @@ interface CouponBadgeCompactProps {
 
 function CouponBadgeCompact({ cupom, validadeCupom }: CouponBadgeCompactProps) {
   const today = startOfDay(new Date());
-  const isExpired = validadeCupom ? isBefore(parseISO(validadeCupom), today) : false;
+  const isExpired = validadeCupom ? isBefore(parseDateSafe(validadeCupom), today) : false;
 
   if (isExpired) {
     return (

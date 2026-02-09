@@ -73,8 +73,9 @@ import {
   Hotel,
   Map,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import type { CollaborativeEvent, CollaborativeEventParticipant, CollaborativeEventTask } from "@shared/schema";
 
@@ -1169,9 +1170,8 @@ export default function RoleDetail() {
         const destino = rawDestino.split(' ').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
         ).join(' ');
-        // Use parseISO with neutral time to avoid timezone issues (same pattern as Período display)
         const dataFormatted = event.eventDate 
-          ? format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+          ? format(parseDateSafe(event.eventDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
           : "";
         message = `🌴 Bora viajar? Estou organizando uma viagem para ${destino} em ${dataFormatted}! Entre no link para confirmar sua presença e ver todos os detalhes: ${eventUrl}`;
         break;
@@ -1636,15 +1636,15 @@ export default function RoleDetail() {
                       <div>
                         <p className="text-sm font-medium">Período</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00"), "dd 'de' MMMM", { locale: ptBR })}
+                          {format(parseDateSafe(event.eventDate), "dd 'de' MMMM", { locale: ptBR })}
                           {tripData?.dataFim && (
-                            <> a {format(parseISO(tripData.dataFim.split("T")[0] + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                            <> a {format(parseDateSafe(tripData.dataFim), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
                           )}
                         </p>
                         {/* Duration calculation */}
                         {tripData?.dataFim && (() => {
-                          const startDate = parseISO(event.eventDate.toString().split("T")[0] + "T12:00:00");
-                          const endDate = parseISO(tripData.dataFim.split("T")[0] + "T12:00:00");
+                          const startDate = parseDateSafe(event.eventDate);
+                          const endDate = parseDateSafe(tripData.dataFim);
                           const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
                           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                           return (
@@ -1770,14 +1770,17 @@ export default function RoleDetail() {
                     <div>
                       <p className="text-sm font-medium">Data e Hora</p>
                       <p className="text-sm text-muted-foreground" data-testid="text-event-date">
-                        {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                        {(() => {
+                          const s = String(event.eventDate);
+                          return format(parseDateSafe(s), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+                        })()}
                       </p>
                     </div>
                   </div>
                 )}
                 {event.confirmationDeadline && (() => {
                   const deadline = typeof event.confirmationDeadline === 'string' 
-                    ? parseISO(event.confirmationDeadline) 
+                    ? parseDateSafe(event.confirmationDeadline) 
                     : event.confirmationDeadline;
                   const now = new Date();
                   const isExpired = now > deadline;

@@ -41,7 +41,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, parseDateSafe } from "@/lib/utils";
 import type { CollaborativeEvent } from "@shared/schema";
 
 const createRoleSchema = z.object({
@@ -272,7 +272,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         : data.confirmationDeadline!;
 
       // Adjust dates to noon to avoid timezone issues when converting to ISO
-      const adjustedEventDate = new Date(data.eventDate);
+      const adjustedEventDate = parseDateSafe(data.eventDate);
       adjustedEventDate.setHours(12, 0, 0, 0);
       
       const adjustedDeadline = new Date(effectiveDeadline);

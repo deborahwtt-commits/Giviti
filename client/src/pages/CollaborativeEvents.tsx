@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, MapPin, Users, Gift, PartyPopper, Heart, Sparkles, Check, Ban, Plane, Clock } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 import { CreateRoleDialog } from "@/components/CreateRoleDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -123,8 +124,8 @@ export default function CollaborativeEvents() {
   const sortedEvents = events ? [...events].sort((a, b) => {
     if (!a.createdAt) return 1;
     if (!b.createdAt) return -1;
-    const dateA = typeof a.createdAt === 'string' ? parseISO(a.createdAt) : a.createdAt;
-    const dateB = typeof b.createdAt === 'string' ? parseISO(b.createdAt) : b.createdAt;
+    const dateA = typeof a.createdAt === 'string' ? parseDateSafe(a.createdAt) : a.createdAt;
+    const dateB = typeof b.createdAt === 'string' ? parseDateSafe(b.createdAt) : b.createdAt;
     return dateB.getTime() - dateA.getTime(); // Descending order (most recent first)
   }) : [];
 
@@ -224,15 +225,15 @@ export default function CollaborativeEvents() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
                       <span data-testid="text-event-date">
-                        {event.eventType === 'group_trip' && event.typeSpecificData && (event.typeSpecificData as { dataFim?: string }).dataFim ? (
-                          <>
-                            {format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy")}
-                            {" - "}
-                            {format(parseISO((event.typeSpecificData as { dataFim: string }).dataFim), "dd/MM/yyyy")}
-                          </>
-                        ) : (
-                          format(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate, "dd/MM/yyyy 'às' HH:mm")
-                        )}
+                        {(() => {
+                          const safeDate = parseDateSafe(event.eventDate);
+                          if (event.eventType === 'group_trip' && event.typeSpecificData && (event.typeSpecificData as { dataFim?: string }).dataFim) {
+                            const endStr = (event.typeSpecificData as { dataFim: string }).dataFim;
+                            const safeEnd = parseDateSafe(endStr);
+                            return <>{format(safeDate, "dd/MM/yyyy")} - {format(safeEnd, "dd/MM/yyyy")}</>;
+                          }
+                          return format(safeDate, "dd/MM/yyyy");
+                        })()}
                       </span>
                     </div>
                   )}
@@ -240,7 +241,7 @@ export default function CollaborativeEvents() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span data-testid="text-confirmation-deadline">
-                        Confirmar até {format(typeof event.confirmationDeadline === 'string' ? parseISO(event.confirmationDeadline) : event.confirmationDeadline, "dd/MM/yyyy")}
+                        Confirmar até {format(parseDateSafe(event.confirmationDeadline), "dd/MM/yyyy")}
                       </span>
                     </div>
                   )}

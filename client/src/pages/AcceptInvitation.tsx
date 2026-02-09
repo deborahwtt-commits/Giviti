@@ -7,8 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Gift, PartyPopper, Heart, Sparkles, Calendar, MapPin, Loader2, Check, Clock, AlertTriangle } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
 const eventTypeInfo: Record<string, { label: string; Icon: LucideIcon }> = {
@@ -201,7 +202,7 @@ export default function AcceptInvitation() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <span data-testid="text-event-date">
-                  {format(parseISO(event.eventDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {format(parseDateSafe(event.eventDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </span>
               </div>
             )}
@@ -220,7 +221,7 @@ export default function AcceptInvitation() {
             )}
             
             {event.confirmationDeadline && (() => {
-              const deadline = parseISO(event.confirmationDeadline);
+              const deadline = parseDateSafe(event.confirmationDeadline);
               const now = new Date();
               const isExpired = now > deadline;
               const isUrgent = !isExpired && (deadline.getTime() - now.getTime()) < 3 * 24 * 60 * 60 * 1000;

@@ -19,6 +19,7 @@ import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c
 import type { EventWithRecipients, Recipient, CollaborativeEvent, UserProfile } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -87,13 +88,6 @@ export default function Dashboard() {
       }, 500);
     }
   }, [statsError, recipientsError, eventsError, rolesError, toast]);
-
-  const parseDateSafe = (d: string | Date): Date => {
-    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      return new Date(`${d}T12:00:00`);
-    }
-    return typeof d === "string" ? new Date(d) : d;
-  };
 
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 999;
