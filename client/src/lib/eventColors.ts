@@ -26,6 +26,13 @@ export const EVENT_CANDY_COLORS = {
     icon: "text-amber-500 dark:text-amber-400",
     badge: "bg-amber-500 text-white",
     gradient: "from-amber-500/10 to-amber-500/5 border-amber-500/30"
+  },
+  custom_event: {
+    bg: "bg-teal-100 dark:bg-teal-950",
+    border: "border-teal-300 dark:border-teal-700",
+    icon: "text-teal-500 dark:text-teal-400",
+    badge: "bg-teal-500 text-white",
+    gradient: "from-teal-500/10 to-teal-500/5 border-teal-500/30"
   }
 } as const;
 
@@ -39,6 +46,8 @@ export function getEventColors(eventType?: string | null) {
       return EVENT_CANDY_COLORS.themed_night;
     case 'collective_gift':
       return EVENT_CANDY_COLORS.collective_gift;
+    case 'custom_event':
+      return EVENT_CANDY_COLORS.custom_event;
     default:
       return EVENT_CANDY_COLORS.regular;
   }
@@ -52,6 +61,8 @@ export function getRoleTypeLabel(eventType?: string | null): string {
       return 'Evento Temático';
     case 'collective_gift':
       return 'Presente Coletivo';
+    case 'custom_event':
+      return 'Rolê Personalizado';
     default:
       return 'Rolê';
   }

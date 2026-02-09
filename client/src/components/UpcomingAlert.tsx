@@ -7,6 +7,7 @@ import {
   Clock, 
   AlertTriangle, 
   PartyPopper,
+  Sparkles,
   Users,
   Heart,
   ChevronRight
@@ -90,6 +91,7 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
         case 'secret_santa': return Gift;
         case 'themed_night': return PartyPopper;
         case 'collective_gift': return Heart;
+        case 'custom_event': return Sparkles;
         default: return Users;
       }
     }

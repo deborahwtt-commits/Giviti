@@ -81,6 +81,9 @@ function getTypeIcon(type: 'birthday' | 'collaborative', eventType: string) {
   if (eventType.includes('Presente Coletivo')) {
     return <Gift className="w-5 h-5 text-blue-500" />;
   }
+  if (eventType.includes('Rolê Personalizado')) {
+    return <Sparkles className="w-5 h-5 text-teal-500" />;
+  }
   
   return <Users className="w-5 h-5 text-violet-500" />;
 }

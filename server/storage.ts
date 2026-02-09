@@ -1088,6 +1088,7 @@ export class DatabaseStorage implements IStorage {
         'themed_night': 'Evento Temático',
         'collective_gift': 'Presente Coletivo',
         'creative_challenge': 'Desafio Criativo',
+        'custom_event': 'Rolê Personalizado',
       }[invite.eventType] || 'Rolê';
       
       // Check if draw has been performed for secret_santa events

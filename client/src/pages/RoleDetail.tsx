@@ -105,6 +105,11 @@ const eventTypeInfo: Record<string, { label: string; className: string; Icon: Lu
     className: "bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-700", 
     Icon: Plane 
   },
+  custom_event: { 
+    label: "Rolê Personalizado", 
+    className: "bg-teal-500 text-white border-teal-600 dark:bg-teal-600 dark:border-teal-700", 
+    Icon: Sparkles 
+  },
 };
 
 const statusLabels: Record<string, string> = {
@@ -378,7 +383,7 @@ export default function RoleDetail() {
       }
       return response.json();
     },
-    enabled: !!id && !!event && (event.eventType === "themed_night" || event.eventType === "group_trip"),
+    enabled: !!id && !!event && (event.eventType === "themed_night" || event.eventType === "group_trip" || event.eventType === "custom_event"),
   });
 
   // State for adding new task items
@@ -764,7 +769,7 @@ export default function RoleDetail() {
   // Get definirResponsaveis setting from typeSpecificData
   // For group_trip, checklist is always enabled
   const definirResponsaveis = Boolean(
-    (event?.eventType === "themed_night" || event?.eventType === "group_trip") && 
+    (event?.eventType === "themed_night" || event?.eventType === "group_trip" || event?.eventType === "custom_event") && 
     event?.typeSpecificData && 
     typeof event.typeSpecificData === "object" &&
     "definirResponsaveis" in event.typeSpecificData &&
@@ -2046,7 +2051,7 @@ export default function RoleDetail() {
             )}
 
             {/* Themed Night / Group Trip Checklist Card */}
-            {(event.eventType === "themed_night" || event.eventType === "group_trip") && (
+            {(event.eventType === "themed_night" || event.eventType === "group_trip" || event.eventType === "custom_event") && (
               <Card data-testid="card-themed-checklist">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">

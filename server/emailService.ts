@@ -227,7 +227,8 @@ export async function sendCollaborativeEventInviteEmail(
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
     themed_night: 'Evento Temático',
-    collective_gift: 'Presente Coletivo'
+    collective_gift: 'Presente Coletivo',
+    custom_event: 'Rolê Personalizado'
   };
   
   const typeLabel = eventTypeLabels[eventType] || 'Rolê';
@@ -1104,7 +1105,8 @@ export async function sendEventCancellationEmail(options: EventCancellationEmail
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
     themed_night: 'Evento Temático',
-    collective_gift: 'Presente Coletivo'
+    collective_gift: 'Presente Coletivo',
+    custom_event: 'Rolê Personalizado'
   };
   
   const typeLabel = eventTypeLabels[eventType] || 'Evento';

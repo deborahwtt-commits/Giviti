@@ -92,6 +92,11 @@ export default function CollaborativeEvents() {
       className: "bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800", 
       Icon: Plane 
     },
+    custom_event: { 
+      label: "Rolê Personalizado", 
+      className: "bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800", 
+      Icon: Sparkles 
+    },
   };
 
   if (isLoading) {

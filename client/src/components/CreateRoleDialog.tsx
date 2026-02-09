@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X, Clock, ClipboardList, Plane } from "lucide-react";
+import { Gift, PartyPopper, Heart, Calendar as CalendarIcon, X, Clock, ClipboardList, Plane, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfDay } from "date-fns";
@@ -46,7 +46,7 @@ import type { CollaborativeEvent } from "@shared/schema";
 
 const createRoleSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
-  eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge", "group_trip"]),
+  eventType: z.enum(["secret_santa", "themed_night", "collective_gift", "creative_challenge", "group_trip", "custom_event"]),
   eventDate: z.date({ required_error: "Data e hora são obrigatórios" }),
   confirmationDeadline: z.date().optional(), // Optional for secret_santa
   location: z.string().max(200).optional().or(z.literal("")), // Optional for group trips (uses destino instead)
@@ -163,6 +163,12 @@ const eventTypeOptions = [
     icon: Plane,
     description: "Organize viagens com amigos",
   },
+  {
+    value: "custom_event",
+    label: "Rolê Personalizado",
+    icon: Sparkles,
+    description: "Crie seu próprio tipo de rolê",
+  },
 ];
 
 export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) {
@@ -222,7 +228,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
         typeSpecificData.budgetLimit = parseFloat(data.budgetLimit);
       }
       
-      if (data.eventType === "themed_night") {
+      if (data.eventType === "themed_night" || data.eventType === "custom_event") {
         typeSpecificData.definirResponsaveis = data.definirResponsaveis ?? false;
       }
       
@@ -395,93 +401,92 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
             />
 
             {selectedType === "themed_night" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="themedNightCategoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Qual é a boa?</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoadingCategories}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-themed-category">
-                            <SelectValue placeholder={isLoadingCategories ? "Carregando temas..." : "Selecione o tema"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {themedCategories.length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground text-center">
-                              Nenhum tema disponível
-                            </div>
-                          ) : (
-                            themedCategories.map((category) => (
-                              <SelectItem
-                                key={category.id}
-                                value={category.id}
-                                data-testid={`option-category-${category.id}`}
-                              >
-                                <div>
-                                  <div className="text-sm font-medium">{category.name}</div>
-                                  {category.description && (
-                                    <div className="text-xs text-muted-foreground">
-                                      {category.description}
-                                    </div>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription className="text-xs">
-                        Escolha o tema da noite temática
-                      </FormDescription>
-                      <FormMessage />
-                      
-                      {/* Show selected category description */}
-                      {selectedCategory?.description && (
-                        <div 
-                          className="mt-2 p-3 rounded-lg border text-sm"
-                          data-testid="themed-category-description"
-                        >
-                          <p className="font-medium text-sm mb-0.5">{selectedCategory.name}</p>
-                          <p className="text-xs text-muted-foreground">{selectedCategory.description}</p>
-                        </div>
-                      )}
-                    </FormItem>
-                  )}
-                />
-
-                {/* Option to define who brings each item */}
-                <FormField
-                  control={form.control}
-                  name="definirResponsaveis"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 gap-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm font-medium flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4 text-muted-foreground" />
-                          Definir quem leva o quê?
-                        </FormLabel>
-                        <FormDescription className="text-xs">
-                          Crie uma lista de itens e atribua responsáveis para cada um
-                        </FormDescription>
-                      </div>
+              <FormField
+                control={form.control}
+                name="themedNightCategoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Qual é a boa?</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isLoadingCategories}
+                    >
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-definir-responsaveis"
-                        />
+                        <SelectTrigger data-testid="select-themed-category">
+                          <SelectValue placeholder={isLoadingCategories ? "Carregando temas..." : "Selecione o tema"} />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </>
+                      <SelectContent>
+                        {themedCategories.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Nenhum tema disponível
+                          </div>
+                        ) : (
+                          themedCategories.map((category) => (
+                            <SelectItem
+                              key={category.id}
+                              value={category.id}
+                              data-testid={`option-category-${category.id}`}
+                            >
+                              <div>
+                                <div className="text-sm font-medium">{category.name}</div>
+                                {category.description && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {category.description}
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Escolha o tema da noite temática
+                    </FormDescription>
+                    <FormMessage />
+                    
+                    {/* Show selected category description */}
+                    {selectedCategory?.description && (
+                      <div 
+                        className="mt-2 p-3 rounded-lg border text-sm"
+                        data-testid="themed-category-description"
+                      >
+                        <p className="font-medium text-sm mb-0.5">{selectedCategory.name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedCategory.description}</p>
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {(selectedType === "themed_night" || selectedType === "custom_event") && (
+              <FormField
+                control={form.control}
+                name="definirResponsaveis"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 gap-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-muted-foreground" />
+                        Definir quem leva o quê?
+                      </FormLabel>
+                      <FormDescription className="text-xs">
+                        Crie uma lista de itens e atribua responsáveis para cada um
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-definir-responsaveis"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
             )}
 
             {/* Collective Gift specific fields */}

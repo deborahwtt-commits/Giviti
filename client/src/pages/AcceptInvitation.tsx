@@ -17,6 +17,7 @@ const eventTypeInfo: Record<string, { label: string; Icon: LucideIcon }> = {
   themed_night: { label: "Evento Temático", Icon: PartyPopper },
   collective_gift: { label: "Presente Coletivo", Icon: Heart },
   creative_challenge: { label: "Desafio Criativo", Icon: Sparkles },
+  custom_event: { label: "Rolê Personalizado", Icon: Sparkles },
 };
 
 interface InvitationData {

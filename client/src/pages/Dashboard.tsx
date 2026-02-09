@@ -227,6 +227,8 @@ export default function Dashboard() {
         return { icon: Gift, label: "Presente Coletivo", color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" };
       case "creative_challenge":
         return { icon: Palette, label: "Desafio Criativo", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" };
+      case "custom_event":
+        return { icon: Palette, label: "Rolê Personalizado", color: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800" };
       default:
         return { icon: Users, label: "Rolê", color: "bg-muted text-muted-foreground" };
     }

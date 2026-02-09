@@ -42,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **Admin Panel**: Comprehensive administrative module with role-based access control for user management, categories, system settings, audit logs, and gift suggestions. Includes waitlist approval system that generates unique VIP passes (VIP-XXXX-XXXX format) and sends automated email invitations.
 - **Astrology Module**: Displays weekly horoscope messages on the Dashboard based on the user's zodiac sign (auto-calculated from birth date).
 - **Birthday Events ("Meu Aniversário")**: Special event type for managing personal birthday celebrations with wishlists, guest management, and automated email invitations with tracking.
-- **Collaborative Events**: Supports Secret Santa, themed nights, and collective gifts with participant management, draw algorithms, and shareable links. Includes dynamic subcategory systems for themed nights and automated email invitations with status tracking.
+- **Collaborative Events**: Supports Secret Santa, themed nights, collective gifts, group trips, and custom events ("Rolê Personalizado") with participant management, draw algorithms, and shareable links. Includes dynamic subcategory systems for themed nights, checklist/task management for themed nights and custom events, and automated email invitations with status tracking.
 
 ### System Design Choices
 - **Database Schema**: PostgreSQL with tables for `users`, `userProfiles`, `recipients`, `events`, `giftSuggestions`, `giftCategories`, `giftTypes`, and dedicated tables for collaborative events and birthday wishlists.
