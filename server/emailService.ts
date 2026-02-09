@@ -232,13 +232,7 @@ export async function sendCollaborativeEventInviteEmail(
   
   const typeLabel = eventTypeLabels[eventType] || 'Rolê';
   
-  const formatDeadline = (deadline: string | Date | null | undefined) => {
-    if (!deadline) return null;
-    const date = new Date(deadline);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-  
-  const formattedDeadline = formatDeadline(confirmationDeadline);
+  const formattedDeadline = formatDateBrazil(confirmationDeadline, false);
   
   const deadlineHtml = formattedDeadline ? `
               <p style="color: #dc2626; font-weight: 600; margin: 0 0 16px 0; font-size: 14px; text-align: center; font-family: Arial, sans-serif;">
