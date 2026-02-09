@@ -267,6 +267,12 @@ export default function Events() {
     return eventDate >= today && eventDate <= threeMonthsFromNow;
   });
 
+  const pastEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return false;
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
+    return eventDate < today;
+  });
+
   const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
 
   const handleEdit = (event: EventWithRecipients) => {
@@ -370,6 +376,9 @@ export default function Events() {
                 >
                   Próximos 3 Meses ({nextThreeMonthsEvents.length})
                 </TabsTrigger>
+                <TabsTrigger value="past" data-testid="tab-past-events">
+                  Passados ({pastEvents.length})
+                </TabsTrigger>
                 <TabsTrigger value="archived" data-testid="tab-archived-events">
                   Arquivados ({archivedEvents.length})
                 </TabsTrigger>
@@ -458,6 +467,33 @@ export default function Events() {
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
                     Nenhuma data comemorativa nos próximos 3 meses
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {pastEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(event)}
+                      onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
+                      hasGiftPurchased={event.hasWishlistItems}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    Nenhuma data comemorativa passada
                   </p>
                 </div>
               )}
