@@ -706,7 +706,7 @@ export function registerCollabEventsRoutes(app: Express) {
       // Respond immediately — email will be sent in background
       const updatedParticipant = await storage.getParticipant(participant.id);
       const shouldSendEmail = !!(validatedData.email && validatedData.inviteToken && event.eventType !== 'secret_santa');
-      res.status(201).json({ ...updatedParticipant, emailSent: false });
+      res.status(201).json({ ...updatedParticipant, emailSent: shouldSendEmail, emailQueued: shouldSendEmail });
       
       // Send invite email in background (fire-and-forget)
       if (shouldSendEmail) {
@@ -810,6 +810,10 @@ export function registerCollabEventsRoutes(app: Express) {
             await storage.updateParticipantEmailStatus(participant.id, 'failed');
           }
         })();
+      } else if (!validatedData.email) {
+        console.log(`[AddParticipant] No invite email sent - participant has no email address`);
+      } else if (!validatedData.inviteToken) {
+        console.log(`[AddParticipant] No invite email sent to ${validatedData.email} - participant already accepted`);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
