@@ -273,6 +273,12 @@ export default function Events() {
     return eventDate < today;
   });
 
+  const upcomingEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return true;
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
+    return eventDate >= today;
+  });
+
   const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
 
   const handleEdit = (event: EventWithRecipients) => {
@@ -362,7 +368,7 @@ export default function Events() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <TabsList>
                 <TabsTrigger value="all" data-testid="tab-all-events">
-                  Todos ({activeEvents.length})
+                  Todos ({upcomingEvents.length})
                 </TabsTrigger>
                 <TabsTrigger
                   value="thisMonth"
@@ -401,7 +407,7 @@ export default function Events() {
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeEvents.map((event) => (
+                {upcomingEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
