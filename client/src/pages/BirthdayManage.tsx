@@ -241,10 +241,9 @@ export default function BirthdayManage() {
   });
 
   const buildShareMessage = (url: string) => {
-    const name = event?.eventName || "Meu";
     const dateStr = event?.eventDate ? formatEventDate(event.eventDate) : null;
     const datePart = dateStr ? ` no dia ${dateStr}` : "";
-    return `Oi! O anivers\u00e1rio de ${name} est\u00e1 chegando${datePart} e criei uma lista de desejos no Giviti. D\u00e1 uma olhada e veja se algo te inspira: ${url}`;
+    return `\uD83C\uDF82 Meu anivers\u00e1rio est\u00e1 chegando! Estou comemorando${datePart} e criei minha lista de desejos no Giviti. Entre no link para ver o que eu quero ganhar e confirmar sua presen\u00e7a: ${url}`;
   };
 
   const generateShareLinkMutation = useMutation({
