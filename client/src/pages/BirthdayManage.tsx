@@ -252,13 +252,17 @@ export default function BirthdayManage() {
       const response = await apiRequest(`/api/events/${id}/share-link`, "POST");
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const fullUrl = `${window.location.origin}${data.shareUrl}`;
       setShareUrl(fullUrl);
       const message = buildShareMessage(fullUrl);
       setShareMessage(message);
-      navigator.clipboard.writeText(message);
-      toast({ title: "Mensagem copiada!", description: "A mensagem com o link foi copiada para a \u00e1rea de transfer\u00eancia." });
+      try {
+        await navigator.clipboard.writeText(message);
+        toast({ title: "Mensagem copiada!", description: "A mensagem com o link foi copiada para a \u00e1rea de transfer\u00eancia." });
+      } catch {
+        toast({ title: "Link gerado!", description: "Copie a mensagem abaixo para compartilhar." });
+      }
     },
     onError: () => {
       toast({ title: "Erro", description: "N\u00e3o foi poss\u00edvel gerar o link.", variant: "destructive" });
@@ -425,9 +429,13 @@ export default function BirthdayManage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(shareMessage);
-                      toast({ title: "Mensagem copiada!" });
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareMessage);
+                        toast({ title: "Mensagem copiada!" });
+                      } catch {
+                        toast({ title: "Erro", description: "Não foi possível copiar. Selecione o texto manualmente.", variant: "destructive" });
+                      }
                     }}
                     data-testid="button-copy-share-message"
                   >
@@ -437,9 +445,13 @@ export default function BirthdayManage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => {
-                      navigator.clipboard.writeText(shareUrl);
-                      toast({ title: "Link copiado!" });
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        toast({ title: "Link copiado!" });
+                      } catch {
+                        toast({ title: "Erro", description: "Não foi possível copiar. Selecione o texto manualmente.", variant: "destructive" });
+                      }
                     }}
                     data-testid="button-copy-share-link"
                   >
