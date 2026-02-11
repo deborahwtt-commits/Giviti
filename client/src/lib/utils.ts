@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function parseDateSafe(d: string | Date | null | undefined): Date {
+  if (!d) return new Date();
+  const str = typeof d === "string" ? d : d.toISOString();
+  const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return new Date(`${match[1]}T12:00:00`);
+  }
+  return new Date(str);
+}
+
 export function formatCurrency(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === "") return "R$ 0,00";
   

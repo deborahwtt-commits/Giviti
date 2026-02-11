@@ -2,11 +2,12 @@ import { Resend } from 'resend';
 
 let connectionSettings: any;
 
-async function getCredentials() {
-  console.log('[EmailService] Getting Resend credentials...');
-  
+let cachedCredentials: { apiKey: string; fromEmail: string } | null = null;
+let credentialsCachedAt: number = 0;
+const CREDENTIALS_CACHE_TTL = 5 * 60 * 1000;
+
+async function fetchCredentialsOnce(): Promise<{ apiKey: string; fromEmail: string }> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  console.log('[EmailService] Connectors hostname:', hostname ? 'configured' : 'NOT CONFIGURED');
   
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -15,53 +16,69 @@ async function getCredentials() {
     : null;
 
   if (!xReplitToken) {
-    console.error('[EmailService] ERROR: X_REPLIT_TOKEN not found - REPL_IDENTITY and WEB_REPL_RENEWAL are both undefined');
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
-  
-  console.log('[EmailService] Token type:', xReplitToken.startsWith('repl') ? 'REPL' : 'DEPL');
 
-  try {
-    const url = 'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend';
-    console.log('[EmailService] Fetching credentials from connectors API...');
-    
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    });
-    
-    console.log('[EmailService] API response status:', response.status);
-    
-    const data = await response.json();
-    connectionSettings = data.items?.[0];
-    
-    if (!connectionSettings) {
-      console.error('[EmailService] ERROR: No Resend connection found in response. Make sure Resend integration is connected.');
-      console.error('[EmailService] Response data:', JSON.stringify(data, null, 2));
-      throw new Error('Resend not connected - no connection found');
+  const url = 'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend';
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+      'X_REPLIT_TOKEN': xReplitToken
     }
-    
-    if (!connectionSettings.settings?.api_key) {
-      console.error('[EmailService] ERROR: Resend connection exists but API key is missing');
-      throw new Error('Resend not connected - missing API key');
-    }
-    
-    console.log('[EmailService] Credentials obtained successfully');
-    console.log('[EmailService] From email:', connectionSettings.settings.from_email);
-    
-    return {
-      apiKey: connectionSettings.settings.api_key, 
-      fromEmail: connectionSettings.settings.from_email
-    };
-  } catch (error) {
-    console.error('[EmailService] Failed to get credentials:', error);
-    throw error;
+  });
+  
+  if (!response.ok) {
+    const statusText = response.statusText || 'Unknown error';
+    throw new Error(`Connectors API returned HTTP ${response.status}: ${statusText}`);
   }
+  
+  const data = await response.json();
+  connectionSettings = data.items?.[0];
+  
+  if (!connectionSettings) {
+    throw new Error('Resend not connected - no connection found');
+  }
+  
+  if (!connectionSettings.settings?.api_key) {
+    throw new Error('Resend not connected - missing API key');
+  }
+  
+  return {
+    apiKey: connectionSettings.settings.api_key, 
+    fromEmail: connectionSettings.settings.from_email
+  };
 }
 
-async function getUncachableResendClient() {
+async function getCredentials(): Promise<{ apiKey: string; fromEmail: string }> {
+  const now = Date.now();
+  if (cachedCredentials && (now - credentialsCachedAt) < CREDENTIALS_CACHE_TTL) {
+    return cachedCredentials;
+  }
+
+  console.log('[EmailService] Fetching Resend credentials...');
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const creds = await fetchCredentialsOnce();
+      cachedCredentials = creds;
+      credentialsCachedAt = Date.now();
+      console.log('[EmailService] Credentials obtained successfully');
+      return creds;
+    } catch (error: any) {
+      console.error(`[EmailService] Attempt ${attempt}/2 failed:`, error.message);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 1500));
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Failed to get credentials after retries');
+}
+
+async function getResendClient() {
   const { apiKey, fromEmail } = await getCredentials();
   return {
     client: new Resend(apiKey),
@@ -73,7 +90,11 @@ async function getUncachableResendClient() {
 function formatDateBrazil(dateStr: string | Date | null | undefined, includeTime: boolean = true): string | null {
   if (!dateStr) return null;
   try {
-    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    let parsedStr = dateStr;
+    if (typeof parsedStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsedStr)) {
+      parsedStr = `${parsedStr}T12:00:00`;
+    }
+    const date = typeof parsedStr === 'string' ? new Date(parsedStr) : parsedStr;
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
       day: 'numeric',
@@ -105,7 +126,7 @@ export async function sendEmail(options: SendEmailOptions) {
   console.log('[EmailService] Subject:', options.subject);
   
   try {
-    const { client, fromEmail } = await getUncachableResendClient();
+    const { client, fromEmail } = await getResendClient();
     
     // Normalize recipient email(s) to lowercase (Resend is case-sensitive for test accounts)
     const normalizedTo = Array.isArray(options.to) 
@@ -223,18 +244,13 @@ export async function sendCollaborativeEventInviteEmail(
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
     themed_night: 'Evento Temático',
-    collective_gift: 'Presente Coletivo'
+    collective_gift: 'Presente Coletivo',
+    custom_event: 'Rolê Personalizado'
   };
   
   const typeLabel = eventTypeLabels[eventType] || 'Rolê';
   
-  const formatDeadline = (deadline: string | Date | null | undefined) => {
-    if (!deadline) return null;
-    const date = new Date(deadline);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-  
-  const formattedDeadline = formatDeadline(confirmationDeadline);
+  const formattedDeadline = formatDateBrazil(confirmationDeadline, false);
   
   const deadlineHtml = formattedDeadline ? `
               <p style="color: #dc2626; font-weight: 600; margin: 0 0 16px 0; font-size: 14px; text-align: center; font-family: Arial, sans-serif;">
@@ -1106,7 +1122,8 @@ export async function sendEventCancellationEmail(options: EventCancellationEmail
   const eventTypeLabels: Record<string, string> = {
     secret_santa: 'Amigo Secreto',
     themed_night: 'Evento Temático',
-    collective_gift: 'Presente Coletivo'
+    collective_gift: 'Presente Coletivo',
+    custom_event: 'Rolê Personalizado'
   };
   
   const typeLabel = eventTypeLabels[eventType] || 'Evento';

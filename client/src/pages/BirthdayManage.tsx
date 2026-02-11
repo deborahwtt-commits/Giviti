@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import {
   ArrowLeft,
   Gift,
@@ -125,6 +126,7 @@ export default function BirthdayManage() {
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const [newItem, setNewItem] = useState({
     title: "",
@@ -214,9 +216,15 @@ export default function BirthdayManage() {
       toast({ title: "Convidado adicionado!", description: "Um convite será enviado por email." });
     },
     onError: (error: any) => {
+      let description = error.message || "Não foi possível adicionar o convidado.";
+      try {
+        const jsonPart = error.message.substring(error.message.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        description = parsed.error || parsed.message || description;
+      } catch {}
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível adicionar o convidado.",
+        description,
         variant: "destructive",
       });
     },
@@ -232,19 +240,31 @@ export default function BirthdayManage() {
     },
   });
 
+  const buildShareMessage = (url: string) => {
+    const dateStr = event?.eventDate ? formatEventDate(event.eventDate) : null;
+    const datePart = dateStr ? ` no dia ${dateStr}` : "";
+    return `\uD83C\uDF82 Meu anivers\u00e1rio est\u00e1 chegando! Estou comemorando${datePart} e criei minha lista de desejos no Giviti. Entre no link para ver o que eu quero ganhar e confirmar sua presen\u00e7a: ${url}`;
+  };
+
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest(`/api/events/${id}/share-link`, "POST");
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const fullUrl = `${window.location.origin}${data.shareUrl}`;
       setShareUrl(fullUrl);
-      navigator.clipboard.writeText(fullUrl);
-      toast({ title: "Link copiado!", description: "O link foi copiado para a área de transferência." });
+      const message = buildShareMessage(fullUrl);
+      setShareMessage(message);
+      try {
+        await navigator.clipboard.writeText(message);
+        toast({ title: "Mensagem copiada!", description: "A mensagem com o link foi copiada para a \u00e1rea de transfer\u00eancia." });
+      } catch {
+        toast({ title: "Link gerado!", description: "Copie a mensagem abaixo para compartilhar." });
+      }
     },
     onError: () => {
-      toast({ title: "Erro", description: "Não foi possível gerar o link.", variant: "destructive" });
+      toast({ title: "Erro", description: "N\u00e3o foi poss\u00edvel gerar o link.", variant: "destructive" });
     },
   });
 
@@ -261,8 +281,7 @@ export default function BirthdayManage() {
   const formatEventDate = (date: string | Date | null) => {
     if (!date) return "Sem data definida";
     try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return format(dateObj, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+      return format(parseDateSafe(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
     } catch {
       return "Data inválida";
     }
@@ -391,7 +410,7 @@ export default function BirthdayManage() {
                 variant="outline"
                 size="sm"
                 onClick={() => generateShareLinkMutation.mutate()}
-                disabled={generateShareLinkMutation.isPending}
+                disabled={generateShareLinkMutation.isPending || !event}
                 data-testid="button-share-birthday"
               >
                 {generateShareLinkMutation.isPending ? (
@@ -402,19 +421,43 @@ export default function BirthdayManage() {
                 Compartilhar
               </Button>
             </div>
-            {shareUrl && (
-              <div className="mt-4 p-3 bg-muted rounded-md flex items-center gap-2">
-                <span className="text-sm flex-1 truncate">{shareUrl}</span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl);
-                    toast({ title: "Link copiado!" });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+            {shareMessage && shareUrl && (
+              <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-share-message">{shareMessage}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareMessage);
+                        toast({ title: "Mensagem copiada!" });
+                      } catch {
+                        toast({ title: "Erro", description: "Não foi possível copiar. Selecione o texto manualmente.", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-copy-share-message"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar mensagem
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        toast({ title: "Link copiado!" });
+                      } catch {
+                        toast({ title: "Erro", description: "Não foi possível copiar. Selecione o texto manualmente.", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-copy-share-link"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar somente o link
+                  </Button>
+                </div>
               </div>
             )}
           </CardHeader>

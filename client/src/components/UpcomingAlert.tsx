@@ -7,14 +7,16 @@ import {
   Clock, 
   AlertTriangle, 
   PartyPopper,
+  Sparkles,
   Users,
   Heart,
   ChevronRight
 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { EventWithRecipients, CollaborativeEvent } from "@shared/schema";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays } from "date-fns";
 import { getEventColors, getRoleTypeLabel } from "@/lib/eventColors";
+import { parseDateSafe } from "@/lib/utils";
 
 interface UpcomingAlertProps {
   events: EventWithRecipients[];
@@ -40,7 +42,7 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
 
     events.forEach(event => {
       if (!event.eventDate) return;
-      const eventDate = typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate;
+      const eventDate = parseDateSafe(event.eventDate);
       const daysUntil = differenceInDays(eventDate, today);
       if (daysUntil >= 0 && daysUntil <= 30) {
         const displayName = event.eventName 
@@ -60,7 +62,7 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
 
     roles.forEach(role => {
       if (!role.eventDate || role.status === 'cancelled' || role.status === 'completed') return;
-      const eventDate = typeof role.eventDate === 'string' ? parseISO(role.eventDate) : role.eventDate;
+      const eventDate = parseDateSafe(role.eventDate);
       const daysUntil = differenceInDays(eventDate, today);
       if (daysUntil >= 0 && daysUntil <= 30) {
         items.push({
@@ -89,6 +91,7 @@ export default function UpcomingAlert({ events, roles }: UpcomingAlertProps) {
         case 'secret_santa': return Gift;
         case 'themed_night': return PartyPopper;
         case 'collective_gift': return Heart;
+        case 'custom_event': return Sparkles;
         default: return Users;
       }
     }

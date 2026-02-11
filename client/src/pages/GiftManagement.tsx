@@ -86,14 +86,17 @@ export default function GiftManagement() {
     return `R$ ${numPrice.toFixed(2).replace(".", ",")}`;
   };
 
-  // Format date - handles both Date objects and ISO strings from API
   const formatDate = (date: Date | string | null) => {
-    if (!date) return "—";
+    if (!date) return "\u2014";
     try {
-      const dateObj = date instanceof Date ? date : new Date(date);
+      let input = date;
+      if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+        input = `${input}T12:00:00`;
+      }
+      const dateObj = input instanceof Date ? input : new Date(input);
       return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
     } catch {
-      return "—";
+      return "\u2014";
     }
   };
 

@@ -50,6 +50,10 @@ export default function UnifiedEventCard({
       label: "Desafio Criativo", 
       Icon: Sparkles 
     },
+    custom_event: { 
+      label: "Rolê Personalizado", 
+      Icon: Sparkles 
+    },
   };
 
   if (item.type === 'role') {

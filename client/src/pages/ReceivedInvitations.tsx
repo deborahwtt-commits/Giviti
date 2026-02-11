@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { format, parseISO, isPast, isToday } from "date-fns";
+import { format, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import { ArrowLeft, Mail, Calendar, Gift, Users, PartyPopper, Sparkles, Loader2, Clock, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,9 @@ function getTypeIcon(type: 'birthday' | 'collaborative', eventType: string) {
   }
   if (eventType.includes('Presente Coletivo')) {
     return <Gift className="w-5 h-5 text-blue-500" />;
+  }
+  if (eventType.includes('Rolê Personalizado')) {
+    return <Sparkles className="w-5 h-5 text-teal-500" />;
   }
   
   return <Users className="w-5 h-5 text-violet-500" />;
@@ -225,25 +229,25 @@ export default function ReceivedInvitations() {
                       {invitation.eventDate && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-4 h-4 flex-shrink-0" />
-                          <span>Evento: {format(parseISO(invitation.eventDate), "d/MM/yyyy", { locale: ptBR })}</span>
+                          <span>Evento: {format(parseDateSafe(invitation.eventDate), "d/MM/yyyy", { locale: ptBR })}</span>
                         </div>
                       )}
                       
                       {invitation.confirmationDeadline && (
                         <div className={`flex items-center gap-1.5 ${
-                          isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline))
+                          isPast(parseDateSafe(invitation.confirmationDeadline)) && !isToday(parseDateSafe(invitation.confirmationDeadline))
                             ? 'text-destructive' 
-                            : isToday(parseISO(invitation.confirmationDeadline))
+                            : isToday(parseDateSafe(invitation.confirmationDeadline))
                               ? 'text-orange-600 dark:text-orange-400'
                               : ''
                         }`}>
                           <Clock className="w-4 h-4 flex-shrink-0" />
                           <span>
-                            Responder até {format(parseISO(invitation.confirmationDeadline), "d/MM/yyyy", { locale: ptBR })}
-                            {isPast(parseISO(invitation.confirmationDeadline)) && !isToday(parseISO(invitation.confirmationDeadline)) && (
+                            Responder até {format(parseDateSafe(invitation.confirmationDeadline), "d/MM/yyyy", { locale: ptBR })}
+                            {isPast(parseDateSafe(invitation.confirmationDeadline)) && !isToday(parseDateSafe(invitation.confirmationDeadline)) && (
                               <span className="ml-1 text-xs">(expirado)</span>
                             )}
-                            {isToday(parseISO(invitation.confirmationDeadline)) && (
+                            {isToday(parseDateSafe(invitation.confirmationDeadline)) && (
                               <span className="ml-1 text-xs">(hoje)</span>
                             )}
                           </span>
@@ -253,7 +257,7 @@ export default function ReceivedInvitations() {
                     
                     {invitation.invitedAt && (
                       <div className="text-xs text-muted-foreground/70 mt-2">
-                        Convidado em {format(parseISO(invitation.invitedAt), "d/MM/yyyy", { locale: ptBR })}
+                        Convidado em {format(parseDateSafe(invitation.invitedAt), "d/MM/yyyy", { locale: ptBR })}
                       </div>
                     )}
                   </div>

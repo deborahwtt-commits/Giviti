@@ -11,8 +11,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 import {
   Cake,
   Calendar,
@@ -166,7 +167,7 @@ export default function PublicBirthday() {
   const formatEventDate = (date: string | null) => {
     if (!date) return "Sem data definida";
     try {
-      return format(parseISO(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+      return format(parseDateSafe(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
     } catch {
       return "Data inválida";
     }

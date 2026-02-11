@@ -29,7 +29,8 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import type { EventWithRecipients, Recipient } from "@shared/schema";
-import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
+import { format, differenceInDays, startOfDay } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 
 export default function Events() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -73,9 +74,9 @@ export default function Events() {
       }
       return await apiRequest("/api/events", "POST", data);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: variables.id ? "Evento atualizado com sucesso." : "Evento criado com sucesso.",
@@ -107,9 +108,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}`, "DELETE");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento deletado com sucesso.",
@@ -139,9 +140,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}/archive`, "PATCH");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento arquivado com sucesso.",
@@ -171,9 +172,9 @@ export default function Events() {
     mutationFn: async (eventId: string) => {
       return await apiRequest(`/api/events/${eventId}/advance-year`, "PATCH");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Sucesso!",
         description: "Evento atualizado para o próximo ano.",
@@ -202,15 +203,13 @@ export default function Events() {
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 0;
     const today = startOfDay(new Date());
-    const event = startOfDay(typeof eventDate === 'string' ? parseISO(eventDate) : eventDate);
-    return differenceInDays(event, today);
+    return differenceInDays(startOfDay(parseDateSafe(eventDate)), today);
   };
 
   const formatEventDate = (dateString: string | Date | null) => {
     if (!dateString) return 'Sem data definida';
     try {
-      const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-      return format(date, "d 'de' MMM, yyyy");
+      return format(parseDateSafe(dateString), "d 'de' MMM, yyyy");
     } catch {
       return 'Data inválida';
     }
@@ -237,8 +236,8 @@ export default function Events() {
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA; // Most recent first
         case "eventDate":
-          const eventDateA = a.eventDate ? new Date(a.eventDate).getTime() : Infinity;
-          const eventDateB = b.eventDate ? new Date(b.eventDate).getTime() : Infinity;
+          const eventDateA = a.eventDate ? parseDateSafe(a.eventDate).getTime() : Infinity;
+          const eventDateB = b.eventDate ? parseDateSafe(b.eventDate).getTime() : Infinity;
           return eventDateA - eventDateB; // Closest event first
         case "alphabetical":
           const nameA = a.eventName || a.eventType || "";
@@ -258,14 +257,26 @@ export default function Events() {
 
   const thisMonthEvents = activeEvents.filter((event) => {
     if (!event.eventDate) return false;
-    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
     return eventDate >= today && eventDate <= oneMonthFromNow;
   });
 
   const nextThreeMonthsEvents = activeEvents.filter((event) => {
     if (!event.eventDate) return false;
-    const eventDate = startOfDay(typeof event.eventDate === 'string' ? parseISO(event.eventDate) : event.eventDate);
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
     return eventDate >= today && eventDate <= threeMonthsFromNow;
+  });
+
+  const pastEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return false;
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
+    return eventDate < today;
+  });
+
+  const upcomingEvents = activeEvents.filter((event) => {
+    if (!event.eventDate) return true;
+    const eventDate = startOfDay(parseDateSafe(event.eventDate));
+    return eventDate >= today;
   });
 
   const recipientOptions = recipients?.map(r => ({ id: r.id, name: r.name })) || [];
@@ -357,7 +368,7 @@ export default function Events() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <TabsList>
                 <TabsTrigger value="all" data-testid="tab-all-events">
-                  Todos ({activeEvents.length})
+                  Todos ({upcomingEvents.length})
                 </TabsTrigger>
                 <TabsTrigger
                   value="thisMonth"
@@ -370,6 +381,9 @@ export default function Events() {
                   data-testid="tab-next-three-months-events"
                 >
                   Próximos 3 Meses ({nextThreeMonthsEvents.length})
+                </TabsTrigger>
+                <TabsTrigger value="past" data-testid="tab-past-events">
+                  Passados ({pastEvents.length})
                 </TabsTrigger>
                 <TabsTrigger value="archived" data-testid="tab-archived-events">
                   Arquivados ({archivedEvents.length})
@@ -393,7 +407,7 @@ export default function Events() {
 
             <TabsContent value="all">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeEvents.map((event) => (
+                {upcomingEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
@@ -459,6 +473,33 @@ export default function Events() {
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
                     Nenhuma data comemorativa nos próximos 3 meses
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {pastEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      daysUntil={calculateDaysUntil(event.eventDate)}
+                      date={formatEventDate(event.eventDate)}
+                      onViewSuggestions={() => setLocation("/sugestoes")}
+                      onEdit={() => handleEdit(event)}
+                      onDelete={() => handleDelete(event.id)}
+                      onArchive={() => handleArchive(event.id)}
+                      onAdvanceYear={() => handleAdvanceYear(event.id)}
+                      hasGiftPurchased={event.hasWishlistItems}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    Nenhuma data comemorativa passada
                   </p>
                 </div>
               )}

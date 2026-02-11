@@ -19,6 +19,7 @@ import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c
 import type { EventWithRecipients, Recipient, CollaborativeEvent, UserProfile } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -91,13 +92,13 @@ export default function Dashboard() {
   const calculateDaysUntil = (eventDate: string | Date | null) => {
     if (!eventDate) return 999;
     const today = new Date();
-    const event = typeof eventDate === "string" ? new Date(eventDate) : eventDate;
+    const event = parseDateSafe(eventDate);
     return differenceInDays(event, today);
   };
 
   const formatEventDate = (dateString: string | Date | null) => {
     if (!dateString) return "Sem data definida";
-    const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+    const date = parseDateSafe(dateString);
     return format(date, "d 'de' MMM, yyyy");
   };
 
@@ -122,7 +123,7 @@ export default function Dashboard() {
             id: event.id,
             type: 'event',
             name: event.eventName ? `${event.eventType} - ${event.eventName}` : event.eventType,
-            date: event.eventDate ? new Date(event.eventDate) : null,
+            date: event.eventDate ? parseDateSafe(event.eventDate) : null,
             daysUntil,
             data: event,
           });
@@ -140,7 +141,7 @@ export default function Dashboard() {
               id: role.id,
               type: 'role',
               name: role.name,
-              date: role.eventDate ? new Date(role.eventDate) : null,
+              date: role.eventDate ? parseDateSafe(role.eventDate) : null,
               daysUntil,
               eventType: role.eventType,
               data: role as CollaborativeEvent,
@@ -182,7 +183,7 @@ export default function Dashboard() {
             id: event.id,
             type: 'event',
             name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
-            date: event.eventDate ? new Date(event.eventDate) : null,
+            date: event.eventDate ? parseDateSafe(event.eventDate) : null,
             data: event,
           });
         });
@@ -194,7 +195,7 @@ export default function Dashboard() {
         .filter(role => !displayedItemIds.has(role.id))
         .filter(role => {
           if (!role.eventDate) return true;
-          const eventDate = new Date(role.eventDate);
+          const eventDate = parseDateSafe(role.eventDate);
           return eventDate >= new Date();
         })
         .forEach(role => {
@@ -202,7 +203,7 @@ export default function Dashboard() {
             id: role.id,
             type: 'role',
             name: role.name,
-            date: role.eventDate ? new Date(role.eventDate) : null,
+            date: role.eventDate ? parseDateSafe(role.eventDate) : null,
             eventType: role.eventType,
             data: role as CollaborativeEvent,
           });
@@ -226,6 +227,8 @@ export default function Dashboard() {
         return { icon: Gift, label: "Presente Coletivo", color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" };
       case "creative_challenge":
         return { icon: Palette, label: "Desafio Criativo", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" };
+      case "custom_event":
+        return { icon: Palette, label: "Rolê Personalizado", color: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800" };
       default:
         return { icon: Users, label: "Rolê", color: "bg-muted text-muted-foreground" };
     }
@@ -233,7 +236,7 @@ export default function Dashboard() {
 
   const formatRoleDate = (date: Date | string | null) => {
     if (!date) return "Sem data definida";
-    const dateObj = typeof date === "string" ? new Date(date) : date;
+    const dateObj = parseDateSafe(date);
     return format(dateObj, "d 'de' MMM, yyyy", { locale: ptBR });
   };
 
@@ -244,13 +247,13 @@ export default function Dashboard() {
       .filter(role => role.status === "active" || role.status === "draft")
       .filter(role => {
         if (!role.eventDate) return true;
-        const eventDate = new Date(role.eventDate);
+        const eventDate = parseDateSafe(role.eventDate);
         return eventDate >= now;
       })
       .sort((a, b) => {
         if (!a.eventDate) return 1;
         if (!b.eventDate) return -1;
-        return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+        return parseDateSafe(a.eventDate).getTime() - parseDateSafe(b.eventDate).getTime();
       });
   };
 

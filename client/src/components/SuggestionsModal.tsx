@@ -16,8 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { runSuggestionAlgorithmV1, type UnifiedProduct, type RecipientData } from "@/lib/suggestionAlgorithm";
 import type { Recipient, RecipientProfile, GiftSuggestion, UserGift, GiftCategory, GoogleProductCategory } from "@shared/schema";
-import { parseISO, isBefore, startOfDay, format } from "date-fns";
+import { isBefore, startOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateSafe } from "@/lib/utils";
 
 interface SuggestionsModalProps {
   open: boolean;
@@ -26,7 +27,7 @@ interface SuggestionsModalProps {
 }
 
 function CouponBadge({ cupom, validadeCupom }: { cupom: string; validadeCupom?: string | null }) {
-  const isExpired = validadeCupom && isBefore(parseISO(validadeCupom), startOfDay(new Date()));
+  const isExpired = validadeCupom && isBefore(parseDateSafe(validadeCupom), startOfDay(new Date()));
   
   if (isExpired) return null;
   
@@ -36,7 +37,7 @@ function CouponBadge({ cupom, validadeCupom }: { cupom: string; validadeCupom?: 
       <span className="font-medium">{cupom}</span>
       {validadeCupom && (
         <span className="text-muted-foreground">
-          até {format(parseISO(validadeCupom), "dd/MM", { locale: ptBR })}
+          até {format(parseDateSafe(validadeCupom), "dd/MM", { locale: ptBR })}
         </span>
       )}
     </div>
