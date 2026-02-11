@@ -2076,7 +2076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contactSchema = z.object({
         name: z.string().min(1, "Nome é obrigatório").max(200),
         email: z.string().email("Email inválido").max(200),
-        message: z.string().min(1, "Mensagem é obrigatória").max(5000),
+        message: z.string().min(1, "Mensagem é obrigatória").max(500, "Mensagem deve ter no máximo 500 caracteres"),
       });
 
       const parsed = contactSchema.safeParse(req.body);

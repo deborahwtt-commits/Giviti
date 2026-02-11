@@ -387,11 +387,17 @@ export default function FAQ() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact-message">Mensagem</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="contact-message">Mensagem</Label>
+                      <span className={`text-xs ${contactForm.message.length > 500 ? "text-destructive" : "text-muted-foreground"}`} data-testid="text-char-count">
+                        {contactForm.message.length}/500
+                      </span>
+                    </div>
                     <Textarea
                       id="contact-message"
                       placeholder="Escreva sua dúvida, sugestão ou feedback..."
                       rows={5}
+                      maxLength={500}
                       value={contactForm.message}
                       onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
                       data-testid="input-contact-message"
