@@ -47,10 +47,11 @@ export default function FAQ() {
 
     setIsSending(true);
     try {
-      await apiRequest("POST", "/api/contact", contactForm);
+      const res = await apiRequest("/api/contact", "POST", contactForm);
+      const data = await res.json();
       setSent(true);
       setContactForm({ name: "", email: "", message: "" });
-      toast({ title: "Mensagem enviada com sucesso!" });
+      toast({ title: data.message || "Mensagem enviada com sucesso!" });
     } catch (error: any) {
       let msg = "Erro ao enviar mensagem. Tente novamente.";
       try {
