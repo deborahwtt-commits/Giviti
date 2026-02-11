@@ -2069,6 +2069,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Contact Form Route ==========
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { z } = await import("zod");
+      const contactSchema = z.object({
+        name: z.string().min(1, "Nome é obrigatório").max(200),
+        email: z.string().email("Email inválido").max(200),
+        message: z.string().min(1, "Mensagem é obrigatória").max(5000),
+      });
+
+      const parsed = contactSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const firstError = parsed.error.errors[0]?.message || "Dados inválidos.";
+        return res.status(400).json({ message: firstError });
+      }
+
+      const { name, email, message } = parsed.data;
+
+      const escapeHtml = (str: string) =>
+        str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+      const safeName = escapeHtml(name);
+      const safeEmail = escapeHtml(email);
+      const safeMessage = escapeHtml(message);
+
+      const { sendEmail } = await import("./emailService");
+
+      await sendEmail({
+        to: "contato@giviti.com.br",
+        subject: `[Giviti] Mensagem de ${safeName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Nova mensagem recebida no Giviti</h2>
+            <hr style="border: 1px solid #eee;" />
+            <p><strong>Nome:</strong> ${safeName}</p>
+            <p><strong>Email:</strong> ${safeEmail}</p>
+            <p><strong>Mensagem:</strong></p>
+            <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; white-space: pre-wrap;">${safeMessage}</div>
+            <hr style="border: 1px solid #eee; margin-top: 24px;" />
+            <p style="color: #999; font-size: 12px;">Enviado pelo formulário de contato do Giviti</p>
+          </div>
+        `,
+        replyTo: email,
+      });
+
+      res.json({ message: "Mensagem enviada com sucesso!" });
+    } catch (error) {
+      console.error("Error sending contact message:", error);
+      res.status(500).json({ message: "Erro ao enviar mensagem. Tente novamente mais tarde." });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
