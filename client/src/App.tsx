@@ -31,6 +31,8 @@ import ReceivedInvitations from "@/pages/ReceivedInvitations";
 import AcceptInvitation from "@/pages/AcceptInvitation";
 import CreateAccountRedirect from "@/pages/CreateAccountRedirect";
 import FAQ from "@/pages/FAQ";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -80,7 +82,15 @@ function AuthenticatedApp() {
     );
   }
 
-  // Allow create account redirect page (for birthday invite links)
+  if (location === "/termos" || location === "/privacidade") {
+    return (
+      <Switch>
+        <Route path="/termos" component={Terms} />
+        <Route path="/privacidade" component={Privacy} />
+      </Switch>
+    );
+  }
+
   if (location.startsWith("/criar-conta")) {
     return (
       <Switch>
