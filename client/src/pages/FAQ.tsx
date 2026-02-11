@@ -7,7 +7,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -33,24 +32,24 @@ import {
 
 export default function FAQ() {
   const { toast } = useToast();
-  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+  const [contactMessage, setContactMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.message.trim()) {
-      toast({ title: "Preencha todos os campos", variant: "destructive" });
+    if (!contactMessage.trim()) {
+      toast({ title: "Escreva sua mensagem", variant: "destructive" });
       return;
     }
 
     setIsSending(true);
     try {
-      const res = await apiRequest("/api/contact", "POST", contactForm);
+      const res = await apiRequest("/api/contact", "POST", { message: contactMessage });
       const data = await res.json();
       setSent(true);
-      setContactForm({ name: "", email: "", message: "" });
+      setContactMessage("");
       toast({ title: data.message || "Mensagem enviada com sucesso!" });
     } catch (error: any) {
       let msg = "Erro ao enviar mensagem. Tente novamente.";
@@ -366,31 +365,10 @@ export default function FAQ() {
               ) : (
                 <form onSubmit={handleContactSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="contact-name">Nome</Label>
-                    <Input
-                      id="contact-name"
-                      placeholder="Seu nome"
-                      value={contactForm.name}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                      data-testid="input-contact-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contact-email">Email</Label>
-                    <Input
-                      id="contact-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={contactForm.email}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                      data-testid="input-contact-email"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="contact-message">Mensagem</Label>
-                      <span className={`text-xs ${contactForm.message.length > 500 ? "text-destructive" : "text-muted-foreground"}`} data-testid="text-char-count">
-                        {contactForm.message.length}/500
+                      <span className={`text-xs ${contactMessage.length > 500 ? "text-destructive" : "text-muted-foreground"}`} data-testid="text-char-count">
+                        {contactMessage.length}/500
                       </span>
                     </div>
                     <Textarea
@@ -398,8 +376,8 @@ export default function FAQ() {
                       placeholder="Escreva sua dúvida, sugestão ou feedback..."
                       rows={5}
                       maxLength={500}
-                      value={contactForm.message}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
                       data-testid="input-contact-message"
                     />
                   </div>
