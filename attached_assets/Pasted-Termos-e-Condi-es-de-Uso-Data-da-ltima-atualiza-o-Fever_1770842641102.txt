@@ -1,0 +1,63 @@
+Termos e Condições de Uso
+Data da última atualização: Fevereiro/2026
+Seja bem-vindo ao Giviti!
+Estes Termos e Condições de Uso (”Termos”) regulam o acesso e a utilização do aplicativo Giviti (“Plataforma”), oferecido por DIG CONSULTORIA EM T.I LTDA, inscrita no CNPJ sob nº 58.248.596/0001-23, com sede em Rua Luiz de Camões 114, Santos/SP.
+Ao utilizar a Plataforma, você declara ter lido, compreendido e aceito estes Termos e a nossa Política de Privacidade, conforme a legislação brasileira vigente.
+1. Objeto
+O Giviti é uma plataforma digital que permite ao usuário organizar e registrar datas comemorativas, rolês, eventos e listas de presenteados, com base em suas preferências pessoais.
+2. Cadastro e Conta do Usuário
+Para utilizar o Giviti, o usuário deverá criar uma conta pessoal, fornecendo dados como: Nome completo, Data de nascimento, E-mail, Telefone, Preferências de uso.
+
+
+O usuário também poderá criar e armazenar dados dentro do app, como: Datas comemorativas, Eventos e rolês, Listas de presenteados, Notas ou registros personalizados
+
+
+O usuário compromete-se a fornecer apenas informações verdadeiras, exatas e atualizadas, e é responsável por manter a segurança de suas credenciais de acesso.
+3. Coleta e Tratamento de Dados Pessoais
+Ao utilizar o Giviti, o usuário autoriza o tratamento de seus dados pessoais para os seguintes fins:
+Identificação e autenticação na Plataforma;
+Personalização da experiência de uso com base nas preferências fornecidas;
+Armazenamento de informações criadas pelo usuário dentro do app (eventos, presentes, rolês etc.);
+Comunicação sobre funcionalidades, atualizações ou ações promocionais;
+Cumprimento de obrigações legais ou regulatórias.
+Os dados tratados incluem:
+Nome
+Data de nascimento
+E-mail
+Preferências pessoais (ex: categorias de interesse, tipos de rolês)
+Dados criados pelo usuário: datas comemorativas, listas de presenteados, rolês e eventos registrados no app
+A Giviti compromete-se a:
+Tratar os dados conforme a LGPD (Lei nº 13.709/2018);
+Adotar medidas de segurança para proteger as informações armazenadas;
+Não compartilhar dados com terceiros sem consentimento expresso, exceto quando necessário para cumprimento legal ou ordem judicial.
+4. Direitos do Usuário
+Nos termos da LGPD, o usuário tem direito a:
+Confirmar a existência de tratamento de seus dados;
+Acessar, corrigir, excluir ou solicitar a portabilidade de seus dados;
+Revogar consentimento e solicitar anonimização ou bloqueio de dados desnecessários;
+Obter informações sobre compartilhamento de dados com terceiros.
+Tais solicitações podem ser feitas a qualquer momento através do e-mail: contato@giviti.com.br.
+5. Obrigações do Usuário
+O usuário compromete-se a:
+Utilizar a Plataforma de forma ética e conforme a legislação brasileira;
+Fornecer apenas dados verdadeiros e de sua titularidade;
+Não praticar atividades ilícitas ou que comprometam a segurança da Plataforma;
+Não registrar informações sensíveis de terceiros sem o devido consentimento.
+6. Propriedade Intelectual
+Todo o conteúdo da Plataforma (incluindo textos, logotipos, marca Giviti, funcionalidades e layout) é de propriedade exclusiva do Giviti ou licenciado, sendo protegido por leis de propriedade intelectual. É proibido reproduzir ou utilizar qualquer conteúdo sem autorização prévia e expressa.
+7. Funcionalidade da Plataforma
+A Giviti realiza seus melhores esforços para manter a Plataforma segura, funcional e disponível. No entanto, não se responsabiliza por:
+Falhas técnicas, interrupções temporárias ou perda de dados por fatores externos;
+Informações inseridas incorretamente pelo próprio usuário;
+Uso indevido da conta por terceiros, decorrente de falhas na proteção das credenciais do usuário.
+8. Cancelamento de Conta e Exclusão de Dados
+O usuário pode, a qualquer momento, solicitar:
+Cancelamento de sua conta;
+Exclusão definitiva de seus dados pessoais.
+Solicitações devem ser enviadas para: contato@giviti.com.br.
+9. Alterações nos Termos
+A Giviti poderá atualizar estes Termos a qualquer momento, especialmente em caso de mudanças legais ou funcionais da Plataforma. A nova versão será publicada no app e entrará em vigor imediatamente após sua publicação. A continuidade do uso após tais alterações será considerada aceitação tácita.
+10. Legislação Aplicável e Foro
+Estes Termos são regidos pelas leis da República Federativa do Brasil. Para dirimir quaisquer controvérsias, fica eleito o foro da comarca de São Paulo/SP, com renúncia de qualquer outro, por mais privilegiado que seja.
+Dúvidas ou solicitações?
+Entre em contato conosco: contato@giviti.com.br
