@@ -792,6 +792,32 @@ export class DatabaseStorage implements IStorage {
       nextYearDate.setFullYear(nextYearDate.getFullYear() + 1);
     } while (nextYearDate <= today);
 
+    if (event.isBirthday) {
+      // For birthday events: archive old event and create a new one
+      await db
+        .update(events)
+        .set({ archived: true, updatedAt: new Date() })
+        .where(and(eq(events.id, id), eq(events.userId, userId)));
+
+      const newShareToken = `bday_${crypto.randomUUID()}`;
+      const [newEvent] = await db
+        .insert(events)
+        .values({
+          userId,
+          eventType: event.eventType,
+          eventName: event.eventName,
+          eventDate: nextYearDate.toISOString().split('T')[0],
+          isBirthday: true,
+          birthdayShareToken: newShareToken,
+          eventLocation: null,
+          eventDescription: null,
+        })
+        .returning();
+
+      return this.getEvent(newEvent.id, userId);
+    }
+
+    // For non-birthday events: update date in place
     const [updated] = await db
       .update(events)
       .set({
