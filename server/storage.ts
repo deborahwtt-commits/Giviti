@@ -792,7 +792,7 @@ export class DatabaseStorage implements IStorage {
       nextYearDate.setFullYear(nextYearDate.getFullYear() + 1);
     } while (nextYearDate <= today);
 
-    if (event.isBirthday) {
+    if (event.eventType === "Meu Aniversário") {
       // For birthday events: keep old event intact (stays in "past events") and create a new one
       const newShareToken = `bday_${crypto.randomUUID()}`;
       const [newEvent] = await db
