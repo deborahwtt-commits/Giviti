@@ -187,7 +187,7 @@ export default function DashboardHero({
                 }
               }}
             >
-              <div className="text-2xl font-bold text-teal-600 dark:text-teal-400 flex items-center gap-2">
+              <div className="text-2xl font-bold text-teal-500 dark:text-teal-300 flex items-center gap-2">
                 <GiftIcon className="w-5 h-5" />
                 {stats.giftsReceived}
               </div>
