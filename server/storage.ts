@@ -575,7 +575,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(({ recipient, linkedUser, linkedProfile }) => ({
       ...recipient,
       isLinked: !!recipient.linkedUserId,
-      syncedData: linkedProfile ? {
+      syncedData: (linkedProfile && linkedProfile.sharePreferences) ? {
         syncedName: linkedUser?.firstName && linkedUser?.lastName 
           ? `${linkedUser.firstName} ${linkedUser.lastName}` 
           : linkedUser?.firstName || null,
@@ -609,7 +609,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...recipient,
       isLinked: !!recipient.linkedUserId,
-      syncedData: linkedProfile ? {
+      syncedData: (linkedProfile && linkedProfile.sharePreferences) ? {
         syncedName: linkedUser?.firstName && linkedUser?.lastName 
           ? `${linkedUser.firstName} ${linkedUser.lastName}` 
           : linkedUser?.firstName || null,
