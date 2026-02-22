@@ -417,6 +417,7 @@ export const userProfiles = pgTable("user_profiles", {
   specialTalent: varchar("special_talent"),
   giftsToAvoid: varchar("gifts_to_avoid", { length: 256 }),
   interests: text("interests").array(),
+  sharePreferences: boolean("share_preferences").default(false),
   isCompleted: boolean("is_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -200,7 +200,7 @@ export interface IStorage {
   deleteUserGift(id: string, userId: string): Promise<boolean>;
 
   // Stats
-  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
+  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number; giftsReceived: number }>;
   getReceivedInvitationsCount(email: string): Promise<number>;
   getReceivedInvitations(email: string): Promise<ReceivedInvitation[]>;
   
@@ -575,7 +575,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(({ recipient, linkedUser, linkedProfile }) => ({
       ...recipient,
       isLinked: !!recipient.linkedUserId,
-      syncedData: linkedProfile ? {
+      syncedData: (linkedProfile && linkedProfile.sharePreferences) ? {
         syncedName: linkedUser?.firstName && linkedUser?.lastName 
           ? `${linkedUser.firstName} ${linkedUser.lastName}` 
           : linkedUser?.firstName || null,
@@ -609,7 +609,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...recipient,
       isLinked: !!recipient.linkedUserId,
-      syncedData: linkedProfile ? {
+      syncedData: (linkedProfile && linkedProfile.sharePreferences) ? {
         syncedName: linkedUser?.firstName && linkedUser?.lastName 
           ? `${linkedUser.firstName} ${linkedUser.lastName}` 
           : linkedUser?.firstName || null,
@@ -792,6 +792,27 @@ export class DatabaseStorage implements IStorage {
       nextYearDate.setFullYear(nextYearDate.getFullYear() + 1);
     } while (nextYearDate <= today);
 
+    if (event.eventType === "Meu Aniversário") {
+      // For birthday events: keep old event intact (stays in "past events") and create a new one
+      const newShareToken = `bday_${crypto.randomUUID()}`;
+      const [newEvent] = await db
+        .insert(events)
+        .values({
+          userId,
+          eventType: event.eventType,
+          eventName: event.eventName,
+          eventDate: nextYearDate.toISOString().split('T')[0],
+          isBirthday: true,
+          birthdayShareToken: newShareToken,
+          eventLocation: null,
+          eventDescription: null,
+        })
+        .returning();
+
+      return this.getEvent(newEvent.id, userId);
+    }
+
+    // For non-birthday events: update date in place
     const [updated] = await db
       .update(events)
       .set({
@@ -955,6 +976,7 @@ export class DatabaseStorage implements IStorage {
     upcomingEvents: number;
     giftsPurchased: number;
     totalSpent: number;
+    giftsReceived: number;
   }> {
     // Total recipients
     const recipientCount = await db
@@ -988,11 +1010,25 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Gifts received (birthday wishlist items marked as received)
+    const receivedGiftsCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayWishlistItems)
+      .innerJoin(events, eq(birthdayWishlistItems.eventId, events.id))
+      .where(
+        and(
+          eq(events.userId, userId),
+          eq(events.eventType, "Meu Aniversário"),
+          eq(birthdayWishlistItems.isReceived, true)
+        )
+      );
+
     return {
       totalRecipients: recipientCount[0]?.count || 0,
       upcomingEvents: upcomingEventCount[0]?.count || 0,
       giftsPurchased: purchasedGiftsData[0]?.count || 0,
       totalSpent: parseFloat(String(purchasedGiftsData[0]?.totalSpent || 0)),
+      giftsReceived: receivedGiftsCount[0]?.count || 0,
     };
   }
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -5,6 +6,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   HelpCircle, 
   Users, 
@@ -17,10 +23,50 @@ import {
   Shuffle,
   Palette,
   Star,
-  Plane
+  Plane,
+  Mail,
+  Send,
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 
 export default function FAQ() {
+  const { toast } = useToast();
+  const [contactMessage, setContactMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!contactMessage.trim()) {
+      toast({ title: "Escreva sua mensagem", variant: "destructive" });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const res = await apiRequest("/api/contact", "POST", { message: contactMessage });
+      const data = await res.json();
+      setSent(true);
+      setContactMessage("");
+      toast({ title: data.message || "Mensagem enviada com sucesso!" });
+    } catch (error: any) {
+      let msg = "Erro ao enviar mensagem. Tente novamente.";
+      try {
+        const errText = error?.message || "";
+        const jsonStart = errText.indexOf("{");
+        if (jsonStart >= 0) {
+          const parsed = JSON.parse(errText.substring(jsonStart));
+          if (parsed.message) msg = parsed.message;
+        }
+      } catch {}
+      toast({ title: msg, variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-12">
@@ -281,6 +327,75 @@ export default function FAQ() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="faq-section-contact">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/10">
+                  <Mail className="w-5 h-5 text-amber-500" />
+                </div>
+                Dúvidas e Sugestões
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-6">
+                Tem alguma dúvida, sugestão ou feedback? Envie sua mensagem e nossa equipe 
+                entrará em contato o mais breve possível.
+              </p>
+
+              {sent ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center" data-testid="contact-success">
+                  <div className="p-3 rounded-full bg-green-500/10 mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">Mensagem enviada!</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Obrigado por entrar em contato. Responderemos o mais breve possível.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSent(false)}
+                    data-testid="button-send-another"
+                  >
+                    Enviar outra mensagem
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="contact-message">Mensagem</Label>
+                      <span className={`text-xs ${contactMessage.length > 500 ? "text-destructive" : "text-muted-foreground"}`} data-testid="text-char-count">
+                        {contactMessage.length}/500
+                      </span>
+                    </div>
+                    <Textarea
+                      id="contact-message"
+                      placeholder="Escreva sua dúvida, sugestão ou feedback..."
+                      rows={5}
+                      maxLength={500}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      data-testid="input-contact-message"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isSending}
+                    className="w-full sm:w-auto"
+                    data-testid="button-send-contact"
+                  >
+                    {isSending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    {isSending ? "Enviando..." : "Enviar Mensagem"}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
 

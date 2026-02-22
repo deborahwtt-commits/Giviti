@@ -1,0 +1,56 @@
+Política de Privacidade – Giviti
+Data da última atualização: Fevereiro/2026
+Esta Política de Privacidade descreve como o Giviti coleta, utiliza, armazena e protege os dados pessoais dos usuários, garantindo a transparência no tratamento das informações em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+Ao utilizar o aplicativo Giviti, você declara estar ciente e de acordo com as práticas descritas nesta Política.
+1. Controlador dos Dados
+Responsável pelo tratamento dos dados:
+DIG CONSULTORIA EM T.I LTDA, inscrita no CNPJ sob nº 58.248.596/0001-23
+E-mail de contato: contato@giviti.com.br
+2. Dados Coletados
+Durante o uso do aplicativo, os seguintes dados pessoais podem ser coletados e armazenados:
+Nome completo
+Data de nascimento
+E-mail
+Telefone
+Preferências de uso (ex: categorias de interesse)
+Informações criadas pelo usuário dentro do app, como:
+Datas comemorativas (ex: aniversários, casamentos)
+Lista de presenteados
+Eventos e rolês registrados
+Notas e conteúdos personalizados
+3. Finalidades do Tratamento
+Seus dados são utilizados para:
+Criar e manter sua conta na plataforma;
+Personalizar sua experiência com base em suas preferências;
+Permitir o registro e organização de eventos, rolês e presentes;
+Enviar comunicações sobre funcionalidades, lembretes e atualizações do app;
+Cumprir obrigações legais ou regulatórias.
+4. Compartilhamento de Dados
+O Giviti não compartilha seus dados com terceiros sem seu consentimento, exceto nos seguintes casos:
+Cumprimento de obrigações legais ou ordens judiciais;
+Necessidade de repasse técnico a prestadores de serviço para manutenção do app (com contratos de confidencialidade).
+5. Armazenamento e Segurança
+Os dados são armazenados em servidores seguros e protegidos por práticas atualizadas de segurança da informação;
+Implementamos medidas de proteção contra acessos não autorizados, destruição, perda, alteração ou divulgação indevida;
+O acesso aos dados é restrito apenas a profissionais autorizados, com base em princípios de necessidade e confidencialidade.
+6. Direitos do Titular de Dados
+De acordo com a LGPD, você tem os seguintes direitos:
+Confirmar a existência de tratamento;
+Acessar, corrigir, atualizar ou solicitar a exclusão dos seus dados;
+Revogar consentimento, quando aplicável;
+Solicitar anonimização ou portabilidade dos dados;
+Obter informações sobre eventuais compartilhamentos.
+
+
+Você pode exercer esses direitos cancelando sua conta no app ou enviando uma solicitação para: contato@giviti.com.br
+7. Retenção dos Dados
+Seus dados serão mantidos enquanto:
+Sua conta estiver ativa no Giviti;
+Houver necessidade para cumprir obrigações legais ou resguardar direitos;
+Não houver solicitação de exclusão pelo titular dos dados.
+8. Exclusão da Conta e dos Dados
+O usuário pode, a qualquer momento, solicitar a exclusão total de sua conta e dos dados associados. Basta entrar em contato por e-mail: contato@giviti.com.br. O Giviti se compromete a excluir os dados no prazo legal, exceto em casos de obrigação legal de retenção.
+9. Alterações na Política de Privacidade
+Esta Política poderá ser atualizada periodicamente. Quaisquer alterações serão informadas no aplicativo e/ou por e-mail. Recomendamos que você revise esta Política regularmente.
+10. Contato
+Se você tiver dúvidas, sugestões ou solicitações relacionadas ao tratamento dos seus dados, entre em contato com nosso Encarregado de Proteção de Dados (DPO): contato@giviti.com.br

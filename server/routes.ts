@@ -2069,6 +2069,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Contact Form Route ==========
+  app.post("/api/contact", isAuthenticated, async (req: any, res) => {
+    try {
+      const { z } = await import("zod");
+      if (!req.user) {
+        return res.status(401).json({ message: "Você precisa estar logado para enviar uma mensagem." });
+      }
+
+      const contactSchema = z.object({
+        message: z.string().min(1, "Mensagem é obrigatória").max(500, "Mensagem deve ter no máximo 500 caracteres"),
+      });
+
+      const parsed = contactSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const firstError = parsed.error.errors[0]?.message || "Dados inválidos.";
+        return res.status(400).json({ message: firstError });
+      }
+
+      const { message } = parsed.data;
+      const userName = [req.user.firstName, req.user.lastName].filter(Boolean).join(" ") || "Usuário";
+      const userEmail = req.user.email;
+
+      const escapeHtml = (str: string) =>
+        str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+      const safeName = escapeHtml(userName);
+      const safeEmail = escapeHtml(userEmail);
+      const safeMessage = escapeHtml(message);
+
+      const { sendEmail } = await import("./emailService");
+
+      await sendEmail({
+        to: "contato@giviti.com.br",
+        subject: `[Giviti] Mensagem de ${safeName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Nova mensagem recebida no Giviti</h2>
+            <hr style="border: 1px solid #eee;" />
+            <p><strong>Usuário:</strong> ${safeName}</p>
+            <p><strong>Email:</strong> ${safeEmail}</p>
+            <p><strong>Mensagem:</strong></p>
+            <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; white-space: pre-wrap;">${safeMessage}</div>
+            <hr style="border: 1px solid #eee; margin-top: 24px;" />
+            <p style="color: #999; font-size: 12px;">Enviado pelo formulário de contato do Giviti</p>
+          </div>
+        `,
+        replyTo: userEmail,
+      });
+
+      res.json({ message: "Mensagem enviada com sucesso!" });
+    } catch (error) {
+      console.error("Error sending contact message:", error);
+      res.status(500).json({ message: "Erro ao enviar mensagem. Tente novamente mais tarde." });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

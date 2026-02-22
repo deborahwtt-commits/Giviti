@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper } from "lucide-react";
+import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon, Heart, CalendarHeart, Rocket } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -10,14 +10,18 @@ interface DashboardHeroProps {
     upcomingEvents: number;
     giftsPurchased: number;
     totalSpent: number;
+    giftsReceived: number;
     upcomingRoles: number;
     invitationsReceived: number;
   };
   onCreateRecipient: () => void;
   onExploreSuggestions: () => void;
+  onRegisterDate: () => void;
+  onPlanRole: () => void;
   onRecipientsClick?: () => void;
   onEventsClick?: () => void;
   onGiftsClick?: () => void;
+  onGiftsReceivedClick?: () => void;
   onRolesClick?: () => void;
   onInvitationsClick?: () => void;
 }
@@ -27,9 +31,12 @@ export default function DashboardHero({
   stats,
   onCreateRecipient,
   onExploreSuggestions,
+  onRegisterDate,
+  onPlanRole,
   onRecipientsClick,
   onEventsClick,
   onGiftsClick,
+  onGiftsReceivedClick,
   onRolesClick,
   onInvitationsClick,
 }: DashboardHeroProps) {
@@ -46,7 +53,7 @@ export default function DashboardHero({
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/80" />
       </div>
 
-      <div className="relative px-6 py-12 md:py-20 max-w-7xl mx-auto">
+      <div className="relative px-6 py-8 md:py-10 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-6 h-6 text-primary" />
@@ -60,15 +67,15 @@ export default function DashboardHero({
           </h1>
 
           <p className="text-lg text-muted-foreground mb-6">
-            Encontre o presente perfeito para quem você ama. Sugestões
-            personalizadas prontas para você.
+            O que você quer fazer hoje?
           </p>
+        </div>
 
-          <div className="mb-6">
-            <HoroscopeBanner />
-          </div>
+        <div className="mb-6">
+          <HoroscopeBanner />
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <div 
               className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
               onClick={onRecipientsClick}
@@ -172,26 +179,56 @@ export default function DashboardHero({
                 </div>
               )}
             </div>
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onGiftsReceivedClick}
+              data-testid="stat-gifts-received"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onGiftsReceivedClick?.();
+                }
+              }}
+            >
+              <div className="text-2xl font-bold text-teal-500 dark:text-teal-300 flex items-center gap-2">
+                <GiftIcon className="w-5 h-5" />
+                {stats.giftsReceived}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Presentes recebidos
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              onClick={onCreateRecipient}
-              data-testid="button-create-recipient"
-            >
-              <Gift className="w-4 h-4 mr-2" />
-              Criar Novo Presenteado
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={onExploreSuggestions}
-              data-testid="button-explore-suggestions"
-            >
-              Explorar Sugestões
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Button
+            size="lg"
+            className="bg-rose-200 text-rose-800 border-rose-200 dark:bg-rose-300 dark:text-rose-900 dark:border-rose-300"
+            onClick={onCreateRecipient}
+            data-testid="button-create-recipient"
+          >
+            Quero presentear alguém
+            <Heart className="w-4 h-4 ml-2" />
+          </Button>
+          <Button
+            size="lg"
+            className="bg-amber-100 text-amber-800 border-amber-100 dark:bg-amber-200 dark:text-amber-900 dark:border-amber-200"
+            onClick={onRegisterDate}
+            data-testid="button-register-date"
+          >
+            Quero registrar uma data importante
+            <CalendarHeart className="w-4 h-4 ml-2" />
+          </Button>
+          <Button
+            size="lg"
+            className="bg-violet-200 text-violet-800 border-violet-200 dark:bg-violet-300 dark:text-violet-900 dark:border-violet-300"
+            onClick={onPlanRole}
+            data-testid="button-plan-role"
+          >
+            Quero planejar um rolê
+            <Rocket className="w-4 h-4 ml-2" />
+          </Button>
         </div>
       </div>
     </div>

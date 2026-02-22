@@ -30,6 +30,7 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
@@ -326,7 +327,14 @@ export default function Landing() {
   };
 
   const onRegisterSubmit = (data: RegisterUser) => {
-    // Include pending invite token if available
+    if (!acceptedTerms) {
+      toast({
+        title: "Aceite os termos",
+        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar sua conta.",
+        variant: "destructive",
+      });
+      return;
+    }
     const registerData = {
       ...data,
       inviteToken: pendingInviteToken || undefined,
@@ -753,6 +761,25 @@ export default function Landing() {
                           />
                           <Label htmlFor="keep-logged-in-register" className="text-sm font-medium cursor-pointer">
                             Manter-me logado neste navegador
+                          </Label>
+                        </div>
+
+                        <div className="flex items-start space-x-2">
+                          <Checkbox
+                            id="accept-terms"
+                            checked={acceptedTerms}
+                            onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                            data-testid="checkbox-accept-terms"
+                          />
+                          <Label htmlFor="accept-terms" className="text-sm font-normal cursor-pointer leading-snug">
+                            Li e aceito os{" "}
+                            <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" data-testid="link-terms">
+                              Termos de Uso
+                            </a>{" "}
+                            e a{" "}
+                            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" data-testid="link-privacy">
+                              Política de Privacidade
+                            </a>
                           </Label>
                         </div>
 

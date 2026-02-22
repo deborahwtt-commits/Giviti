@@ -692,6 +692,25 @@ export default function Profile() {
             )}
           </Card>
 
+          <Card className="p-6">
+            <div className="flex items-start gap-4">
+              <Checkbox
+                id="share-preferences"
+                checked={watch("sharePreferences") || false}
+                onCheckedChange={(checked) => setValue("sharePreferences", checked === true)}
+                data-testid="checkbox-share-preferences"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="share-preferences" className="text-base font-semibold cursor-pointer">
+                  Compartilhar preferências com quem me adicionar como presenteado
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Ao ativar, outros usuários do Giviti que adicionarem você como presenteado poderão ver suas preferências (interesses, gênero, data de nascimento e presentes para evitar) para encontrar presentes mais adequados.
+                </p>
+              </div>
+            </div>
+          </Card>
+
           <div className="flex justify-end gap-4 pt-6">
             <Button
               type="submit"
