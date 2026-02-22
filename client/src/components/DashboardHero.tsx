@@ -69,12 +69,13 @@ export default function DashboardHero({
           <p className="text-lg text-muted-foreground mb-6">
             O que você quer fazer hoje?
           </p>
+        </div>
 
-          <div className="mb-6">
-            <HoroscopeBanner />
-          </div>
+        <div className="mb-6">
+          <HoroscopeBanner />
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <div 
               className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
               onClick={onRecipientsClick}
@@ -200,35 +201,33 @@ export default function DashboardHero({
             </div>
           </div>
 
-          <div className="flex gap-3 w-full">
-            <Button
-              size="lg"
-              className="flex-1"
-              onClick={onCreateRecipient}
-              data-testid="button-create-recipient"
-            >
-              Quero presentear alguém
-              <Heart className="w-4 h-4 ml-2" />
-            </Button>
-            <Button
-              size="lg"
-              className="flex-1 bg-yellow-300 text-yellow-900 border-yellow-300"
-              onClick={onRegisterDate}
-              data-testid="button-register-date"
-            >
-              Quero registrar uma data importante
-              <CalendarHeart className="w-4 h-4 ml-2" />
-            </Button>
-            <Button
-              size="lg"
-              className="flex-1 bg-violet-600 text-white border-violet-600"
-              onClick={onPlanRole}
-              data-testid="button-plan-role"
-            >
-              Quero planejar um rolê
-              <Rocket className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Button
+            size="lg"
+            onClick={onCreateRecipient}
+            data-testid="button-create-recipient"
+          >
+            Quero presentear alguém
+            <Heart className="w-4 h-4 ml-2" />
+          </Button>
+          <Button
+            size="lg"
+            className="bg-yellow-300 text-yellow-900 border-yellow-300"
+            onClick={onRegisterDate}
+            data-testid="button-register-date"
+          >
+            Quero registrar uma data importante
+            <CalendarHeart className="w-4 h-4 ml-2" />
+          </Button>
+          <Button
+            size="lg"
+            className="bg-violet-600 text-white border-violet-600"
+            onClick={onPlanRole}
+            data-testid="button-plan-role"
+          >
+            Quero planejar um rolê
+            <Rocket className="w-4 h-4 ml-2" />
+          </Button>
         </div>
       </div>
     </div>
