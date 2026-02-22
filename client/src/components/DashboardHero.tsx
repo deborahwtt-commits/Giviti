@@ -53,7 +53,7 @@ export default function DashboardHero({
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/80" />
       </div>
 
-      <div className="relative px-6 py-12 md:py-20 max-w-7xl mx-auto">
+      <div className="relative px-6 py-8 md:py-10 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-6 h-6 text-primary" />
