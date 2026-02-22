@@ -11,6 +11,7 @@ import EventCard from "@/components/EventCard";
 import EmptyState from "@/components/EmptyState";
 import ProfileOnboardingModal from "@/components/ProfileOnboardingModal";
 import BirthdayBanner from "@/components/BirthdayBanner";
+import MiniCalendar from "@/components/MiniCalendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,10 @@ export default function Dashboard() {
 
   const { data: upcomingEvents, isLoading: eventsLoading, error: eventsError} = useQuery<EventWithRecipients[]>({
     queryKey: ["/api/events?upcoming=true"],
+  });
+
+  const { data: allEvents } = useQuery<EventWithRecipients[]>({
+    queryKey: ["/api/events"],
   });
 
   const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery<CollaborativeEvent[]>({
@@ -328,12 +333,12 @@ export default function Dashboard() {
         ) : null}
 
         <section id="events-section">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between gap-2 mb-6">
             <div>
               <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Eventos Próximos
+                Calendário
               </h2>
-              <p className="text-muted-foreground mt-1">Eventos nos próximos 30 dias</p>
+              <p className="text-muted-foreground mt-1">Visualize seus eventos e rolês</p>
             </div>
             <Button
               size="sm"
@@ -346,76 +351,12 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {eventsLoading || rolesLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 bg-card rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : getDisplayedItemsIn30Days().length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getDisplayedItemsIn30Days().map((item) => {
-                if (item.type === 'event') {
-                  const event = item.data as EventWithRecipients;
-                  return (
-                    <EventCard
-                      key={`event-${item.id}`}
-                      event={event}
-                      daysUntil={item.daysUntil}
-                      date={formatEventDate(event.eventDate)}
-                      onViewSuggestions={() => setLocation("/sugestoes")}
-                      onDelete={() => {}}
-                      hasGiftPurchased={event.hasWishlistItems}
-                    />
-                  );
-                } else {
-                  const role = item.data as CollaborativeEvent;
-                  const typeInfo = getRoleTypeInfo(role.eventType);
-                  const TypeIcon = typeInfo.icon;
-                  return (
-                    <Card
-                      key={`role-${item.id}`}
-                      className="cursor-pointer hover-elevate transition-all"
-                      onClick={() => setLocation(`/role/${role.id}`)}
-                      data-testid={`card-role-${role.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-foreground truncate">
-                              {role.name}
-                            </h3>
-                            <Badge className={`mt-1 text-xs ${typeInfo.color}`}>
-                              <TypeIcon className="w-3 h-3 mr-1" />
-                              {typeInfo.label}
-                            </Badge>
-                          </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`shrink-0 ${item.daysUntil <= 7 ? 'bg-destructive/10 text-destructive border-destructive/20' : ''}`}
-                          >
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {item.daysUntil === 0 ? 'Hoje' : item.daysUntil === 1 ? 'Amanhã' : `${item.daysUntil} dias`}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {formatRoleDate(role.eventDate)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-              })}
-            </div>
-          ) : (
-            <EmptyState
-              image={emptyEventsImage}
-              title="Nenhum evento nos próximos 30 dias"
-              description="Cadastre aniversários, formaturas e outras datas especiais para nunca esquecer de presentear."
-              actionLabel="Criar Evento"
-              onAction={() => setLocation("/eventos")}
-            />
-          )}
+          <MiniCalendar
+            events={allEvents?.filter(e => !e.archived) || []}
+            roles={roles || []}
+            onNavigate={setLocation}
+            isLoading={eventsLoading || rolesLoading}
+          />
         </section>
 
         {getUpcomingItemsForVemAi().length > 0 && (
