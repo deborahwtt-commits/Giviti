@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon } from "lucide-react";
+import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon, Heart } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -63,8 +63,7 @@ export default function DashboardHero({
           </h1>
 
           <p className="text-lg text-muted-foreground mb-6">
-            Encontre o presente perfeito para quem você ama. Sugestões
-            personalizadas prontas para você.
+            O que você quer fazer hoje?
           </p>
 
           <div className="mb-6">
@@ -203,16 +202,8 @@ export default function DashboardHero({
               onClick={onCreateRecipient}
               data-testid="button-create-recipient"
             >
-              <Gift className="w-4 h-4 mr-2" />
-              Criar Novo Presenteado
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={onExploreSuggestions}
-              data-testid="button-explore-suggestions"
-            >
-              Explorar Sugestões
+              Quero presentear alguém
+              <Heart className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
