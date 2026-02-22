@@ -793,12 +793,7 @@ export class DatabaseStorage implements IStorage {
     } while (nextYearDate <= today);
 
     if (event.isBirthday) {
-      // For birthday events: archive old event and create a new one
-      await db
-        .update(events)
-        .set({ archived: true, updatedAt: new Date() })
-        .where(and(eq(events.id, id), eq(events.userId, userId)));
-
+      // For birthday events: keep old event intact (stays in "past events") and create a new one
       const newShareToken = `bday_${crypto.randomUUID()}`;
       const [newEvent] = await db
         .insert(events)
