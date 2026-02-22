@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper } from "lucide-react";
+import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -10,6 +10,7 @@ interface DashboardHeroProps {
     upcomingEvents: number;
     giftsPurchased: number;
     totalSpent: number;
+    giftsReceived: number;
     upcomingRoles: number;
     invitationsReceived: number;
   };
@@ -18,6 +19,7 @@ interface DashboardHeroProps {
   onRecipientsClick?: () => void;
   onEventsClick?: () => void;
   onGiftsClick?: () => void;
+  onGiftsReceivedClick?: () => void;
   onRolesClick?: () => void;
   onInvitationsClick?: () => void;
 }
@@ -30,6 +32,7 @@ export default function DashboardHero({
   onRecipientsClick,
   onEventsClick,
   onGiftsClick,
+  onGiftsReceivedClick,
   onRolesClick,
   onInvitationsClick,
 }: DashboardHeroProps) {
@@ -68,7 +71,7 @@ export default function DashboardHero({
             <HoroscopeBanner />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <div 
               className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
               onClick={onRecipientsClick}
@@ -171,6 +174,26 @@ export default function DashboardHero({
                   R$ {stats.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
+            </div>
+            <div 
+              className="bg-card/80 backdrop-blur-sm p-4 rounded-md border border-card-border cursor-pointer hover-elevate transition-all"
+              onClick={onGiftsReceivedClick}
+              data-testid="stat-gifts-received"
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onGiftsReceivedClick?.();
+                }
+              }}
+            >
+              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                <GiftIcon className="w-5 h-5" />
+                {stats.giftsReceived}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Presentes recebidos
+              </div>
             </div>
           </div>
 

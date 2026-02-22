@@ -200,7 +200,7 @@ export interface IStorage {
   deleteUserGift(id: string, userId: string): Promise<boolean>;
 
   // Stats
-  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number }>;
+  getStats(userId: string): Promise<{ totalRecipients: number; upcomingEvents: number; giftsPurchased: number; totalSpent: number; giftsReceived: number }>;
   getReceivedInvitationsCount(email: string): Promise<number>;
   getReceivedInvitations(email: string): Promise<ReceivedInvitation[]>;
   
@@ -976,6 +976,7 @@ export class DatabaseStorage implements IStorage {
     upcomingEvents: number;
     giftsPurchased: number;
     totalSpent: number;
+    giftsReceived: number;
   }> {
     // Total recipients
     const recipientCount = await db
@@ -1009,11 +1010,25 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Gifts received (birthday wishlist items marked as received)
+    const receivedGiftsCount = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(birthdayWishlistItems)
+      .innerJoin(events, eq(birthdayWishlistItems.eventId, events.id))
+      .where(
+        and(
+          eq(events.userId, userId),
+          eq(events.eventType, "Meu Aniversário"),
+          eq(birthdayWishlistItems.isReceived, true)
+        )
+      );
+
     return {
       totalRecipients: recipientCount[0]?.count || 0,
       upcomingEvents: upcomingEventCount[0]?.count || 0,
       giftsPurchased: purchasedGiftsData[0]?.count || 0,
       totalSpent: parseFloat(String(purchasedGiftsData[0]?.totalSpent || 0)),
+      giftsReceived: receivedGiftsCount[0]?.count || 0,
     };
   }
 

@@ -31,6 +31,7 @@ export default function Dashboard() {
     upcomingEvents: number;
     giftsPurchased: number;
     totalSpent: number;
+    giftsReceived: number;
   }>({
     queryKey: ["/api/stats"],
   });
@@ -285,6 +286,7 @@ export default function Dashboard() {
             upcomingEvents: stats?.upcomingEvents || 0,
             giftsPurchased: stats?.giftsPurchased || 0,
             totalSpent: stats?.totalSpent || 0,
+            giftsReceived: stats?.giftsReceived || 0,
             upcomingRoles: getUpcomingRoles().length,
             invitationsReceived: invitationsData?.count || 0,
           }}
