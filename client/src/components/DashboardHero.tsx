@@ -200,9 +200,10 @@ export default function DashboardHero({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex gap-3 w-full">
             <Button
               size="lg"
+              className="flex-1"
               onClick={onCreateRecipient}
               data-testid="button-create-recipient"
             >
@@ -211,7 +212,7 @@ export default function DashboardHero({
             </Button>
             <Button
               size="lg"
-              className="bg-amber-600 text-white border-amber-600"
+              className="flex-1 bg-yellow-300 text-yellow-900 border-yellow-300"
               onClick={onRegisterDate}
               data-testid="button-register-date"
             >
@@ -220,7 +221,7 @@ export default function DashboardHero({
             </Button>
             <Button
               size="lg"
-              className="bg-violet-600 text-white border-violet-600"
+              className="flex-1 bg-violet-600 text-white border-violet-600"
               onClick={onPlanRole}
               data-testid="button-plan-role"
             >
