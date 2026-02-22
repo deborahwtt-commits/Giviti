@@ -168,8 +168,6 @@ export default function Dashboard() {
   };
 
   const getUpcomingItemsForVemAi = () => {
-    const displayedItemIds = new Set(getDisplayedItemsIn30Days().map(e => e.id));
-    
     type UnifiedItem = {
       id: string;
       type: 'event' | 'role';
@@ -182,23 +180,20 @@ export default function Dashboard() {
     const items: UnifiedItem[] = [];
     
     if (upcomingEvents) {
-      upcomingEvents
-        .filter(event => !displayedItemIds.has(event.id))
-        .forEach(event => {
-          items.push({
-            id: event.id,
-            type: 'event',
-            name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
-            date: event.eventDate ? parseDateSafe(event.eventDate) : null,
-            data: event,
-          });
+      upcomingEvents.forEach(event => {
+        items.push({
+          id: event.id,
+          type: 'event',
+          name: event.eventName ? `${event.eventType} ${event.eventName}` : event.eventType,
+          date: event.eventDate ? parseDateSafe(event.eventDate) : null,
+          data: event,
         });
+      });
     }
     
     if (roles) {
       roles
         .filter(role => role.status === "active" || role.status === "draft")
-        .filter(role => !displayedItemIds.has(role.id))
         .filter(role => {
           if (!role.eventDate) return true;
           const eventDate = parseDateSafe(role.eventDate);
@@ -220,7 +215,7 @@ export default function Dashboard() {
       if (!a.date) return 1;
       if (!b.date) return -1;
       return a.date.getTime() - b.date.getTime();
-    });
+    }).slice(0, 6);
   };
 
   const getRoleTypeInfo = (eventType: string) => {
@@ -359,7 +354,7 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-muted-foreground mt-1">Seus próximos eventos e rolês</p>
               </div>
-              {getUpcomingItemsForVemAi().length > 9 && (
+              {getUpcomingItemsForVemAi().length >= 6 && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -372,7 +367,7 @@ export default function Dashboard() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getUpcomingItemsForVemAi().slice(0, 9).map((item) => {
+              {getUpcomingItemsForVemAi().map((item) => {
                 if (item.type === 'event') {
                   const event = item.data as EventWithRecipients;
                   return (
