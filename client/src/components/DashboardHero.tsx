@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon, Heart } from "lucide-react";
+import { Gift, Sparkles, Mail, Users, Calendar, PartyPopper, GiftIcon, Heart, CalendarHeart, Rocket } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_celebration_gift_exchange_b57996b1.png";
 import HoroscopeBanner from "@/components/HoroscopeBanner";
 
@@ -16,6 +16,8 @@ interface DashboardHeroProps {
   };
   onCreateRecipient: () => void;
   onExploreSuggestions: () => void;
+  onRegisterDate: () => void;
+  onPlanRole: () => void;
   onRecipientsClick?: () => void;
   onEventsClick?: () => void;
   onGiftsClick?: () => void;
@@ -29,6 +31,8 @@ export default function DashboardHero({
   stats,
   onCreateRecipient,
   onExploreSuggestions,
+  onRegisterDate,
+  onPlanRole,
   onRecipientsClick,
   onEventsClick,
   onGiftsClick,
@@ -204,6 +208,24 @@ export default function DashboardHero({
             >
               Quero presentear alguém
               <Heart className="w-4 h-4 ml-2" />
+            </Button>
+            <Button
+              size="lg"
+              className="bg-amber-600 text-white border-amber-600"
+              onClick={onRegisterDate}
+              data-testid="button-register-date"
+            >
+              Quero registrar uma data importante
+              <CalendarHeart className="w-4 h-4 ml-2" />
+            </Button>
+            <Button
+              size="lg"
+              className="bg-violet-600 text-white border-violet-600"
+              onClick={onPlanRole}
+              data-testid="button-plan-role"
+            >
+              Quero planejar um rolê
+              <Rocket className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>

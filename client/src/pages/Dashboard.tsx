@@ -297,6 +297,8 @@ export default function Dashboard() {
           }}
           onCreateRecipient={() => setLocation("/presenteados")}
           onExploreSuggestions={() => setLocation("/sugestoes")}
+          onRegisterDate={() => setLocation("/eventos")}
+          onPlanRole={() => setLocation("/role")}
           onRecipientsClick={() => setLocation("/presenteados")}
           onEventsClick={() => {
             const eventsSection = document.getElementById("events-section");
