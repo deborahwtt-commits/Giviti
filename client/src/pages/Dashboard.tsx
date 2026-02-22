@@ -15,7 +15,7 @@ import MiniCalendar from "@/components/MiniCalendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Gift, Palette, MapPin, Calendar, UserCheck, Cake } from "lucide-react";
+import { Users, Gift, Palette, MapPin, Calendar, UserCheck, Cake } from "lucide-react";
 import emptyEventsImage from "@assets/generated_images/Empty_state_no_events_a8c49f04.png";
 import type { EventWithRecipients, Recipient, CollaborativeEvent, UserProfile } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
@@ -279,7 +279,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <ProfileOnboardingModal />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
         <BirthdayBanner 
           userName={userName} 
           birthDate={userProfile?.birthDate} 
@@ -335,22 +335,11 @@ export default function Dashboard() {
         ) : null}
 
         <section id="events-section">
-          <div className="flex items-center justify-between gap-2 mb-6">
-            <div>
-              <h2 className="font-heading font-semibold text-3xl text-foreground">
-                Calendário
-              </h2>
-              <p className="text-muted-foreground mt-1">Visualize seus eventos e rolês</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/eventos")}
-              data-testid="button-add-event"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Evento
-            </Button>
+          <div className="mb-6">
+            <h2 className="font-heading font-semibold text-3xl text-foreground">
+              Calendário
+            </h2>
+            <p className="text-muted-foreground mt-1">Visualize seus eventos e rolês</p>
           </div>
 
           <MiniCalendar

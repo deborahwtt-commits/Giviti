@@ -204,6 +204,7 @@ export default function DashboardHero({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Button
             size="lg"
+            className="bg-rose-200 text-rose-800 border-rose-200 dark:bg-rose-300 dark:text-rose-900 dark:border-rose-300"
             onClick={onCreateRecipient}
             data-testid="button-create-recipient"
           >
@@ -212,7 +213,7 @@ export default function DashboardHero({
           </Button>
           <Button
             size="lg"
-            className="bg-yellow-300 text-yellow-900 border-yellow-300"
+            className="bg-amber-100 text-amber-800 border-amber-100 dark:bg-amber-200 dark:text-amber-900 dark:border-amber-200"
             onClick={onRegisterDate}
             data-testid="button-register-date"
           >
@@ -221,7 +222,7 @@ export default function DashboardHero({
           </Button>
           <Button
             size="lg"
-            className="bg-violet-600 text-white border-violet-600"
+            className="bg-violet-200 text-violet-800 border-violet-200 dark:bg-violet-300 dark:text-violet-900 dark:border-violet-300"
             onClick={onPlanRole}
             data-testid="button-plan-role"
           >
