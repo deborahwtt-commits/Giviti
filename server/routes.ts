@@ -2070,7 +2070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== Contact Form Route ==========
-  app.post("/api/contact", async (req: any, res) => {
+  app.post("/api/contact", isAuthenticated, async (req: any, res) => {
     try {
       const { z } = await import("zod");
       if (!req.user) {
